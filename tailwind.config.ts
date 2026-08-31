@@ -49,6 +49,10 @@ const config: Config = {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
+        ticker: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
         riseIn: {
           from: { opacity: "0", transform: "translateY(14px)" },
           to: { opacity: "1", transform: "translateY(0)" },
@@ -57,6 +61,7 @@ const config: Config = {
       animation: {
         pulseRing: "pulseRing 2.6s cubic-bezier(0.16,1,0.3,1) infinite",
         riseIn: "riseIn 0.6s cubic-bezier(0.16,1,0.3,1) both",
+        ticker: "ticker 48s linear infinite",
         shimmer: "shimmer 1.6s infinite",
       },
       transitionDuration: {

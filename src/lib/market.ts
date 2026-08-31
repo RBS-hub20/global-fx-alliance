@@ -282,3 +282,80 @@ export function pipValuePerLot(symbol: string, lots: number, price: number): num
   if (p.quote === "USD") return raw;
   return raw / (price || p.price);
 }
+
+/* ------------------------------------------------------------------- candles */
+
+export interface OhlcBar {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+const RANGE_BAR_SECONDS: Record<Range, number> = {
+  "1D": 15 * 60,
+  "1W": 2 * 3600,
+  "1M": 8 * 3600,
+  "3M": 24 * 3600,
+  "1Y": 3 * 24 * 3600,
+};
+
+const candleCache = new Map<string, OhlcBar[]>();
+
+/**
+ * OHLC bars for a pair/range, built from the same detrended walk that drives the
+ * line series so the candles and the quoted close never disagree. Wick sizes come
+ * from the same seeded PRNG, so the chart is byte-identical on every render.
+ *
+ * `anchor` lets a caller re-base the whole series onto a live price without
+ * changing its shape — used when an upstream quote is available.
+ */
+export function candlesFor(symbol: string, range: Range = "1D", anchor?: number): OhlcBar[] {
+  const key = `${symbol}:${range}:${anchor ?? ""}`;
+  const hit = candleCache.get(key);
+  if (hit) return hit;
+
+  const pair = getPair(symbol);
+  const series = seriesFor(symbol, range);
+  const scale = anchor && pair.price ? anchor / pair.price : 1;
+  const points = series.points.map((p) => p * scale);
+
+  const rnd = mulberry32(pair.seed * 7919 + range.length * 104729);
+  const step = RANGE_BAR_SECONDS[range];
+  // End the series on the most recent completed bar boundary.
+  const end = Math.floor(Date.now() / 1000 / step) * step;
+  const start = end - (points.length - 1) * step;
+
+  const bars: OhlcBar[] = points.map((close, i) => {
+    // Most bars open where the last one closed, but real markets gap on news
+    // and session opens. Without occasional gaps a three-candle imbalance can
+    // never form, and fair-value-gap detection would be permanently empty.
+    const prev = i === 0 ? close : points[i - 1];
+    const gapRoll = rnd();
+    const gap = gapRoll < 0.08 ? (rnd() - 0.5) * close * 0.0045 : 0;
+    const open = i === 0 ? close : prev + gap;
+    const body = Math.abs(close - open);
+    // Wicks scale with the bar's own body plus a floor, so quiet bars still
+    // show a little range instead of collapsing to a flat line.
+    const reach = body * (0.4 + rnd() * 0.9) + close * 0.0004 * (0.3 + rnd());
+    const high = Math.max(open, close) + reach * rnd();
+    const low = Math.min(open, close) - reach * rnd();
+    const volume = Math.round(500 + rnd() * 1500 + body / (close || 1) * 250_000);
+    const r = (v: number) => Number(v.toFixed(pair.decimals + 2));
+    return { time: start + i * step, open: r(open), high: r(high), low: r(low), close: r(close), volume };
+  });
+
+  // The final bar must close exactly on the quoted price.
+  const lastBar = bars[bars.length - 1];
+  if (lastBar) {
+    const target = Number((anchor ?? pair.price).toFixed(pair.decimals));
+    lastBar.close = target;
+    lastBar.high = Math.max(lastBar.high, target);
+    lastBar.low = Math.min(lastBar.low, target);
+  }
+
+  candleCache.set(key, bars);
+  return bars;
+}

@@ -5,7 +5,14 @@
 
 The Global Community for Forex Traders — marketing site + member dashboard.
 
-**Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react. Dark theme only, no runtime chart dependency.
+**Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react ·
+TradingView Lightweight Charts. Dark theme only.
+
+**GFXA Terminal** — the Market Analysis tab is a Bloomberg-style workstation: a pro
+candlestick chart that draws its own support, resistance, trendline and fair-value
+gaps, and a four-agent analyst (technical · fundamental · flow · risk) that reads the
+same numbers the chart is showing. All indicator maths is local and dependency-free;
+live quotes come from free upstreams with a seeded fallback that never fails.
 
 ## Routes
 

@@ -181,3 +181,67 @@ Pre-push safety check: `.gitignore` covers `node_modules`, `.next`, `out`, `.env
 `.vercel`, `.DS_Store`, `next-env.d.ts`. No `.env*` or `.vercel` paths are tracked, and
 a scan of tracked files for OIDC tokens, private keys and `ghp_`/`sk-` patterns found
 nothing.
+
+---
+
+## Update — GFXA Terminal (Sep 1, 2026)
+
+Bloomberg-style terminal and a pro auto-drawn chart on the Market Analysis tab.
+
+### New modules
+
+| File | What it does |
+| --- | --- |
+| `src/lib/indicators.ts` | EMA, SMA, RSI, MACD, Bollinger, ATR, swing pivots, S/R clustering, trend fitting. Pure math, no dependencies. Warm-up positions return `null` so indices stay aligned with the candles. |
+| `src/lib/autoDraw.ts` | Turns candles into drawings: top 3 supports and resistances by strength, dominant trendline, recent fair-value gaps, EMA levels. |
+| `src/lib/ai.ts` | Four agents — technical, fundamental, flow, risk — over one shared context, returning a structured `TerminalReport`. |
+| `src/components/chart/TradingViewChart.tsx` | TradingView Lightweight Charts v4.2.3 with candles, volume, EMA 20/50/200, dashed S/R price lines, a two-point trendline series and HTML-overlay FVG boxes. |
+| `src/components/dashboard/TickerTape.tsx` | Scrolling quote strip, polls live every 60s, falls back to seeded values. |
+
+### API routes (Edge)
+
+| Route | Cache | Upstream | Behaviour |
+| --- | --- | --- | --- |
+| `/api/market/live` | `s-maxage=60` | exchangerate-api → twelvedata demo → seeded | Returns quote + 96 OHLC bars. Never throws; `source` says `live` or `fallback`. |
+| `/api/calendar/live` | `s-maxage=300` | curated | Today's schedule, marks which have printed against the UTC clock. |
+| `/api/news/live` | `s-maxage=180` | forexlive RSS → investing RSS → curated | Parses RSS at the edge, tags sentiment and symbols. |
+
+Verified live in dev: EUR/USD returned `source: "live"` at 1.1601 and the ForexLive
+feed parsed real headlines, so both upstreams work rather than only the fallback path.
+
+### Honesty constraints
+
+- `seriesSource` is always `"modeled"`. The spot quote can be live, but the OHLC
+  candles are synthesised from the seeded engine and re-based onto that quote — they
+  are not real historical prints, and the UI says so.
+- Upstream quotes are sanity-gated at 35% against the seeded reference, so a wrong
+  instrument resolution (metals, indices) falls back rather than printing nonsense.
+- Every terminal report ends with the educational disclaimer.
+
+### Bugs found and fixed during this build
+
+1. **MACD flipped bearish on floating-point noise.** A perfectly linear series
+   converges to a histogram of exactly zero; float error landed at ~1e-15 and read as
+   a bearish crossover. Added a relative deadband.
+2. **The signal guardrail was unreachable for any query naming a pair.** "Should I buy
+   EUR/USD?" matched pair routing first and returned an analysis instead of declining.
+   The refusal now runs before pair detection.
+3. **Fair-value gaps could never form.** The candle generator opened every bar exactly
+   at the prior close, so three-candle imbalances were impossible and the feature was
+   permanently empty. Added deterministic gap-opens on ~8% of bars.
+4. **S1/R1 labelled the strongest level, not the nearest.** Levels are now selected on
+   strength then presented nearest-first, matching how traders read them.
+5. **Unrelated headlines presented as pair-relevant.** When no headline matches the
+   instrument the report now says so instead of passing off the broad tape.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Indicator unit tests | 24/24 pass (known vectors, edge cases, degenerate inputs) |
+| Auto-draw tests | all pass across 4 instruments — OHLC validity, determinism, anchor re-basing |
+| AI agent tests | 4 sections populated, guardrails hold on 4 phrasings, no `NaN`/`undefined` leaks |
+| `npm run lint` / `tsc --noEmit` | clean |
+| `npm run build` | passes; `/dashboard` 56.3 kB, first load 157 kB |
+| Bundle | lightweight-charts is dynamically imported (`ssr: false`), so first load grew ~8 kB, not ~45 kB |
+| All 17 tabs after the rewrite | 17/17 unique panels, **0 console errors** |

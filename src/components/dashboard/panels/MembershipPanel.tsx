@@ -6,7 +6,7 @@ import { Card, CardHead, PanelHeader, Toast, money } from "@/components/ui/Primi
 import { MEMBERSHIP_BENEFITS } from "@/lib/data";
 import { BILLING } from "@/lib/content";
 
-const REFERRAL = "https://globalfxalliance.com/join?ref=renmar";
+const REFERRAL = "https://globalfxalliance.io/join?ref=renmar";
 
 export function MembershipPanel() {
   const [toast, setToast] = useState<string | null>(null);

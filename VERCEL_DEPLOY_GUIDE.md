@@ -50,38 +50,50 @@ cause of "No Output Directory named .next found" build failures. Leave it out.
 `?tab=` at runtime, and a static export would drop the server runtime the app is
 built against.
 
-## Custom domain — globalfxalliance.com
+## Custom domain — globalfxalliance.io ✅ live
 
-### 1. Add the domain in Vercel
+Both hostnames are attached to the project and serving:
 
-1. <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/settings/domains>
-2. **Add** → `globalfxalliance.com` → Add
-3. Add `www.globalfxalliance.com` too, and set one as the redirect target (the usual
-   choice is apex as primary, `www` redirecting to it)
+- <https://globalfxalliance.io>
+- <https://www.globalfxalliance.io>
 
-### 2. Point DNS at Vercel
+Registered at Namecheap, using Namecheap's nameservers with records pointed at Vercel
+(rather than delegating NS to Vercel — both approaches are supported).
 
-At your registrar, either delegate the whole domain to Vercel's nameservers (simplest,
-Vercel then manages every record), or add these records manually:
+### Current DNS
 
-| Type | Name | Value |
-| --- | --- | --- |
-| `A` | `@` | `76.76.21.21` |
-| `CNAME` | `www` | `cname.vercel-dns.com` |
+| Type | Name | Value | Status |
+| --- | --- | --- | --- |
+| `A` | `@` | `76.76.21.21` | valid |
+| `CNAME` | `www` | `cname.vercel-dns.com` | valid |
 
-Vercel shows the exact values for your domain on the Domains screen — use those if they
-differ from the table above.
+`vercel domains verify globalfxalliance.io` reports `ok: true`, `misconfigured: false`.
 
-### 3. Wait for verification
+### Optional DNS upgrade
 
-Vercel issues the TLS certificate automatically once DNS resolves. Propagation is
-usually minutes, occasionally up to 48 hours.
+Vercel now prefers newer anycast targets and reports `dns_change_recommended`. This is
+**optional** (`ipStatus: "optional-change"`) — the current records work. To adopt them,
+change at Namecheap:
 
-### 4. Update the canonical URL in the code
+| Type | Name | From | To |
+| --- | --- | --- | --- |
+| `A` | `@` | `76.76.21.21` | `216.198.79.1` (and/or `64.29.17.1`) |
+| `CNAME` | `www` | `cname.vercel-dns.com` | `595a25e9c8b719d9.vercel-dns-017.com.` |
 
-`src/app/layout.tsx` sets `metadataBase` and the Open Graph URL from a `SITE` constant
-that already points at `https://globalfxalliance.com`. Once the domain is live, that
-becomes correct on its own — but re-check it if you use a different hostname.
+Then re-check with `npx vercel domains verify globalfxalliance.io`.
+
+### www does not redirect to apex
+
+Both hostnames currently return `200` and serve the same content. `metadataBase` and
+the Open Graph URL both point at the apex, so crawlers get a clear canonical — but if
+you want `www` to 308-redirect to the apex, set it in
+[Settings → Domains](https://vercel.com/rbs-hub-s-projects/global-fx-alliance/settings/domains):
+open `www.globalfxalliance.io`, choose **Redirect to** `globalfxalliance.io`.
+
+### TLS
+
+Certificate issued automatically by Let's Encrypt for `CN=globalfxalliance.io`,
+valid Aug 31 2026 → Nov 29 2026, and renewed by Vercel.
 
 ## Analytics
 

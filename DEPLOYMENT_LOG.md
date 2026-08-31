@@ -4,7 +4,9 @@
 
 | | |
 | --- | --- |
-| **Production URL** | <https://global-fx-alliance.vercel.app> |
+| **Production URL** | <https://globalfxalliance.io> |
+| Also serving | <https://www.globalfxalliance.io> |
+| Vercel URL | <https://global-fx-alliance.vercel.app> |
 | Team alias | <https://global-fx-alliance-rbs-hub-s-projects.vercel.app> |
 | Immutable deployment | <https://global-fx-alliance-gsl2o9v0r-rbs-hub-s-projects.vercel.app> |
 | Vercel project | `rbs-hub-s-projects/global-fx-alliance` |
@@ -80,8 +82,48 @@ Checked against the live production URL, not localhost.
 
 1. **Connect GitHub** for automatic deploys on push — see `DEPLOY_INSTRUCTIONS.md`.
    Until then, deploys are manual via `npx vercel --prod --archive=tgz`.
-2. **Custom domain** `globalfxalliance.com` — see `VERCEL_DEPLOY_GUIDE.md`.
+2. ~~Custom domain~~ — **done**, `globalfxalliance.io` + `www` are live with TLS.
+   Two optional follow-ups in `VERCEL_DEPLOY_GUIDE.md`: adopt Vercel's newer DNS
+   targets, and decide whether `www` should redirect to the apex.
 3. **Analytics** — `npm i @vercel/analytics`, then mount `<Analytics />` in
    `src/app/layout.tsx`. Speed Insights is `@vercel/speed-insights`.
 4. **Environment variables** — none required today. The app has no backend and no
    secrets; all market data is generated locally from a seeded PRNG.
+
+---
+
+## Update — custom domain added (Aug 31, 2026)
+
+`globalfxalliance.io` and `www.globalfxalliance.io` attached to the project and
+verified. Registrar Namecheap; Namecheap nameservers kept, with records pointed at
+Vercel.
+
+| Check | Result |
+| --- | --- |
+| `dig globalfxalliance.io +short` | `76.76.21.21` — as expected |
+| `dig www.globalfxalliance.io +short` | `cname.vercel-dns.com` |
+| `vercel domains verify` (apex) | `ok: true`, `misconfigured: false`, `attached: true`, `verified: true` |
+| `vercel domains verify` (www) | `ok: true`, `misconfigured: false` |
+| `https://globalfxalliance.io/` | 200 |
+| `https://www.globalfxalliance.io/` | 200 |
+| `https://globalfxalliance.io/dashboard?tab=market-analysis&pair=XAU/USD` | 200 |
+| `https://globalfxalliance.io/logo.png` | 200 |
+| TLS certificate | Let's Encrypt, `CN=globalfxalliance.io`, valid to Nov 29 2026 |
+| All 17 dashboard tabs on `.io` | 17/17 unique panels, **0 console errors** |
+| Open Graph URL | `https://globalfxalliance.io` |
+| OG image | `https://globalfxalliance.io/logo.png` |
+| `global-fx-alliance.vercel.app` | still 200 |
+
+Code changes in this deploy:
+
+- `src/app/layout.tsx` — `SITE` constant `globalfxalliance.com` → `globalfxalliance.io`,
+  which drives `metadataBase`, the canonical and the Open Graph URL.
+- `src/components/dashboard/panels/MembershipPanel.tsx` — referral link moved to the
+  real domain so the app stops advertising a hostname the project does not own.
+
+Two open items, both optional and both documented in `VERCEL_DEPLOY_GUIDE.md`:
+
+1. Vercel reports `dns_change_recommended` — it now prefers `216.198.79.1` / `64.29.17.1`
+   for the apex. Flagged `optional-change`; the current record works.
+2. `www` serves `200` rather than redirecting to the apex. Canonical metadata already
+   points at the apex, so this is a preference, not a defect.

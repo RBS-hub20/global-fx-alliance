@@ -9,7 +9,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const SITE = "https://globalfxalliance.com";
+const SITE = "https://globalfxalliance.io";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

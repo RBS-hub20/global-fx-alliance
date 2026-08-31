@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --navy-950: #070a12;
+  --navy-900: #0a1931;
+  --blue: #2a7fff;
+  --green: #00d094;
+  --danger: #ff4d4d;
+  --hair: rgba(255, 255, 255, 0.08);
+}
+
+@layer base {
+  * {
+    border-color: var(--hair);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Keep anchored headings clear of the 72px sticky navbar. */
+  section[id],
+  [data-anchor] {
+    scroll-margin-top: 80px;
+  }
+
+  body {
+    @apply bg-navy-950 text-ink antialiased;
+    background-image: linear-gradient(180deg, #070a12 0%, #0a1931 100%);
+    background-attachment: fixed;
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  }
+
+  ::selection {
+    background: rgba(42, 127, 255, 0.3);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #070a12;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.09);
+    border-radius: 999px;
+    border: 2px solid #070a12;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(42, 127, 255, 0.45);
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgba(16, 22, 38, 0.8);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-soft {
+    background: rgba(16, 22, 38, 0.55);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .kicker {
+    @apply text-[12px] font-semibold uppercase tracking-kicker text-brand-blue;
+  }
+
+  .headline {
+    @apply font-bold tracking-headline text-white;
+  }
+
+  .hairline {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1) 20%,
+      rgba(255, 255, 255, 0.1) 80%,
+      transparent
+    );
+    height: 1px;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-blue px-6 py-3 text-sm font-semibold tracking-tight text-white transition-all duration-200 hover:bg-[#4A93FF] hover:shadow-glow active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-6 py-3 text-sm font-semibold tracking-tight text-ink backdrop-blur-xl transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07] active:scale-[0.98];
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-1 hover:border-brand-blue/30 hover:shadow-glow;
+  }
+
+  .num-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+}
+
+/*
+ * Ambient glow. Painted as a radial gradient that reaches full transparency at
+ * its own box edge rather than a blurred solid: a blurred circle spills past the
+ * element box, and every section here is overflow-hidden, so the spill was being
+ * chopped into a visible horizontal seam at the section boundary. Orbs must also
+ * sit fully inside their section for the same reason.
+ */
+.orb {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  background-image: radial-gradient(closest-side, var(--orb), transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

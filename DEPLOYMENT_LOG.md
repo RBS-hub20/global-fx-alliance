@@ -245,3 +245,76 @@ feed parsed real headlines, so both upstreams work rather than only the fallback
 | `npm run build` | passes; `/dashboard` 56.3 kB, first load 157 kB |
 | Bundle | lightweight-charts is dynamically imported (`ssr: false`), so first load grew ~8 kB, not ~45 kB |
 | All 17 tabs after the rewrite | 17/17 unique panels, **0 console errors** |
+
+---
+
+## Update — Launch Kit (Sep 1, 2026)
+
+### SEO
+
+- Full metadata in `src/app/layout.tsx`: canonical, keywords, authors, Open Graph
+  (1200×630) and a `summary_large_image` Twitter card.
+- `src/app/sitemap.ts` → **18 URLs** (root + all 17 dashboard tabs). Market surfaces
+  are `hourly`, account pages `0.4` priority.
+- `src/app/robots.ts` → allows all, disallows `/api/`, points at the sitemap.
+- `public/og-image.png` — 1200×630, **80 KB**, generated with Pillow: brand wordmark,
+  candlestick chart with EMA and dashed auto-S/R, terminal strip, domain badge and the
+  educational disclaimer.
+
+### Waitlist
+
+`lib/waitlist.ts` + `components/launch/Waitlist.tsx` (modal, dismissible top banner,
+inline footer form) + `app/api/waitlist/route.ts`.
+
+- Addresses are kept in `localStorage` on the visitor's own device. The edge route
+  validates and rate-limits but **deliberately stores nothing** — there is no database
+  and no processor, so taking custody of addresses would be the dishonest option. Only
+  a timestamped count is logged.
+- Rate limit: 5 requests / minute / IP in edge-isolate memory. Verified returning 429.
+- Hidden honeypot field; a filled one returns success and discards.
+
+### Social proof
+
+`components/launch/SocialProof.tsx`, driven by `lib/launch.ts`.
+
+The stat row reports **facts countable in the repo** — 17 tools, 8 instruments, 4 AI
+agents, 8 chapters, 24/7. The rotating activity strip is labelled *Sample activity* and
+the quotes carry a *Sample feedback · illustrative* badge plus an explicit footnote.
+
+> **Deliberate deviation.** The brief asked for "2,480+ verified members" in the meta
+> description, OG image and testimonials. That number is the demo profile's reputation
+> score; the site has no registered users. Publishing it as a factual claim — with
+> attributed testimonials — on a live financial site would be fabricated social proof.
+> Every figure now routes through `COMMUNITY_TARGET` / `PRODUCT_STATS` in
+> `lib/launch.ts` with a `verified` flag: set the real numbers and flip the flag when
+> the community exists.
+
+### Analytics goals
+
+`lib/analytics.ts` wraps `window.va` with full guarding (absent in dev and for anyone
+blocking analytics). Events wired: `waitlist_signup`, `terminal_query`, `pair_selected`,
+`chart_timeframe_changed`, `tab_changed`, `calculator_used`, `watchlist_add`,
+`chapter_joined`.
+
+### Bug found and fixed
+
+**The waitlist's styled validation error was dead code.** Both inputs are
+`type="email"`, so the browser's native constraint validation blocked submit and showed
+its own tooltip — `isValidEmail` never ran and the accessible inline error never
+rendered. Added `noValidate` to both forms so our validator owns the message. Verified:
+invalid input now shows *"That doesn't look like a valid email address."*
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `/sitemap.xml` | 200, **18 `<url>` entries** |
+| `/robots.txt` | 200, `Disallow: /api/` + sitemap line |
+| `/og-image.png` | 1200×630, 80 KB |
+| `POST /api/waitlist` valid | `{ok:true, stored:false}` |
+| `POST /api/waitlist` invalid | **400** with a message |
+| Honeypot filled | 200, silently discarded |
+| Rate limit | **429** after 5 in a minute |
+| Waitlist modal | invalid → styled alert · valid → success + persisted |
+| `npm run build` / `lint` / `tsc` | clean |
+| All 17 tabs | 17/17 unique, **0 console errors** |

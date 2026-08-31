@@ -8,6 +8,7 @@ import { TopHeader } from "./TopHeader";
 import { MobileNav } from "./MobileNav";
 import { PANELS } from "./panels";
 import { resolveTab } from "@/lib/tabs";
+import { EVENTS, trackEvent } from "@/lib/analytics";
 
 /**
  * The whole dashboard is one route driven by `?tab=`. Sidebar entries are real
@@ -37,6 +38,7 @@ export function DashboardApp() {
   useEffect(() => {
     setDrawer(false);
     window.scrollTo({ top: 0, behavior: "auto" });
+    trackEvent(EVENTS.tabChanged, { tab: tab.slug });
   }, [tab.slug]);
 
   const Panel = PANELS[tab.slug];

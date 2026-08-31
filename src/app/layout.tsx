@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { LogoDefs } from "@/components/brand/LogoMark";
+import { COPY } from "@/lib/launch";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,36 +17,58 @@ const SITE = "https://globalfxalliance.io";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "GLOBAL FX ALLIANCE — The Global Community for Forex Traders",
-    template: "%s | GLOBAL FX ALLIANCE",
+    default: "Global FX Alliance — The Global Community for Forex Traders",
+    template: "%s | Global FX Alliance",
   },
-  description:
-    "Join a growing global network of Forex traders, analysts, educators and market enthusiasts. Learn, connect, share insights and grow together.",
+  description: COPY.seoDescription,
   keywords: [
     "forex community",
-    "global fx alliance",
-    "trading education",
+    "forex traders",
+    "XAUUSD analysis",
+    "forex AI",
+    "trading terminal",
+    "forex education",
     "market intelligence",
-    "forex traders network",
+    "global fx alliance",
   ],
+  authors: [{ name: "Global FX Alliance", url: SITE }],
+  creator: "Global FX Alliance",
+  publisher: "Global FX Alliance",
+  applicationName: "Global FX Alliance",
+  category: "finance",
+  alternates: { canonical: SITE },
   openGraph: {
-    title: "GLOBAL FX ALLIANCE — The Global Community for Forex Traders",
-    description:
-      "Connect. Learn. Analyze. Grow. A global trading intelligence network for Forex traders.",
-    url: SITE,
-    siteName: "GLOBAL FX ALLIANCE",
-    images: [{ url: "/logo.png", width: 1024, height: 1024, alt: "GLOBAL FX ALLIANCE" }],
     type: "website",
+    locale: "en_US",
+    url: SITE,
+    siteName: "Global FX Alliance",
+    title: "Global FX Alliance — The Global Community for Forex Traders",
+    description: `Bloomberg-style AI terminal + TradingView-grade auto-drawn charts. ${COPY.ogSubtitle}. Educational only.`,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Global FX Alliance — AI terminal and pro auto-drawn charts",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "GLOBAL FX ALLIANCE",
-    description: "The Global Community for Forex Traders.",
-    images: ["/logo.png"],
+    site: "@gfxa",
+    creator: "@gfxa",
+    title: "Global FX Alliance — The Global Community for Forex Traders",
+    description: "Bloomberg-style AI terminal + pro auto-drawn charts. Educational only.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/logo.png", sizes: "1024x1024" }],
-    apple: "/logo.png",
+    apple: [{ url: "/logo.png", sizes: "180x180" }],
   },
 };
 

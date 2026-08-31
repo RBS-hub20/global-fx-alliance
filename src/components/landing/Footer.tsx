@@ -3,6 +3,7 @@ import { ExternalLink, Facebook, Send, Youtube, Instagram, Music2, type LucideIc
 import { Logo } from "@/components/brand/Logo";
 import { DISCLAIMER } from "@/lib/data";
 import { FOOTER_COLUMNS, SOCIAL_LINKS } from "@/lib/links";
+import { WaitlistInline } from "@/components/launch/Waitlist";
 
 const SOCIAL_ICONS: Record<string, LucideIcon> = {
   Facebook,
@@ -27,6 +28,13 @@ export function Footer() {
             <p className="mt-5 max-w-[34ch] text-[14px] leading-relaxed text-ink-muted">
               The Global Community for Forex Traders. Connect. Learn. Analyze. Grow.
             </p>
+
+            <div className="mt-6 max-w-[34ch]">
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white">
+                Founding member list
+              </p>
+              <WaitlistInline />
+            </div>
           </div>
 
           {FOOTER_COLUMNS.map((col) => (

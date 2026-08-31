@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/Primitives";
 import { PAIRS, getPair, sparkFor } from "@/lib/market";
 import { KEYS, usePersistentState } from "@/lib/storage";
+import { EVENTS, trackEvent } from "@/lib/analytics";
 import { tabHref } from "@/lib/tabs";
 
 const DEFAULT_WATCHLIST = ["EUR/USD", "XAU/USD", "GBP/USD"];
@@ -40,6 +41,7 @@ export function WatchlistPanel() {
 
   const add = (symbol: string) => {
     setList((prev) => (prev.includes(symbol) ? prev : [...prev, symbol]));
+    trackEvent(EVENTS.watchlistAdd, { pair: symbol });
     flash(`${symbol} added to watchlist`);
   };
 

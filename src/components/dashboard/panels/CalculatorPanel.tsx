@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Calculator } from "lucide-react";
+import { EVENTS, trackEvent } from "@/lib/analytics";
 import { Card, CardHead, Field, PanelHeader, Pills, Select, money } from "@/components/ui/Primitives";
 import { PAIRS, getPair, pipValuePerLot } from "@/lib/market";
 
@@ -15,6 +16,11 @@ const num = (v: string) => {
 
 export function CalculatorPanel() {
   const [mode, setMode] = useState<Mode>("Position Size");
+
+  // One event per calculator opened, rather than one per keystroke.
+  useEffect(() => {
+    trackEvent(EVENTS.calculatorUsed, { mode });
+  }, [mode]);
 
   return (
     <div className="space-y-6">

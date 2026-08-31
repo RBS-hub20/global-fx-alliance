@@ -5,6 +5,7 @@ import { ArrowLeft, Check, MapPin, MessageSquare, Users } from "lucide-react";
 import { WorldMap } from "@/components/ui/WorldMap";
 import { Card, CardHead, PanelHeader, Toast } from "@/components/ui/Primitives";
 import { KEYS, usePersistentState } from "@/lib/storage";
+import { EVENTS, trackEvent } from "@/lib/analytics";
 
 interface ChapterRow {
   code: string;
@@ -62,6 +63,7 @@ export function ChaptersPanel() {
   const toggle = (code: string, name: string) => {
     const isJoining = !joined.includes(code);
     setJoined((prev) => (isJoining ? [...prev, code] : prev.filter((c) => c !== code)));
+    if (isJoining) trackEvent(EVENTS.chapterJoined, { chapter: code });
     setToast(isJoining ? `Joined the ${name} chapter` : `Left the ${name} chapter`);
     setTimeout(() => setToast(null), 1800);
   };

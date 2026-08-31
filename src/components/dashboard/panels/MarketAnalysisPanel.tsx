@@ -6,6 +6,7 @@ import { ChevronRight, Loader2, Minus, MoveUpRight, Ruler, Terminal } from "luci
 import { Card, CardHead, Change, PanelHeader, Pills, Skeleton } from "@/components/ui/Primitives";
 import { TickerTape } from "@/components/dashboard/TickerTape";
 import { generateDrawings, type Drawings } from "@/lib/autoDraw";
+import { EVENTS, trackEvent } from "@/lib/analytics";
 import type { Candle } from "@/lib/indicators";
 import { PAIRS, RANGES, candlesFor, getPair, type Range } from "@/lib/market";
 import {
@@ -112,6 +113,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
 
       setRunning(true);
       const target = detectPair(query, symbol);
+      trackEvent(EVENTS.terminalQuery, { query: query.slice(0, 80), pair: target });
       if (target !== symbol) setSymbol(target);
 
       try {
@@ -164,7 +166,14 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
       <PanelHeader title="Market Analysis" />
       <TickerTape />
 
-      <Pills options={PAIRS.map((x) => ({ value: x.symbol, label: x.symbol }))} value={symbol} onChange={setSymbol} />
+      <Pills
+        options={PAIRS.map((x) => ({ value: x.symbol, label: x.symbol }))}
+        value={symbol}
+        onChange={(v) => {
+          setSymbol(v);
+          trackEvent(EVENTS.pairSelected, { pair: v, from: "pills" });
+        }}
+      />
 
       <Card>
         <header className="flex flex-col gap-4 border-b border-white/[0.08] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
@@ -194,7 +203,10 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
                 type="button"
                 role="tab"
                 aria-selected={r === range}
-                onClick={() => setRange(r)}
+                onClick={() => {
+                  setRange(r);
+                  trackEvent(EVENTS.timeframeChanged, { range: r, pair: symbol });
+                }}
                 className={`relative shrink-0 px-3 py-1.5 text-[12.5px] font-semibold transition-colors duration-200 ${
                   r === range ? "text-white" : "text-ink-muted hover:text-ink"
                 }`}

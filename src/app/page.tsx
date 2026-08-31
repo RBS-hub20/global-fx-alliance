@@ -1,4 +1,6 @@
 import { Navbar } from "@/components/landing/Navbar";
+import { WaitlistBanner } from "@/components/launch/Waitlist";
+import { SocialProof } from "@/components/launch/SocialProof";
 import { Hero } from "@/components/landing/Hero";
 import { WhySection } from "@/components/landing/WhySection";
 import { MarketIntelligencePreview } from "@/components/landing/MarketIntelligencePreview";
@@ -15,9 +17,11 @@ import { Footer } from "@/components/landing/Footer";
 export default function LandingPage() {
   return (
     <>
+      <WaitlistBanner />
       <Navbar />
       <main>
         <Hero />
+        <SocialProof />
         <WhySection />
         <MarketIntelligencePreview />
         <GlobalCommunity />

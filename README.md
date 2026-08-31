@@ -1,9 +1,11 @@
 # GLOBAL FX ALLIANCE
 
-**Live: <https://globalfxalliance.io>** &nbsp;·&nbsp; also at
+🚀 **Launch ready** &nbsp;·&nbsp; **Live: <https://globalfxalliance.io>** &nbsp;·&nbsp; also at
 <https://www.globalfxalliance.io> and <https://global-fx-alliance.vercel.app>
 
 The Global Community for Forex Traders — marketing site + member dashboard.
+
+![Open Graph preview](public/og-image.png)
 
 **Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react ·
 TradingView Lightweight Charts. Dark theme only.

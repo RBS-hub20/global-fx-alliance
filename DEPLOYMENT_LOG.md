@@ -127,3 +127,51 @@ Two open items, both optional and both documented in `VERCEL_DEPLOY_GUIDE.md`:
    for the apex. Flagged `optional-change`; the current record works.
 2. `www` serves `200` rather than redirecting to the apex. Canonical metadata already
    points at the apex, so this is a preference, not a defect.
+
+---
+
+## Update — Analytics + GitHub readiness (Aug 31, 2026)
+
+Commit `931fb9e` · deployment `global-fx-alliance-crsc1l48t` · target `production` · Ready
+
+### Vercel Analytics + Speed Insights
+
+`@vercel/analytics@2.0.1` and `@vercel/speed-insights@2.0.0` installed and mounted at
+the end of the root layout body in `src/app/layout.tsx`.
+
+| Check | Result |
+| --- | --- |
+| `npm run lint` | ✔ no warnings or errors |
+| `npx tsc --noEmit` | clean |
+| `npm run build` | passes — `/` and `/dashboard` both still **static** |
+| Bundle impact | shared JS 87.1 kB → 87.2 kB; `/dashboard` 148 → 149 kB |
+| `/_vercel/insights/script.js` | 200, loaded in the browser |
+| `/_vercel/speed-insights/script.js` | 200 |
+| `window.va` / `window.si` | both `function` — both components mounted |
+| **Pageview beacon** | **`/_vercel/insights/view` fired** — Analytics is collecting |
+| All 17 tabs after analytics | 17/17 unique panels, **0 console errors** |
+| `https://globalfxalliance.io/` · `/dashboard` · `www` | 200 · 200 · 200 |
+
+Neither script appears in the server-rendered HTML — both packages inject client-side
+from an effect, so checking view-source will not show them. Verify in the browser
+(`window.va`) or in the network panel instead.
+
+Speed Insights is mounted and its queue is live; web-vitals beacons flush later in the
+page lifecycle, so no vitals request was observed during this check. Data should appear
+in the dashboard once real traffic accumulates.
+
+Dashboards:
+- Analytics — <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/analytics>
+- Speed Insights — <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/speed-insights>
+
+### GitHub
+
+Still **not pushed**. The local repo is clean on `main` with 4 commits and no remote.
+Setup documented in `GITHUB_SETUP.md`; the `gh` CLI is installed and authenticated on
+this machine as `RBS-hub20` with `repo` scope, so the repo can be created and pushed in
+one command once visibility is chosen.
+
+Pre-push safety check: `.gitignore` covers `node_modules`, `.next`, `out`, `.env*`,
+`.vercel`, `.DS_Store`, `next-env.d.ts`. No `.env*` or `.vercel` paths are tracked, and
+a scan of tracked files for OIDC tokens, private keys and `ghp_`/`sk-` patterns found
+nothing.

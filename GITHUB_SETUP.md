@@ -1,15 +1,21 @@
 # GitHub Setup for Global FX Alliance
 
-Live: <https://globalfxalliance.io> · Vercel project: `rbs-hub-s-projects/global-fx-alliance`
+**Repo: <https://github.com/RBS-hub20/global-fx-alliance>** (public) ✅
+**Live: <https://globalfxalliance.io>** · Vercel project: `rbs-hub-s-projects/global-fx-alliance`
 
-The local repo is initialised on `main` with all work committed. Only the remote is
-missing. These are **sequential steps**, not alternatives — do 1, then 2, then 3.
+All three steps below are **done**. Auto-deploy is active: every push to `main` builds
+and promotes to production, and every pull request gets its own preview URL.
 
-> **Automated path:** the `gh` CLI is installed and authenticated on this machine as
-> `RBS-hub20`, so steps 1 and 2 collapse into one command — see
-> [Automated alternative](#automated-alternative) at the bottom.
+```bash
+git push            # -> production deploy on globalfxalliance.io
+```
 
-## Step 1 — Create the repo on GitHub
+The rest of this file is kept as the runbook for rebuilding the link, or for setting
+the same thing up on another machine or project.
+
+---
+
+## Step 1 — Create the repo on GitHub ✅ done
 
 1. Go to <https://github.com/new>
 2. **Repository name:** `global-fx-alliance`
@@ -21,7 +27,7 @@ missing. These are **sequential steps**, not alternatives — do 1, then 2, then
 6. Click **Create repository**
 7. Copy the HTTPS URL: `https://github.com/YOUR_USERNAME/global-fx-alliance.git`
 
-## Step 2 — Push this folder
+## Step 2 — Push this folder ✅ done
 
 Run in this directory, replacing `YOUR_USERNAME`:
 
@@ -37,14 +43,22 @@ If the push is rejected as non-fast-forward, the repo was created with an initia
 commit. Either delete and recreate it empty, or run
 `git pull --rebase origin main` first.
 
-## Step 3 — Attach it to the **existing** Vercel project
+## Step 3 — Attach it to the **existing** Vercel project ✅ done
 
 > **Important:** do *not* use <https://vercel.com/new> to import the repo. That creates
 > a **second** Vercel project on a different URL, and `globalfxalliance.io` would stay
 > attached to the current one. Connect the repo to the project that is already live.
 
+Done from the CLI, which avoids the import trap entirely:
+
+```bash
+npx vercel git connect --yes
+```
+
+Or in the dashboard:
+
 1. Open <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/settings/git>
-2. **Connect Git Repository** → select `YOUR_USERNAME/global-fx-alliance`
+2. **Connect Git Repository** → select `RBS-hub20/global-fx-alliance`
 3. Production branch: `main`
 
 From then on every push to `main` deploys to production automatically, and every pull

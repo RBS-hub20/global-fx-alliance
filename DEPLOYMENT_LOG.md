@@ -14,7 +14,7 @@
 | Inspector | <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/CNVDMRpwk7uBA1zuGvudreCEszbB> |
 | Deployed | Aug 31, 2026 · 21:53 GST |
 | Status | ● Ready · target `production` |
-| GitHub repo | **Not connected yet** — see `GITHUB_SETUP.md` |
+| GitHub repo | <https://github.com/RBS-hub20/global-fx-alliance> (public) |
 
 Deployed from the CLI with `vercel --prod --yes --archive=tgz`.
 
@@ -164,12 +164,18 @@ Dashboards:
 - Analytics — <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/analytics>
 - Speed Insights — <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/speed-insights>
 
-### GitHub
+### GitHub — pushed and connected ✅
 
-Still **not pushed**. The local repo is clean on `main` with 4 commits and no remote.
-Setup documented in `GITHUB_SETUP.md`; the `gh` CLI is installed and authenticated on
-this machine as `RBS-hub20` with `repo` scope, so the repo can be created and pushed in
-one command once visibility is chosen.
+<https://github.com/RBS-hub20/global-fx-alliance> · public · default branch `main`
+
+An empty public repo of that name already existed on the account, so it was reused
+rather than recreated — it had zero commits, so nothing was overwritten. All 5 commits
+pushed; local and `origin/main` are in sync.
+
+`vercel git connect --yes` linked it to the existing project, so **auto-deploy is
+active**: a push to `main` builds and promotes to production, and pull requests get
+preview URLs. This deliberately avoided importing through `vercel.com/new`, which would
+have created a second project and left `globalfxalliance.io` on the old one.
 
 Pre-push safety check: `.gitignore` covers `node_modules`, `.next`, `out`, `.env*`,
 `.vercel`, `.DS_Store`, `next-env.d.ts`. No `.env*` or `.vercel` paths are tracked, and

@@ -1,5 +1,8 @@
 # GLOBAL FX ALLIANCE
 
+**Live: <https://globalfxalliance.io>** &nbsp;·&nbsp; also at
+<https://www.globalfxalliance.io> and <https://global-fx-alliance.vercel.app>
+
 The Global Community for Forex Traders — marketing site + member dashboard.
 
 **Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react. Dark theme only, no runtime chart dependency.

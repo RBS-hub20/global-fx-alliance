@@ -14,7 +14,7 @@
 | Inspector | <https://vercel.com/rbs-hub-s-projects/global-fx-alliance/CNVDMRpwk7uBA1zuGvudreCEszbB> |
 | Deployed | Aug 31, 2026 · 21:53 GST |
 | Status | ● Ready · target `production` |
-| GitHub repo | **Not connected yet** — see `DEPLOY_INSTRUCTIONS.md` |
+| GitHub repo | **Not connected yet** — see `GITHUB_SETUP.md` |
 
 Deployed from the CLI with `vercel --prod --yes --archive=tgz`.
 
@@ -80,7 +80,7 @@ Checked against the live production URL, not localhost.
 
 ## Next steps
 
-1. **Connect GitHub** for automatic deploys on push — see `DEPLOY_INSTRUCTIONS.md`.
+1. **Connect GitHub** for automatic deploys on push — see `GITHUB_SETUP.md`.
    Until then, deploys are manual via `npx vercel --prod --archive=tgz`.
 2. ~~Custom domain~~ — **done**, `globalfxalliance.io` + `www` are live with TLS.
    Two optional follow-ups in `VERCEL_DEPLOY_GUIDE.md`: adopt Vercel's newer DNS

@@ -401,3 +401,77 @@ window for short series. EUR/USD went 0 → 2 pivots, BTC 0 → 3, USD/JPY 0 →
 Intraday FX bar counts are time-of-day dependent: at 03:25 UTC the session is ~4.5
 hours old, so `1D` returns ~55 bars rather than a full ~288. That is correct behaviour,
 not a truncation.
+
+---
+
+## Update — Real News Wire (Sep 1, 2026)
+
+Mock headlines replaced with real RSS from forex desks, parsed in-process at the edge.
+
+### Sources, checked before mapping
+
+| Source | Result | Note |
+| --- | --- | --- |
+| ForexLive | 200 · 25 items | primary · RFC-822 dates · has descriptions |
+| Investing.com `news_25` | 200 · 10 items | **no `<description>`** · zone-less dates |
+| FXStreet | 200 · 30 items | third leg · RFC-822 · has descriptions |
+| ForexFactory | **403** | blocked to server requests — dropped, FXStreet used instead |
+
+The brief listed ForexFactory as the third fallback; it refuses server-side requests, so
+FXStreet replaced it.
+
+### Parsing (`src/lib/newsParser.ts`)
+
+Regex-based, no XML dependency — the feeds are a flat `<item>` list and a parser library
+would cost more bundle than the whole feature. Pure functions, unit-tested without network.
+
+**The timezone trap.** Feeds disagree on date format. Investing.com emits
+`2026-09-01 06:30:04` with no zone, which JavaScript parses as *local* time:
+
+```
+new Date("2026-09-01 06:30:04")  ->  2026-09-01T02:30:04Z   // on a GMT+4 host
+```
+
+Four hours off, and it would differ again between a dev machine and Vercel's UTC edge —
+every "2h ago" silently wrong. Zone-less timestamps are now pinned to UTC explicitly.
+
+### Classification
+
+Sentiment, symbols, category and importance are keyword-derived and labelled
+**auto-detected** in the UI, because headline sentiment is genuinely unreliable.
+
+Two accuracy fixes came out of reading real output:
+
+1. **Classify on the headline, not the body.** Wire descriptions are market round-ups
+   that name every asset in passing — an ETH story whose blurb mentioned bullion landed
+   in "Gold", and *"retail sales slump"* read neutral because the body carried an
+   offsetting bullish word. The body is now only consulted when the headline yields
+   nothing. "Slump" now reads bearish.
+2. **Ticker forms have no word boundary.** `\b(ether|ethereum)\b` never matches
+   `ETHUSD`, so those stories fell through to the body. Added `(btc|eth|xrp|sol|ada|doge)usd`.
+
+### Honest badging
+
+| State | Response | UI |
+| --- | --- | --- |
+| Wire reachable | `source: "live"`, `isReal: true`, `badge: "LIVE"`, provider named | green pulsing **LIVE WIRE · ForexLive**, titles link to the real article |
+| All sources fail | `source: "sample"`, `isReal: false`, `badge: "SAMPLE"`, `reason`, `tried[]`, footnote | amber **SAMPLE MODE** bar, `url: null` so no fake links |
+
+Cache: `s-maxage=120` live (news does not need 60s), `s-maxage=60` sample so it recovers sooner.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Parser unit tests | **38 + 7 pass** — dates, entities, CDATA, missing description, guid fallback, classifiers, truncation |
+| `/api/news/live` | `source: live`, provider **ForexLive**, 10 stories, real URLs, real ISO timestamps |
+| `?pair=XAU/USD` | filters to gold stories, `filteredBy` echoed |
+| **Fault injection** — all 3 sources pointed at an unreachable host | **HTTP 200**, `SAMPLE`, `reason: all_rss_failed`, `tried: [ForexLive, Investing.com, FXStreet]`, `url: null`. Restored and re-verified live. |
+| `lint` / `tsc` / `build` | clean · `/dashboard` 55.6 kB, first load **157 kB** (down 1 kB, no new deps) |
+| All 17 tabs | 17/17 unique, **0 console errors** |
+
+### Consistency fix
+
+Top Movers read the static `PAIRS` table, so it showed gold at its seeded **2,648.90**
+on the same screen the chart was drawing real Yahoo candles near **4,485**. It now reads
+the same `/api/market/live` endpoint as the chart and carries its own Real/Modeled badge.

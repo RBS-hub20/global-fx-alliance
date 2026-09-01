@@ -546,3 +546,78 @@ The brief asked for copy contrasting this with what "broker community only tells
 Vantage, VT Markets and PUPRIME are partners, so the landing section states what the
 tools do — *find out **why** you lose* and *find out **where** to look* — without a swipe
 at anyone. Same message, no partner risk.
+
+---
+
+## Update — Enhanced AI Tools (Sep 1, 2026)
+
+The assistant now reads context instead of answering in the abstract: the reader's own
+imported statement, the pattern scanner, live quotes, the wire, and the session clock.
+
+### New modules
+
+| File | Role |
+| --- | --- |
+| `src/lib/journalStore.ts` | Read-only access to the imported statement (browser-only). Falls back to the sample and flags `isReal: false`. |
+| `src/lib/sessionTime.ts` | Session windows in UTC, rendered in Dubai time. Pure over an injected `now`, so it is testable without mocking the clock. |
+| `src/lib/aiCommands.ts` | Ten slash commands, each grounded in something the app can show. |
+
+### Commands
+
+`/help` · `/explain last loss` · `/my best hour` · `/my worst pair` · `/my revenge` ·
+`/why <symbol> moved` · `/pattern radar <symbol>` · `/community sentiment <symbol>` ·
+`/session` · `/clear`
+
+Journal commands answer instantly from local storage; market commands fetch real quotes,
+patterns and headlines in parallel. Every answer carries a **Sources** line naming what it
+read — e.g. *Yahoo GC=F real · ForexLive live · Pattern Radar (6) · Sample journal (54)*.
+
+`/explain last loss` is the one that earns the feature: it links the trade to the hour it
+was taken, the pair's record, hold-time behaviour and any revenge sizing, then shows where
+price is now and what the radar sees.
+
+### Session awareness
+
+Header greeting plus per-session chips showing **your own** win rate from the statement,
+refreshed each minute against Dubai time. Quick prompts are generated from real context —
+`/my worst pair` appears only when a losing instrument exists, `/pattern radar XAU/USD`
+only when a high-confidence pattern is live.
+
+### Memory
+
+Conversation persists to local storage across reloads. **Clear** wipes both the view and
+the stored history.
+
+### Honesty decisions
+
+The brief asked the assistant to state *"62% bullish from 12 verified traders"*, *"2
+verified traders watching this level"*, and a *"stop hunt map: 200 stops last week"*. None
+of that data exists — there are no members and no order-flow feed. Inventing it inside an
+assistant that also reports genuinely real numbers would make the real ones untrustworthy.
+
+`/community sentiment` therefore returns the figures **explicitly labelled as illustrative**,
+states plainly that there is no member-positioning feed yet, and points the reader at
+`/pattern radar` for something measured. The trader-count and stop-hunt claims were dropped.
+
+### Bugs found while building
+
+1. **Negative P/L lost its minus sign.** `${n >= 0 ? "+" : ""}$${Math.abs(n)}` rendered
+   −725.73 as `$725.73` — a losing book displayed as a winning one. Replaced with a signed
+   formatter.
+2. **`/session` contradicted itself** — *"strongest London (33%), weakest Tokyo (50%)"*.
+   Sessions are ranked by net P/L but the sentence quoted win rate. It now reports net
+   alongside win rate and notes that the two do not always agree.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `/my best hour` | "Best 10:00 — 100% over 3 trades, $40.13. Worst 04:00 — 20% over 5, −$272.80" |
+| `/explain last loss` | GBP/USD 0.5 lots, −$203.95, held 180m — correctly flagged as the worst hour and linked to the pair's 20% record |
+| `/why gold moved` | real `GC=F` 4434.30 −1.05%, real ForexLive headline, high-confidence Bearish Engulfing |
+| `/session` | live board with personal win rate per session |
+| Generate Summary | session + FX + metals + crypto + radar + wire + book, four action buttons, sources line |
+| Generate Idea | real `EURUSD=X` 157 bars, radar pattern, **per-pair** record (46% over 13 trades), risk example |
+| Memory | survives reload; Clear wipes both |
+| All tabs | **19/19 unique, 0 console errors** |
+| `lint` / `tsc` / `build` | clean · `/dashboard` 73.1 kB, first load **174 kB**, no new dependencies |

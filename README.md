@@ -20,6 +20,9 @@ see your worst hour, worst pair, session win rates, hold-time asymmetry and reve
 flags. Parsed entirely in the browser; the statement never leaves the device.
 **Pattern Radar** — a continuous scan for engulfing candles, RSI divergence, S/R tests and
 fair-value-gap retests over the same real candles the chart draws.
+**AI Tools** — a market assistant that reads your imported statement, the pattern scanner,
+live quotes and the session clock, with slash commands like `/explain last loss`,
+`/my best hour` and `/why gold moved`. Conversation persists locally.
 
 **GFXA Terminal** — the Market Analysis tab is a Bloomberg-style workstation: a pro
 candlestick chart that draws its own support, resistance, trendline and fair-value

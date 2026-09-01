@@ -41,7 +41,16 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
 
   // Seeded candles render immediately; the live fetch replaces them if it lands.
   const [ohlc, setOhlc] = useState<Candle[]>(() => candlesFor(initial, "1D"));
-  const [live, setLive] = useState<{ price: number; changePct: number; source: string } | null>(null);
+  const [live, setLive] = useState<{
+    price: number;
+    changePct: number;
+    source: string;
+    isReal: boolean;
+    symbolUsed: string | null;
+    hasVolume: boolean;
+    bars: number;
+    reason?: string;
+  } | null>(null);
   const [loadingChart, setLoadingChart] = useState(false);
 
   const [input, setInput] = useState("");
@@ -57,6 +66,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
   useEffect(() => {
     let alive = true;
     setLoadingChart(true);
+    setLive(null);
 
     (async () => {
       // Instant seeded fallback so the chart never waits on the network.
@@ -71,7 +81,16 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
         const j = await res.json();
         if (!alive || !Array.isArray(j.ohlc) || !j.ohlc.length) return;
         setOhlc(j.ohlc);
-        setLive({ price: j.price, changePct: j.changePct, source: j.source });
+        setLive({
+          price: j.price,
+          changePct: j.changePct,
+          source: j.source,
+          isReal: !!j.isReal,
+          symbolUsed: j.symbolUsed ?? null,
+          hasVolume: j.hasVolume !== false,
+          bars: j.bars ?? j.ohlc.length,
+          reason: j.reason,
+        });
       } catch {
         // Seeded data is already on screen; nothing to recover.
       } finally {
@@ -186,14 +205,19 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
             <Change pct={changePct} />
             <span
               className={`rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.12em] ${
-                live?.source === "live"
+                live?.isReal
                   ? "bg-brand-green/[0.13] text-brand-green"
-                  : "bg-white/[0.06] text-ink-muted"
+                  : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
               }`}
             >
-              {live?.source === "live" ? "Live quote" : "Modeled"}
+              {live?.isReal ? `Real · ${live.symbolUsed}` : "Modeled"}
             </span>
-            {loadingChart ? <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" /> : null}
+            {loadingChart ? (
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-muted">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Fetching real candles…
+              </span>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-1" role="tablist" aria-label="Chart range">
@@ -248,8 +272,11 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
             pair={symbol}
             ohlc={ohlc}
             drawings={drawings}
-            decimals={p.decimals}
+            decimals={live?.isReal ? (live.symbolUsed === "GC=F" ? 2 : p.decimals) : p.decimals}
             height={460}
+            isReal={live?.isReal}
+            symbolUsed={live?.symbolUsed}
+            hasVolume={live?.hasVolume}
           />
         </div>
       </Card>
@@ -368,8 +395,21 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
       </section>
 
       <p className="text-[11.5px] leading-relaxed text-ink-muted/70">
-        Candles are modeled from a seeded engine and re-based onto the live quote when one is
-        available; they are not real historical prints. {DISCLAIMER}
+        {live?.isReal ? (
+          <>
+            Source: Yahoo Finance · <span className="num-mono">{live.symbolUsed}</span> ·{" "}
+            <span className="num-mono">{live.bars}</span> real historical OHLC bars
+            {live.hasVolume ? "" : " · spot FX reports no volume, so the histogram is hidden"}.{" "}
+            {DISCLAIMER}
+          </>
+        ) : (
+          <>
+            Real candles unavailable
+            {live?.reason === "yahoo_rate_limited" ? " (upstream rate-limited)" : ""} — showing
+            candles modeled from a seeded engine, re-based onto a live quote where one exists. These
+            are not real historical prints. {DISCLAIMER}
+          </>
+        )}
       </p>
     </div>
   );

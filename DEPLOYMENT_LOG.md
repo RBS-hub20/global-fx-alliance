@@ -318,3 +318,86 @@ invalid input now shows *"That doesn't look like a valid email address."*
 | Waitlist modal | invalid → styled alert · valid → success + persisted |
 | `npm run build` / `lint` / `tsc` | clean |
 | All 17 tabs | 17/17 unique, **0 console errors** |
+
+---
+
+## Update — B2.5 Real Candles (Sep 1, 2026)
+
+Modelled OHLC replaced with real historical candles from Yahoo Finance's public
+chart endpoint. Free, no API key, server-side only (no CORS).
+
+### Symbol mapping (`src/lib/yahooSymbols.ts`)
+
+Candidates are ordered and tried in sequence — every one below was checked against
+the live endpoint first rather than assumed:
+
+| Pair | Yahoo | Note |
+| --- | --- | --- |
+| EUR/USD · GBP/USD · AUD/USD · NZD/USD · USD/CHF · EUR/GBP | `EURUSD=X` … | 200 |
+| USD/JPY | `JPY=X` → `USDJPY=X` | both work, `JPY=X` canonical |
+| XAU/USD | `GC=F` → `XAUUSD=X` | **`XAUUSD=X` is 404** — futures is the working proxy |
+| BTC/USD | `BTC-USD` | 200 (added to `PAIRS`) |
+| DXY · SPX | `DX-Y.NYB` · `^GSPC` | API-reachable, not in the pair list |
+
+### Range → interval, measured not guessed
+
+| Timeframe | Yahoo | Bars (EUR/USD · GC=F) |
+| --- | --- | --- |
+| 1D | `1d` / `5m` | 54 · 269 |
+| 1W | `5d` / `30m` | 199 · 184 |
+| 1M | `1mo` / `1h` | 400 (capped) · 400 |
+| 3M | `3mo` / `1d` | 67 · 65 |
+| 1Y | `1y` / `1d` | 260 · 252 |
+
+Several plausible combinations return too few bars to compute a 200-period average,
+so the pairing was chosen by measuring. Payload capped at 400 bars, most recent kept.
+
+### Fallback chain
+
+1. **Yahoo** — real candles. Authoritative, so its price is *not* sanity-gated against
+   the seeded reference (real gold is ~4,490; the modelled figure is 2,648.90).
+2. **exchangerate-api** — spot only, re-bases modelled candles. Still gated at 35%,
+   because resolving the wrong instrument there is a real failure mode.
+3. **Seeded engine** — always available.
+
+`isReal`, `source`, `symbolUsed` and `reason` are returned on every response, and the
+chart badge reads **REAL · GC=F** (green) or **MODELED** (amber) directly from them.
+
+### Two findings worth recording
+
+**1. The brief's `User-Agent: Mozilla` header made things worse.** Measured over 5
+rounds against the live endpoint:
+
+| Headers sent | Success |
+| --- | --- |
+| none | **5/5** |
+| `User-Agent` | 4/5 |
+| `User-Agent` + `Accept` + `Accept-Language` | 3/5 |
+
+Yahoo throttles requests that look like browser scraping harder than plain
+programmatic ones. All custom headers were removed; failures now report
+`reason: "yahoo_rate_limited"` when the upstream answers 429.
+
+**2. Real data exposed a latent bug in pivot detection.** `detectSwings` disqualified a
+pivot on *any* tie in the lookback window. Real FX prints repeat the same 5m high and
+low constantly, so EUR/USD produced **zero** pivots — no support, no resistance, no
+trendline. Gold hid it, because futures prices are more granular. Fixed by resolving
+ties per side (strict dominance left, equality tolerated right) and shrinking the
+window for short series. EUR/USD went 0 → 2 pivots, BTC 0 → 3, USD/JPY 0 → 3, gold 13.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Parser unit tests | **20/20** — nulls, NaN, inverted extremes, dedupe, sort, 400-bar cap, all failure modes |
+| Indicator + auto-draw suites | still pass after the pivot fix |
+| `/api/market/live?pair=EUR/USD` | `source: yahoo`, `EURUSD=X`, 55 real bars |
+| `/api/market/live?pair=XAU/USD` | `source: yahoo`, **`GC=F`**, 269 bars, price 4,486.70 |
+| `/api/market/live?pair=BTC/USD` | `source: yahoo`, `BTC-USD`, 43 bars |
+| All five timeframes | real data, 1Y spanning Aug 2025 → Sep 2026 |
+| FX volume | `hasVolume: false` → histogram and legend key hidden, footnote explains why |
+| `lint` / `tsc` / `build` | clean · `/dashboard` 56.6 kB, first load **158 kB** |
+
+Intraday FX bar counts are time-of-day dependent: at 03:25 UTC the session is ~4.5
+hours old, so `1D` returns ~55 bars rather than a full ~288. That is correct behaviour,
+not a truncation.

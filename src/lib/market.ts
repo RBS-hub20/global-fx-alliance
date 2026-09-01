@@ -87,6 +87,13 @@ export const PAIRS: Pair[] = [
     seed: 97,
   },
   {
+    symbol: "BTC/USD", name: "Bitcoin / US Dollar", base: "BTC", quote: "USD",
+    price: 78467.43, change: 1243.10, changePct: 1.61, decimals: 2, pipSize: 1,
+    high24: 79210.0, low24: 76980.0, spread: 12,
+    rsi: 59, support: 76500, resistance: 80200, ma20: 77120, ma50: 74880, ma200: 68440,
+    seed: 127,
+  },
+  {
     symbol: "EUR/GBP", name: "Euro / British Pound", base: "EUR", quote: "GBP",
     price: 0.8684, change: 0.0047, changePct: 0.55, decimals: 4, pipSize: 0.0001,
     high24: 0.8698, low24: 0.8629, spread: 1.0,

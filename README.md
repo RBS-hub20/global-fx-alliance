@@ -10,6 +10,9 @@ The Global Community for Forex Traders — marketing site + member dashboard.
 **Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react ·
 TradingView Lightweight Charts. Dark theme only.
 
+**Real OHLC via Yahoo Finance** (free, no API key) with a modelled fallback that is
+always labelled — the chart never silently passes synthetic candles off as history.
+
 **GFXA Terminal** — the Market Analysis tab is a Bloomberg-style workstation: a pro
 candlestick chart that draws its own support, resistance, trendline and fair-value
 gaps, and a four-agent analyst (technical · fundamental · flow · risk) that reads the

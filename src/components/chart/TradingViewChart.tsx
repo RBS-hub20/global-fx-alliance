@@ -14,6 +14,12 @@ interface Props {
   drawings: Drawings;
   decimals?: number;
   height?: number;
+  /** True when the candles are real historical prints rather than modelled. */
+  isReal?: boolean;
+  /** Upstream ticker the data came from, e.g. "GC=F". */
+  symbolUsed?: string | null;
+  /** FX is OTC and reports no volume; the histogram is hidden when false. */
+  hasVolume?: boolean;
 }
 
 const C = {
@@ -40,7 +46,10 @@ const C = {
  * so the boxes are positioned from the chart's own coordinate conversions and
  * repositioned whenever the visible range moves.
  */
-export function TradingViewChart({ pair, ohlc, drawings, decimals = 4, height = 460 }: Props) {
+export function TradingViewChart({
+  pair, ohlc, drawings, decimals = 4, height = 460,
+  isReal = false, symbolUsed = null, hasVolume = true,
+}: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -120,12 +129,16 @@ export function TradingViewChart({ pair, ohlc, drawings, decimals = 4, height = 
       }))
     );
 
+    // Spot FX reports no volume, so an all-zero histogram would just be a
+    // misleading flat band along the axis.
     volRef.current?.setData(
-      ohlc.map((b) => ({
-        time: b.time as UTCTimestamp,
-        value: b.volume,
-        color: b.close >= b.open ? "rgba(0,208,148,0.30)" : "rgba(255,77,77,0.30)",
-      }))
+      hasVolume
+        ? ohlc.map((b) => ({
+            time: b.time as UTCTimestamp,
+            value: b.volume,
+            color: b.close >= b.open ? "rgba(0,208,148,0.30)" : "rgba(255,77,77,0.30)",
+          }))
+        : []
     );
 
     const s = drawings.indicators?.series;
@@ -172,7 +185,7 @@ export function TradingViewChart({ pair, ohlc, drawings, decimals = 4, height = 
     chart.timeScale().fitContent();
     queueMicrotask(positionBoxes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pair, ohlc, drawings, decimals]);
+  }, [pair, ohlc, drawings, decimals, hasVolume]);
 
   /** Convert each FVG into pixel coordinates for its overlay box. */
   function positionBoxes() {
@@ -218,6 +231,19 @@ export function TradingViewChart({ pair, ohlc, drawings, decimals = 4, height = 
         />
       ))}
 
+      {/* Data provenance */}
+      <div className="pointer-events-none absolute right-16 top-2 z-10">
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] num-mono ${
+            isReal
+              ? "border-brand-green/40 bg-brand-green/[0.12] text-brand-green"
+              : "border-[#fbbf24]/40 bg-[#fbbf24]/[0.12] text-[#fbbf24]"
+          }`}
+        >
+          {isReal ? `Real · ${symbolUsed ?? "upstream"}` : "Modeled"}
+        </span>
+      </div>
+
       {/* Legend */}
       <div className="pointer-events-none absolute left-3 top-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] num-mono">
         <Key color={C.ema20} label="EMA20" />
@@ -226,6 +252,7 @@ export function TradingViewChart({ pair, ohlc, drawings, decimals = 4, height = 
         <Key color={C.support} label="Support" />
         <Key color={C.resistance} label="Resistance" />
         <Key color={C.trend} label="Trend" />
+        {hasVolume ? <Key color="rgba(42,127,255,0.6)" label="Volume" /> : null}
       </div>
     </div>
   );

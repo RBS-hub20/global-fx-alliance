@@ -192,17 +192,35 @@ export interface Swing {
  */
 export function detectSwings(candles: Candle[], lookback = 5): Swing[] {
   const out: Swing[] = [];
-  if (candles.length < lookback * 2 + 1) return out;
+  const n = candles.length;
+  if (n < 5) return out;
 
-  for (let i = lookback; i < candles.length - lookback; i++) {
+  // Shrink the window for short series, otherwise a 55-bar intraday chart has
+  // too few interior bars to confirm anything.
+  const lb = Math.max(2, Math.min(lookback, Math.floor(n / 12)));
+  if (n < lb * 2 + 1) return out;
+
+  for (let i = lb; i < n - lb; i++) {
     let isHigh = true;
     let isLow = true;
-    for (let j = i - lookback; j <= i + lookback; j++) {
+
+    for (let j = i - lb; j <= i + lb; j++) {
       if (j === i) continue;
-      if (candles[j].high >= candles[i].high) isHigh = false;
-      if (candles[j].low <= candles[i].low) isLow = false;
+      // Ties are resolved by side: strict dominance is required to the left,
+      // equality tolerated to the right. Real FX prints repeat the same high or
+      // low constantly at 5m resolution, and rejecting every tie on both sides
+      // finds almost no pivots at all — the auto-drawn levels silently vanish.
+      const left = j < i;
+      if (left) {
+        if (candles[j].high >= candles[i].high) isHigh = false;
+        if (candles[j].low <= candles[i].low) isLow = false;
+      } else {
+        if (candles[j].high > candles[i].high) isHigh = false;
+        if (candles[j].low < candles[i].low) isLow = false;
+      }
       if (!isHigh && !isLow) break;
     }
+
     if (isHigh) out.push({ index: i, time: candles[i].time, price: candles[i].high, type: "high" });
     if (isLow) out.push({ index: i, time: candles[i].time, price: candles[i].low, type: "low" });
   }

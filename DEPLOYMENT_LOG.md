@@ -475,3 +475,74 @@ Cache: `s-maxage=120` live (news does not need 60s), `s-maxage=60` sample so it 
 Top Movers read the static `PAIRS` table, so it showed gold at its seeded **2,648.90**
 on the same screen the chart was drawing real Yahoo candles near **4,485**. It now reads
 the same `/api/market/live` endpoint as the chart and carries its own Real/Modeled badge.
+
+---
+
+## Update — Value Tools: Journal Analytics + Pattern Radar (Sep 1, 2026)
+
+Two features aimed at what a broker community does not give a trader: a read of their
+own behaviour, and a scan of where to look. Tabs go 17 → **19**.
+
+### Cross-Broker Journal Analytics (`?tab=journal-analytics`)
+
+`src/lib/journalParser.ts` — pure, dependency-free CSV parsing and analytics.
+
+- **Columns matched by alias, not position.** MT4 and MT5 exports differ per broker and
+  build. MT5 also repeats `Time` and `Price` for open and close, so duplicate headers are
+  resolved positionally.
+- **Delimiter auto-detected** (comma, semicolon, tab) and quoted fields handled.
+- **Symbols normalised** — `EURUSD`, `XAUUSD.m`, `EURUSD#` all become `EUR/USD`.
+- **Broker inferred** from the comment column or filename (Vantage, VT Markets, PUPRIME).
+- **Timestamps read as UTC**, since MT4/MT5 emit broker-server local time with no zone.
+- Balance/credit rows are skipped rather than counted as trades.
+
+Computed: win rate, profit factor, expectancy, max drawdown from a real equity curve,
+per-pair / per-hour / per-day / per-session buckets, hold-time asymmetry, plus two
+behavioural detectors — **revenge sizing** (three consecutive losers then a >50% size
+jump) and **overtrading** (>10 closes in one clock hour). Rankings ignore buckets with
+fewer than three trades so a single lucky trade cannot become "your best pair".
+
+**Privacy: the panel does not call the API.** It runs the same parser in the browser, so
+a trading history never leaves the device; it is saved only to local storage. The
+endpoint exists for programmatic use and is stateless — `stored: false`.
+
+### Pattern Radar (`?tab=pattern-radar`)
+
+`src/lib/patternDetector.ts` over real Yahoo candles, reusing the chart's own
+`detectSwings` / `findSupportResistance`, so anything flagged is visible on the chart.
+
+Detects bullish/bearish engulfing, support bounce, resistance rejection, bullish/bearish
+RSI divergence and fair-value-gap retests. **Confidence is only raised to `high` when two
+independent conditions agree** — an engulfing candle at a level price has already
+respected, or a level with three or more touches. A pattern on its own stays `medium`.
+
+Surfaces in three places: a mini widget under Market Pulse on the dashboard, the full
+tab, and deep links straight to the chart with the pair preselected.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Journal parser tests | **32/32** — MT4 comma, MT5 semicolon with duplicated headers, `.m` suffixes, balance rows, quoted fields, empty/garbage input, revenge detection |
+| Sample statement | 54 trades, 37% WR, PF 0.37, revenge caught (0.1 → 0.5 lots), losers held 3.6× longer |
+| `POST /api/journal/parse` multipart | 200, `REAL`, 54 trades, `stored: false` |
+| `POST` garbage | **422** with export instructions, not a 500 |
+| `GET /api/journal/parse` | `SAMPLE` badge |
+| `/api/patterns/live` | `source: yahoo`, **12–14 real patterns** across 6 instruments |
+| All tabs | **19/19 unique, 0 console errors** |
+| `lint` / `tsc` / `build` | clean · `/dashboard` 66.1 kB, first load **167 kB**, no new dependencies |
+
+### Two bugs found during the build
+
+1. **Raw float precision leaked into pattern prices** — `4420.39990234375` rather than
+   `4420.40`. Rounded to each instrument's own precision.
+2. **Duplicate React keys.** A bullish and a bearish fair-value-gap retest can occur on
+   the same symbol at the same timestamp, so `symbol-type-time` collided. Direction and a
+   sequence number are now part of the id.
+
+### On the value framing
+
+The brief asked for copy contrasting this with what "broker community only tells you".
+Vantage, VT Markets and PUPRIME are partners, so the landing section states what the
+tools do — *find out **why** you lose* and *find out **where** to look* — without a swipe
+at anyone. Same message, no partner risk.

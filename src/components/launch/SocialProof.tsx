@@ -79,6 +79,37 @@ export function SocialProof() {
           </p>
         </div>
 
+        {/* What the tools actually do — stated as capability, not as a swipe at
+            anyone else's community. The brokers are partners. */}
+        <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-2xl glass p-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-blue">
+              Journal Analytics
+            </p>
+            <h3 className="mt-3 text-[19px] font-bold tracking-tight text-white">
+              Find out <span className="text-brand-green">why</span> you lose
+            </h3>
+            <p className="mt-3 text-[13.5px] leading-relaxed text-ink-muted">
+              Upload an MT4 or MT5 statement from any broker and get your worst hour, your worst
+              pair, session-by-session win rate, how much longer you hold losers, and a flag when
+              size jumped after a losing streak. Parsed in your browser — nothing is uploaded.
+            </p>
+          </div>
+          <div className="rounded-2xl glass p-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-blue">
+              Pattern Radar
+            </p>
+            <h3 className="mt-3 text-[19px] font-bold tracking-tight text-white">
+              Find out <span className="text-brand-green">where</span> to look
+            </h3>
+            <p className="mt-3 text-[13.5px] leading-relaxed text-ink-muted">
+              A continuous scan across the majors and metals on real price data — engulfing
+              candles, RSI divergence, support and resistance tests, fair-value-gap retests — with
+              confidence raised only when two independent conditions agree.
+            </p>
+          </div>
+        </div>
+
         {/* Verified product facts */}
         <div className="mt-14 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-3 lg:grid-cols-5">
           {PRODUCT_STATS.map((s) => (

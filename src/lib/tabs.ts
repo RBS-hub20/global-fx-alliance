@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Globe2, LineChart, Newspaper, Star, Users, MessagesSquare,
+  LayoutDashboard, Globe2, LineChart, Newspaper, Star, Radar, ClipboardList, Users, MessagesSquare,
   GraduationCap, Trophy, MapPin, Calculator, CalendarDays, NotebookPen, Sparkles,
   UserRound, BadgeCheck, Settings, type LucideIcon,
 } from "lucide-react";
@@ -24,7 +24,9 @@ export const TABS: TabDef[] = [
   { slug: "dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Main", blurb: "Here's what's happening across the global market." },
   { slug: "market-overview", label: "Market Overview", icon: Globe2, group: "Main", blurb: "Every instrument the Alliance tracks, at a glance." },
   { slug: "market-analysis", label: "Market Analysis", icon: LineChart, group: "Main", blurb: "Structure, momentum and levels, pair by pair." },
+  { slug: "pattern-radar", label: "Pattern Radar", icon: Radar, group: "Main", blurb: "Setups the scanner found on real price data." },
   { slug: "market-news", label: "Market News", icon: Newspaper, group: "Main", blurb: "Headlines that are actually moving price." },
+  { slug: "journal-analytics", label: "Journal Analytics", icon: ClipboardList, group: "Main", blurb: "Upload your broker statement and see why you lose." },
   { slug: "watchlist", label: "Watchlist", icon: Star, group: "Main", blurb: "The pairs you're tracking, saved to this device." },
 
   { slug: "community", label: "Community", icon: Users, group: "Community", blurb: "What traders around the world are posting right now." },

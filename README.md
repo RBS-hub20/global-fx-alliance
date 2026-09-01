@@ -15,6 +15,12 @@ FXStreet RSS** — both free, no API key, and both with a labelled fallback. The
 never passes synthetic candles off as history, and the wire never dresses curated copy
 up as live headlines.
 
+**Cross-Broker Journal Analytics** — upload an MT4/MT5 statement from any broker and
+see your worst hour, worst pair, session win rates, hold-time asymmetry and revenge-sizing
+flags. Parsed entirely in the browser; the statement never leaves the device.
+**Pattern Radar** — a continuous scan for engulfing candles, RSI divergence, S/R tests and
+fair-value-gap retests over the same real candles the chart draws.
+
 **GFXA Terminal** — the Market Analysis tab is a Bloomberg-style workstation: a pro
 candlestick chart that draws its own support, resistance, trendline and fair-value
 gaps, and a four-agent analyst (technical · fundamental · flow · risk) that reads the

@@ -2,6 +2,7 @@
 
 import { TickerRow } from "@/components/dashboard/TickerRow";
 import { MarketPulse } from "@/components/dashboard/MarketPulse";
+import { PatternRadarWidget } from "@/components/dashboard/PatternRadar";
 import { MarketIntelligence } from "@/components/dashboard/MarketIntelligence";
 import { EconomicCalendar } from "@/components/dashboard/EconomicCalendar";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
@@ -18,6 +19,7 @@ export function OverviewPanel() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
           <MarketPulse />
+          <PatternRadarWidget />
           <MarketIntelligence />
           <EconomicCalendar />
         </div>

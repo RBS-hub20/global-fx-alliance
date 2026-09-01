@@ -3,6 +3,8 @@ import { OverviewPanel } from "./OverviewPanel";
 import { MarketOverviewPanel } from "./MarketOverviewPanel";
 import { MarketAnalysisPanel } from "./MarketAnalysisPanel";
 import { MarketNewsPanel } from "./MarketNewsPanel";
+import { JournalAnalyticsPanel } from "./JournalAnalyticsPanel";
+import { PatternRadarPanel } from "@/components/dashboard/PatternRadar";
 import { WatchlistPanel } from "./WatchlistPanel";
 import { CommunityPanel } from "./CommunityPanel";
 import { DiscussionsPanel } from "./DiscussionsPanel";
@@ -28,6 +30,8 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   "market-overview": MarketOverviewPanel,
   "market-analysis": MarketAnalysisPanel,
   "market-news": MarketNewsPanel,
+  "pattern-radar": PatternRadarPanel,
+  "journal-analytics": JournalAnalyticsPanel,
   watchlist: WatchlistPanel,
   community: CommunityPanel,
   discussions: DiscussionsPanel,

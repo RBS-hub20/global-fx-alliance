@@ -25,6 +25,8 @@ export const EVENTS = {
   calculatorUsed: "calculator_used",
   watchlistAdd: "watchlist_add",
   chapterJoined: "chapter_joined",
+  journalImported: "journal_imported",
+  patternViewed: "pattern_viewed",
 } as const;
 
 export function trackEvent(name: string, props?: Props): void {

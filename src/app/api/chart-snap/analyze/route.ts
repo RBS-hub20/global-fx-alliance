@@ -32,6 +32,10 @@ export async function POST(request: Request) {
   let symbol = "EUR/USD";
   let timeframe: Timeframe = "1H";
   let screenshotPrice: number | null = null;
+  /** Live mode: the plan is anchored to the feed, not to a typed-in number. */
+  let useLive = false;
+  /** What the reader's chart was showing when they pressed analyze. */
+  let chartPrice: number | null = null;
   let imageBytes = 0;
   let imageName: string | null = null;
   const profile: TradeProfile = { ...DEFAULT_PROFILE };
@@ -56,6 +60,11 @@ export async function POST(request: Request) {
 
     const rawTf = (form.get("timeframe") as string | null)?.toUpperCase().trim();
     if (isTimeframe(rawTf)) timeframe = rawTf;
+
+    useLive = form.get("useLive") === "1";
+    const cp = form.get("chartPrice");
+    const cpNum = typeof cp === "string" ? Number.parseFloat(cp) : NaN;
+    if (Number.isFinite(cpNum) && cpNum > 0) chartPrice = cpNum;
 
     const sp = form.get("screenshotPrice");
     const spNum = typeof sp === "string" ? Number.parseFloat(sp) : NaN;
@@ -86,9 +95,12 @@ export async function POST(request: Request) {
    * built around a modelled anchor without saying so.
    */
   const livePrice = isReal ? feed.price : null;
-  const price = livePrice ?? screenshotPrice ?? ohlc[ohlc.length - 1].close;
+  // Live mode never falls back to a typed price: the whole point is that the
+  // plan is anchored to the same feed the chart drew, with no upload in between
+  // for price to move during.
+  const price = livePrice ?? (useLive ? ohlc[ohlc.length - 1].close : screenshotPrice ?? ohlc[ohlc.length - 1].close);
   const anchor: "live" | "screenshot" | "modeled" =
-    livePrice !== null ? "live" : screenshotPrice !== null ? "screenshot" : "modeled";
+    livePrice !== null ? "live" : !useLive && screenshotPrice !== null ? "screenshot" : "modeled";
 
   /*
    * When neither a live quote nor a screenshot price exists, the modelled series
@@ -224,8 +236,30 @@ export async function POST(request: Request) {
        * reader's screenshot to that would report their chart as ~40% stale when
        * it is our own fallback that is off.
        */
+      liveChart: useLive,
+      chartPrice,
+      // In live mode the comparison is between what the chart showed and what the
+      // plan was anchored to — the drift the reader actually cares about.
+      drift:
+        useLive && chartPrice !== null && livePrice !== null
+          ? {
+              chartPrice,
+              anchorPrice: Number(price.toFixed(pair.decimals)),
+              diff: Number((price - chartPrice).toFixed(pair.decimals)),
+              diffPct: Number((((price - chartPrice) / chartPrice) * 100).toFixed(3)),
+            }
+          : null,
+
       validation:
-        screenshotPrice === null
+        useLive
+          ? {
+              compared: isReal,
+              realPrice: Number(price.toFixed(pair.decimals)),
+              note: isReal
+                ? `Anchored to the live ${feed.source} quote the chart above is drawn from — no upload, so nothing moved in between.`
+                : "Live pricing is unavailable right now, so this plan rests on modelled candles. Treat it as illustrative.",
+            }
+          : screenshotPrice === null
           ? { compared: false, note: "No price entered from the screenshot, so nothing to compare." }
           : !isReal
           ? {

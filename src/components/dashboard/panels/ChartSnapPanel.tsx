@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Camera, Check, Copy, Info, Loader2, RotateCcw, Share2, Upload, X,
+  Camera, Check, Copy, Info, Loader2, RotateCcw, Share2, Upload, X, Zap,
 } from "lucide-react";
 import { Card, CardHead, Field, PanelHeader, Pills, Select, Skeleton, Toast } from "@/components/ui/Primitives";
 import { DEFAULT_PROFILE, planToText, type Style, type TradePlan, type TradeProfile } from "@/lib/chartSnap";
 import { PAIRS } from "@/lib/market";
-import { TIMEFRAMES } from "@/lib/timeframes";
+import { TIMEFRAMES, TIMEFRAME_SPEC, type Timeframe } from "@/lib/timeframes";
+import dynamic from "next/dynamic";
+import { generateDrawings, type Drawings } from "@/lib/autoDraw";
+import { tradingViewUrl } from "@/lib/tradingViewEmbed";
+import type { Candle } from "@/lib/indicators";
 import { getBestWorst, getPairStats } from "@/lib/journalStore";
 import { buildJournalAggregate } from "@/lib/journalAggregate";
 import { getCurrentSessionInfo, humanMinutes } from "@/lib/sessionTime";
@@ -59,9 +63,30 @@ interface Analysis {
     pattern: { type: string; direction: string; confidence: string } | null;
     observations: string[]; cautions: string[];
   } | null;
+  liveChart?: boolean;
+  chartPrice?: number | null;
+  drift?: { chartPrice: number; anchorPrice: number; diff: number; diffPct: number } | null;
   tradePlan: TradePlan | null;
   sources: string[];
   disclaimer: string;
+}
+
+const TradingViewChart = dynamic(
+  () => import("@/components/chart/TradingViewChart").then((m) => m.TradingViewChart),
+  { ssr: false, loading: () => <Skeleton className="h-[380px] w-full" /> }
+);
+
+interface LiveFeed {
+  symbol: string; timeframe: string; decimals: number;
+  price: number; changePct: number; candles: Candle[]; bars: number;
+  isReal: boolean; source: string; symbolUsed: string | null;
+  aggregated: boolean; stale: boolean; lastBarTime: number | null;
+}
+
+/** Dubai wall-clock, matching the session strip elsewhere in the dashboard. */
+function dubaiClock(d = new Date()): string {
+  const t = new Date(d.getTime() + (4 * 60 + d.getTimezoneOffset()) * 60_000);
+  return t.toTimeString().slice(0, 8);
 }
 
 export function ChartSnapPanel() {
@@ -78,6 +103,14 @@ export function ChartSnapPanel() {
   const [error, setError] = useState<string | null>(null);
   const [explainer, setExplainer] = useState<string | null>(null);
   const [explaining, setExplaining] = useState(false);
+
+  // Live mode is the default: no upload means no window for price to move in.
+  const [mode, setMode] = useState<"live" | "screenshot">("live");
+  const [live, setLive] = useState<LiveFeed | null>(null);
+  const [liveErr, setLiveErr] = useState(false);
+  const [autoOnClose, setAutoOnClose] = useState(false);
+  const [snappedAt, setSnappedAt] = useState<string | null>(null);
+  const lastBarRef = useRef<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -111,10 +144,17 @@ export function ChartSnapPanel() {
     const ticker = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
       const fd = new FormData();
-      if (file) fd.append("file", file);
+      if (mode === "screenshot" && file) fd.append("file", file);
       fd.append("symbol", symbol);
       fd.append("timeframe", timeframe);
-      if (screenshotPrice.trim()) fd.append("screenshotPrice", screenshotPrice.trim());
+      if (mode === "live") {
+        fd.append("useLive", "1");
+        // What the chart was showing, so the response can report any drift
+        // between it and the price the plan actually anchored to.
+        if (live?.price) fd.append("chartPrice", String(live.price));
+      } else if (screenshotPrice.trim()) {
+        fd.append("screenshotPrice", screenshotPrice.trim());
+      }
       if (profile.useProfile) {
         fd.append("mode", profile.mode);
         fd.append("balance", String(profile.balance));
@@ -130,6 +170,7 @@ export function ChartSnapPanel() {
       }
       const json = (await res.json()) as Analysis;
       setResult(json);
+      setSnappedAt(dubaiClock());
       trackEvent(EVENTS.chartSnap, { pair: symbol, timeframe });
 
       // The computed read is already on screen; the prose arrives after. Failure
@@ -156,7 +197,50 @@ export function ChartSnapPanel() {
       clearInterval(ticker);
       setBusy(false);
     }
-  }, [file, symbol, timeframe, screenshotPrice, profile]);
+  }, [file, symbol, timeframe, screenshotPrice, profile, mode, live?.price]);
+
+  /*
+   * Live feed poll.
+   *
+   * 20s, not the 1s the brief asked for. Twelve Data's free tier allows eight
+   * requests a minute and the provider caches for sixty seconds, so polling
+   * faster returns the same numbers while spending the budget that keeps gold on
+   * the spot feed — and a fallthrough to Yahoo swaps spot for GC=F futures, about
+   * forty points away. Twenty seconds is as live as the data actually is.
+   */
+  useEffect(() => {
+    if (mode !== "live") return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/chart-snap/live?pair=${encodeURIComponent(symbol)}&tf=${timeframe}`);
+        if (!r.ok) { if (alive) setLiveErr(true); return; }
+        const j = (await r.json()) as LiveFeed;
+        if (!alive) return;
+        setLiveErr(false);
+        setLive(j);
+
+        // A new bar means the previous one closed.
+        if (lastBarRef.current !== null && j.lastBarTime !== null && j.lastBarTime !== lastBarRef.current) {
+          if (autoOnClose && !busy) void analyse();
+        }
+        lastBarRef.current = j.lastBarTime;
+      } catch {
+        if (alive) setLiveErr(true);
+      }
+    };
+    void load();
+    const id = setInterval(load, 20_000);
+    return () => { alive = false; clearInterval(id); };
+    // `analyse` is intentionally omitted: including it re-subscribes on every
+    // profile keystroke, which would restart the poll and re-spend the budget.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, symbol, timeframe, autoOnClose, busy]);
+
+  const drawings: Drawings | null = useMemo(
+    () => (live && live.candles.length ? generateDrawings(live.candles) : null),
+    [live]
+  );
 
   const reset = () => {
     if (preview) URL.revokeObjectURL(preview);
@@ -177,20 +261,60 @@ export function ChartSnapPanel() {
         }
       />
 
-      {/* How it works — stated before anything else */}
+      <div className="flex flex-wrap gap-2">
+        {([
+          ["live", "Live chart", "Anchored to the feed — nothing to upload"],
+          ["screenshot", "Screenshot reference", "Name what you are looking at"],
+        ] as const).map(([m, label, hint]) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => { setMode(m); setResult(null); setError(null); }}
+            aria-pressed={mode === m}
+            className={`flex flex-col items-start rounded-xl border px-4 py-2.5 text-left transition-all duration-200 ${
+              mode === m
+                ? "border-brand-blue/50 bg-brand-blue/[0.12] text-white"
+                : "border-white/[0.08] bg-white/[0.02] text-ink-muted hover:border-brand-blue/30 hover:text-ink"
+            }`}
+          >
+            <span className="text-[12.5px] font-semibold">{label}</span>
+            <span className="text-[11px] opacity-75">{hint}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-start gap-3 rounded-xl border border-brand-blue/25 bg-brand-blue/[0.05] px-4 py-3.5">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-blue" strokeWidth={2} />
         <p className="text-[12.5px] leading-relaxed text-ink">
-          <span className="font-semibold text-white">This does not read your image.</span> You name the
-          instrument and timeframe — which you can see on your own chart — and the plan is built from
-          live candles, the real pattern scanner and your own statement. Nothing invented from pixels,
-          and your screenshot is never stored or uploaded anywhere.
+          {mode === "live" ? (
+            <>
+              <span className="font-semibold text-white">The chart below is the analysis.</span> Both are
+              drawn from the same live candles, so the price you see is the price the plan is anchored
+              to — there is no upload for it to drift during.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-white">This does not read your image.</span> You name the
+              instrument and timeframe — which you can see on your own chart — and the plan is built from
+              live candles, the real pattern scanner and your own statement. Nothing invented from pixels,
+              and your screenshot is never stored or uploaded anywhere.
+            </>
+          )}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.3fr_1fr]">
         {/* -------------------------------------------------------- upload */}
         <div className="space-y-5">
+          {mode === "live" ? (
+            <LiveChartCard
+              symbol={symbol}
+              timeframe={timeframe as Timeframe}
+              live={live}
+              liveErr={liveErr}
+              drawings={drawings}
+            />
+          ) : (
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
@@ -241,6 +365,7 @@ export function ChartSnapPanel() {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) takeFile(f); e.target.value = ""; }}
             />
           </div>
+          )}
 
           <Card>
             <CardHead title="What am I looking at?" />
@@ -251,25 +376,80 @@ export function ChartSnapPanel() {
               <Select label="Timeframe" value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
                 {TIMEFRAMES.map((r) => <option key={r} value={r}>{r}</option>)}
               </Select>
-              <Field
-                label="Price on screenshot"
-                placeholder="e.g. 4304.02"
-                inputMode="decimal"
-                value={screenshotPrice}
-                onChange={(e) => setScreenshotPrice(e.target.value)}
-              />
+              {mode === "live" ? (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">Live price</span>
+                  <div className="flex h-[38px] items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3">
+                    {live ? (
+                      <>
+                        <span className="num-mono text-[13px] text-white">{live.price.toFixed(live.decimals)}</span>
+                        <span className={`num-mono text-[11.5px] ${live.changePct >= 0 ? "text-brand-green" : "text-brand-danger"}`}>
+                          {live.changePct >= 0 ? "+" : ""}{live.changePct.toFixed(2)}%
+                        </span>
+                      </>
+                    ) : (
+                      <Skeleton className="h-3.5 w-24" />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <Field
+                  label="Price on screenshot"
+                  placeholder="e.g. 4304.02"
+                  inputMode="decimal"
+                  value={screenshotPrice}
+                  onChange={(e) => setScreenshotPrice(e.target.value)}
+                />
+              )}
             </div>
             <p className="px-5 pb-5 text-[11.5px] leading-relaxed text-ink-muted/80">
-              Worth filling in. It lets the analyzer check whether your chart is still current, and
-              if the live feed is rate-limited it becomes the anchor for the plan — without it, no
-              plan is generated rather than one built on a price that may have drifted.
+              {mode === "live"
+                ? "Taken from the same feed the chart is drawn from, refreshed every 20 seconds — which is as often as the provider itself updates."
+                : "Worth filling in. It lets the analyzer check whether your chart is still current, and if the live feed is rate-limited it becomes the anchor for the plan — without it, no plan is generated rather than one built on a price that may have drifted."}
             </p>
           </Card>
 
-          <button type="button" onClick={analyse} disabled={busy} className="btn-primary w-full !py-3 disabled:opacity-50">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" strokeWidth={2.2} />}
-            {busy ? "Analyzing…" : "Analyze chart"}
+          <button
+            type="button"
+            onClick={analyse}
+            disabled={busy || (mode === "live" && !live)}
+            className="btn-primary w-full !py-3 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" strokeWidth={2.2} />}
+            {busy ? "Analyzing…" : mode === "live" ? "Analyze this live chart" : "Analyze chart"}
           </button>
+
+          {mode === "live" ? (
+            <label className="flex items-start gap-2.5 text-[12px] leading-relaxed text-ink-muted">
+              <input
+                type="checkbox"
+                checked={autoOnClose}
+                onChange={(e) => setAutoOnClose(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#2A7FFF]"
+              />
+              <span>
+                Re-analyze when a {timeframe} candle closes. Refreshes the structure only — the written
+                explainer stays on the button, so this does not run up model usage in the background.
+              </span>
+            </label>
+          ) : null}
+
+          {result?.drift && snappedAt ? (
+            <p className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-[11.5px] leading-relaxed text-ink-muted">
+              Snap taken {snappedAt} Dubai at{" "}
+              <span className="num-mono text-ink">{result.drift.anchorPrice.toFixed(result.decimals)}</span>.
+              {live ? (
+                <>
+                  {" "}Live now{" "}
+                  <span className="num-mono text-ink">{live.price.toFixed(result.decimals)}</span> — moved{" "}
+                  <span className={`num-mono ${Math.abs(live.price - result.drift.anchorPrice) > 0 ? "text-[#fbbf24]" : "text-brand-green"}`}>
+                    {(live.price - result.drift.anchorPrice >= 0 ? "+" : "") + (live.price - result.drift.anchorPrice).toFixed(result.decimals)}
+                  </span>{" "}
+                  since.
+                </>
+              ) : null}
+            </p>
+          ) : null}
 
           {busy ? (
             <Card className="p-5">
@@ -310,6 +490,82 @@ export function ChartSnapPanel() {
 
       <Toast message={toast} />
     </div>
+  );
+}
+
+/**
+ * The live chart, drawn from the analyzer's own candles with its auto-levels on
+ * top — so what is on screen and what the plan prices against cannot diverge.
+ */
+function LiveChartCard({
+  symbol, timeframe, live, liveErr, drawings,
+}: {
+  symbol: string;
+  timeframe: Timeframe;
+  live: LiveFeed | null;
+  liveErr: boolean;
+  drawings: Drawings | null;
+}) {
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-5 py-3.5">
+        <span className="font-mono text-[12px] font-bold text-white">{symbol}</span>
+        <span className="rounded border border-white/[0.12] px-1.5 py-0.5 font-mono text-[10px] text-ink-muted">{timeframe}</span>
+        {live ? (
+          <>
+            <span className="num-mono text-[15px] font-semibold text-white">{live.price.toFixed(live.decimals)}</span>
+            <span className={`num-mono text-[12px] ${live.changePct >= 0 ? "text-brand-green" : "text-brand-danger"}`}>
+              {live.changePct >= 0 ? "+" : ""}{live.changePct.toFixed(2)}%
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${
+                live.isReal ? "bg-brand-green/[0.13] text-brand-green" : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
+              }`}
+            >
+              {live.isReal ? `Live · ${live.source}` : "Modelled"}
+            </span>
+            {live.symbolUsed && live.symbolUsed !== symbol ? (
+              <span className="text-[10.5px] text-ink-muted">via {live.symbolUsed}</span>
+            ) : null}
+            {live.aggregated ? <span className="text-[10.5px] text-ink-muted">rolled up from 1H</span> : null}
+          </>
+        ) : liveErr ? (
+          <span className="text-[12px] text-brand-danger">Live feed unavailable — retrying</span>
+        ) : (
+          <Skeleton className="h-4 w-40" />
+        )}
+        <a
+          href={tradingViewUrl(symbol, timeframe)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto text-[11px] text-ink-muted underline-offset-2 transition-colors hover:text-brand-blue hover:underline"
+        >
+          Cross-check on TradingView
+        </a>
+      </div>
+
+      {live && live.candles.length && drawings ? (
+        <TradingViewChart
+          pair={symbol}
+          ohlc={live.candles}
+          drawings={drawings}
+          decimals={live.decimals}
+          height={380}
+          isReal={live.isReal}
+          symbolUsed={live.symbolUsed}
+          hasVolume={live.candles.some((c) => (c.volume ?? 0) > 0)}
+        />
+      ) : (
+        <div className="flex h-[380px] items-center justify-center">
+          <Skeleton className="h-[340px] w-[92%]" />
+        </div>
+      )}
+
+      <p className="px-5 py-3.5 text-[11.5px] leading-relaxed text-ink-muted/80">
+        {live?.bars ?? 0} {timeframe} candles, levels drawn automatically from the swings price has
+        actually respected. Refreshed every 20 seconds.
+      </p>
+    </Card>
   );
 }
 

@@ -1014,3 +1014,59 @@ worst hour or weakest instrument when they apply. In the UI it is its own
 
 Level prices are also rounded to instrument decimals; the cluster average was
 reaching the UI as `4375.700032552083`.
+
+---
+
+## Chart Snap live mode — the chart is the analysis (2026-09-02)
+
+Screenshot flow kept as a second tab; **Live chart** is now the default. In live
+mode there is no upload, so there is no window for price to move between what the
+reader saw and what the plan was priced against.
+
+### Why the chart is ours, not TradingView's widget
+
+The brief offered the TradingView Advanced Chart widget (`s3.tradingview.com/tv.js`)
+as option A. It is not what shipped, because it would draw a **different feed**
+from the one the analyzer prices against: TradingView's gold is a broker spot feed,
+ours is Twelve Data spot or Yahoo's `GC=F` futures, and those sit ~40 points apart —
+the exact discrepancy the gold work two turns ago existed to fix. A chart showing
+4342.88 beside a plan anchored at 4305.75 recreates the confusion.
+
+So the chart is the existing `TradingViewChart` (lightweight-charts) fed by
+`GET /api/chart-snap/live`, the same provider chain the analyzer uses. Chart price
+and plan anchor are the same number by construction. `lib/tradingViewEmbed.ts`
+still maps symbols and intervals, used for an outbound **Cross-check on TradingView**
+link so the reader can verify against a third party.
+
+### Polling is 20s, not 1s
+
+The brief asked for a one-second ticker. Twelve Data's free tier allows **eight
+requests a minute** and the provider caches for sixty seconds, so a faster poll
+returns identical numbers while burning the budget that keeps gold on the spot
+feed — and a fallthrough to Yahoo swaps spot for futures. Twenty seconds is as
+live as the data actually is.
+
+### Drift is shown, not hidden
+
+After a snap: *"Snap taken 17:03:32 Dubai at 4380.50. Live now 4380.60 — moved
++0.10 since."* The response carries a `drift` block comparing what the chart
+displayed against what the plan anchored to.
+
+### Auto-analyze on candle close
+
+Opt-in, off by default, fired from a change in the newest bar's open time. It
+refreshes the **computed** structure only — the written explainer stays on the
+button, so leaving it on does not run up model usage in the background.
+
+### Verified
+
+| Check | Result |
+| --- | --- |
+| Live mode, 5M/15M/1H/4H/D1 | `anchor=live`, real candles, stop scaling 34.9p → 1147p |
+| Drift reporting | chart 4380.50 vs anchor 4380.30 → `-0.20` |
+| Screenshot mode | unchanged — 4304.02 vs 4380.30 → `STALE SCREENSHOT`, 1.772% |
+| Bundle | **186 kB** first load (+2 kB) |
+
+The chart is loaded with `next/dynamic`, matching Market Analysis. Importing it
+statically first put lightweight-charts in the main bundle and pushed `/dashboard`
+from 184 kB to 238 kB; code-split it costs 2 kB and loads only in live mode.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { Card, CardHead, PanelHeader, Skeleton, Toast } from "@/components/ui/Primitives";
 import type { VerificationRequest } from "@/lib/ibStore";
 
@@ -13,18 +13,27 @@ import type { VerificationRequest } from "@/lib/ibStore";
  * compares it against `GFXA_ADMIN_TOKEN`; nothing here decides access on its own.
  */
 
+type Row = Omit<VerificationRequest, "proofPath"> & { proofUrl: string | null };
+
 interface Payload {
   ok: boolean;
   durable: boolean;
-  requests: VerificationRequest[];
+  backend: string;
+  requests: Row[];
   stats: {
     pending: number; verified: number; rejected: number;
-    byBroker: Record<string, number>; depositsUsd: number;
+    byBroker: Record<string, { pending: number; verified: number; rejected: number }>;
+    depositsUsd: number;
   };
 }
 
 export function AdminPanel() {
-  const [token, setToken] = useState("");
+  // sessionStorage, not localStorage and never the URL: this app runs Vercel
+  // Analytics, which records page URLs, so a token in a query string would be
+  // copied into analytics, history and referrers. Session scope clears with the tab.
+  const [token, setToken] = useState(() => {
+    try { return window.sessionStorage.getItem("gfxa-admin-token") ?? ""; } catch { return ""; }
+  });
   const [data, setData] = useState<Payload | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -36,10 +45,15 @@ export function AdminPanel() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch("/api/ib/admin", { headers: { "x-gfxa-admin": t } });
+      const res = await fetch("/api/ib/admin", { headers: { "x-admin-token": t } });
       const j = await res.json();
-      if (!res.ok || !j.ok) { setErr(j.message ?? "Not authorised."); setData(null); return; }
+      if (!res.ok || !j.ok) {
+        setErr(res.status === 401 ? "Invalid token." : j.message ?? "Could not open the queue.");
+        setData(null);
+        return;
+      }
       setData(j as Payload);
+      try { window.sessionStorage.setItem("gfxa-admin-token", t); } catch { /* private mode */ }
     } catch {
       setErr("Could not reach the queue.");
     } finally {
@@ -47,15 +61,18 @@ export function AdminPanel() {
     }
   }, []);
 
-  const act = async (id: string, action: "approve" | "reject", depositUsd?: number) => {
-    const res = await fetch("/api/ib/admin", {
+  const act = async (id: string, action: "approve" | "reject", depositUsd?: number, reason?: string) => {
+    const res = await fetch(`/api/ib/admin/${action}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-gfxa-admin": token },
-      body: JSON.stringify({ id, action, depositUsd }),
+      headers: { "Content-Type": "application/json", "x-admin-token": token },
+      body: JSON.stringify({ id, depositUsd, reason }),
     });
     if (res.ok) { flash(action === "approve" ? "Approved" : "Rejected"); void load(token); }
     else flash("That didn't go through");
   };
+
+  const brokerLine = (b: string, v: { pending: number; verified: number; rejected: number }) =>
+    `${b}: ${v.pending} pending · ${v.verified} verified${v.rejected ? ` · ${v.rejected} rejected` : ""}`;
 
   const csv = () => {
     if (!data) return;
@@ -104,14 +121,13 @@ export function AdminPanel() {
         {err ? <p className="px-5 pb-5 text-[12.5px] text-brand-danger">{err}</p> : null}
       </Card>
 
-      {data && !data.durable ? (
-        <div className="flex items-start gap-3 rounded-xl border border-[#fbbf24]/30 bg-[#fbbf24]/[0.06] px-4 py-3.5">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[#fbbf24]" strokeWidth={2} />
+      {data ? (
+        <div className="flex items-start gap-3 rounded-xl border border-brand-green/30 bg-brand-green/[0.06] px-4 py-3.5">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" strokeWidth={2} />
           <p className="text-[12.5px] leading-relaxed text-ink">
-            <span className="font-semibold text-white">This queue is not durable.</span> No database is
-            wired to the project, so requests live in server memory and are lost on the next deploy or
-            when a different instance answers. Point <code className="text-brand-blue">getStore()</code> at
-            Vercel KV, Postgres or Supabase before relying on it.
+            <span className="font-semibold text-white">Supabase connected.</span> The queue reads and
+            writes the <code className="text-brand-blue">verified_users</code> table, so it survives a
+            cold start and a redeploy — not the warm-instance luck the in-memory store depended on.
           </p>
         </div>
       ) : null}
@@ -132,6 +148,12 @@ export function AdminPanel() {
             ))}
           </div>
 
+          {Object.keys(data.stats.byBroker).length ? (
+            <p className="text-[11.5px] text-ink-muted">
+              {Object.entries(data.stats.byBroker).map(([b, v]) => brokerLine(b, v)).join("  ·  ")}
+            </p>
+          ) : null}
+
           <Card>
             <CardHead title={`Requests (${data.requests.length})`} />
             {data.requests.length ? (
@@ -151,7 +173,17 @@ export function AdminPanel() {
                         <td className="px-4 py-2.5 text-ink-muted">{r.broker}</td>
                         <td className="num-mono px-4 py-2.5 text-ink">{r.account}</td>
                         <td className="px-4 py-2.5 text-ink-muted">{r.ibCode ?? "—"}</td>
-                        <td className="px-4 py-2.5 text-ink-muted">{r.method}{r.hasProof ? " + proof" : ""}</td>
+                        <td className="px-4 py-2.5 text-ink-muted">
+                          {r.method}
+                          {r.proofUrl ? (
+                            <>
+                              {" · "}
+                              <a href={r.proofUrl} target="_blank" rel="noopener noreferrer" className="text-brand-blue underline-offset-2 hover:underline">
+                                proof
+                              </a>
+                            </>
+                          ) : r.hasProof ? " + proof" : ""}
+                        </td>
                         <td className="px-4 py-2.5">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${
                             r.status === "verified" ? "bg-brand-green/[0.13] text-brand-green"
@@ -173,7 +205,14 @@ export function AdminPanel() {
                               >
                                 Approve
                               </button>
-                              <button type="button" onClick={() => void act(r.id, "reject")} className="rounded border border-brand-danger/40 px-2 py-1 text-[11px] text-brand-danger transition-colors hover:bg-brand-danger/10">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const reason = window.prompt("Reason for rejecting (shown to nobody but the queue):") ?? "";
+                                  void act(r.id, "reject", undefined, reason);
+                                }}
+                                className="rounded border border-brand-danger/40 px-2 py-1 text-[11px] text-brand-danger transition-colors hover:bg-brand-danger/10"
+                              >
                                 Reject
                               </button>
                             </span>

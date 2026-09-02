@@ -1176,3 +1176,56 @@ assume the queue is safe.
 
 The three IB routes run on Node rather than Edge — the store keeps module state,
 and each Edge route is its own isolate.
+
+---
+
+## Verification queue moved to Supabase (2026-09-03)
+
+Vercel Storage on this account offers Supabase rather than KV, so the store is
+now the `verified_users` table. Same API contract; the in-memory fallback is gone
+entirely rather than left as a trap.
+
+### What this fixes
+
+The previous fallback could not back the feature: Next bundles every route
+handler separately, so the Map written by `/api/ib/verify` was a different Map
+from the one `/api/ib/status` read, and a submitted request came back
+`status: null`. On production it *appeared* to work because both calls happened
+to hit the same warm instance — which is worse than failing outright. A table
+removes the class of problem, and the daily rate limit is now a `count` over
+`created_at` rather than a per-instance counter that only throttled whichever
+lambda answered.
+
+Schema and the private bucket ship as `supabase/verified_users.sql`. A column
+mismatch surfaces Postgres's own message (`column … does not exist`) instead of
+failing silently.
+
+### Two things built differently from the brief
+
+**The proofs bucket is private, not public.** The brief asked for a public bucket
+and a stored `publicUrl`. Deposit screenshots carry account numbers, names and
+balances; a public bucket makes every one readable by anyone holding or guessing
+the URL, permanently and unrevocably. The object path is stored instead, and the
+admin route mints a **five-minute signed URL** when a reviewer opens one. The SQL
+also sets `public = false` on conflict, so re-running it repairs a bucket that was
+created public.
+
+**The admin token is not read from the URL.** The brief wanted
+`?tab=verification&token=…` with the value kept in `localStorage`. This app runs
+Vercel Analytics, which records page URLs — a token in a query string would be
+copied into analytics, browser history and referrer headers. It is sent as the
+`x-admin-token` header and held in `sessionStorage`, which clears with the tab.
+
+RLS is enabled with no policies: the service-role key bypasses it, and without
+that line the anon key could read every applicant's email and account number.
+
+### Verified
+
+| Check | Result |
+| --- | --- |
+| `investorPassword` / `investor_password` / `password` in payload | **400**, before any database call |
+| Bad email, unknown broker, short account | 400 each |
+| Supabase unset | verify **503**, admin **503** with the reason |
+| Admin: no token / wrong token | **401** both |
+
+`supabase-js` is server-only, so `/dashboard` first load is unchanged at **191 kB**.

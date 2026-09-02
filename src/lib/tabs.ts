@@ -48,7 +48,7 @@ export const TABS: TabDef[] = [
   { slug: "settings", label: "Settings", icon: Settings, group: "Account", blurb: "Preferences, notifications and privacy." },
   // Reachable by URL for whoever holds the token; the panel and the route both
   // refuse without it, so listing it costs nothing.
-  { slug: "admin", label: "Verification", icon: ShieldCheck, group: "Account", blurb: "Deposit verification queue. Needs the admin token." },
+  { slug: "verification", label: "Verification", icon: ShieldCheck, group: "Account", blurb: "Deposit verification queue. Needs the admin token." },
 ];
 
 export const TAB_GROUPS: TabDef["group"][] = ["Main", "Community", "Tools", "Account"];

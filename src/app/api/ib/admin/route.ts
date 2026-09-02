@@ -1,52 +1,82 @@
 import { NextResponse } from "next/server";
-import { getStore, isAdmin, type VerificationStatus } from "@/lib/ibStore";
+import {
+  isAdmin, listRequests, signProof, storeReady,
+  type VerificationStatus,
+} from "@/lib/ibStore";
+import { reviewFrom } from "@/lib/ibReview";
 
-/*
- * Node, not Edge. The store keeps state in module memory, and each Edge route is
- * its own isolate — a request written by /verify was not visible to /status at
- * all. Node shares module state across routes within an instance, which is the
- * most this can do until a real store is wired.
- */
 export const runtime = "nodejs";
 
 /**
  * The review queue.
  *
- * Guarded by `GFXA_ADMIN_TOKEN` compared server-side. With no accounts system in
- * this project an email string would be a guess, not a check — the token is the
- * only guard here that actually holds.
+ * Guarded by `GFXA_ADMIN_TOKEN` compared server-side, sent as a header. With no
+ * accounts system in this project an email string would be a guess, not a check.
+ *
+ * The token is deliberately **not** accepted from a query string: this app runs
+ * Vercel Analytics, which records page URLs, so a token in the URL would be
+ * copied into analytics, browser history and any referrer.
  */
 
 function deny() {
-  return NextResponse.json({ ok: false, message: "Not authorised." }, { status: 401 });
+  return NextResponse.json({ ok: false, message: "Invalid token." }, { status: 401 });
+}
+
+function closed() {
+  return NextResponse.json(
+    { ok: false, configured: false, message: "Queue closed — GFXA_ADMIN_TOKEN is not set." },
+    { status: 503 }
+  );
 }
 
 export async function GET(request: Request) {
-  if (!process.env.GFXA_ADMIN_TOKEN) {
+  if (!process.env.GFXA_ADMIN_TOKEN) return closed();
+  if (!isAdmin(request)) return deny();
+
+  if (!storeReady()) {
     return NextResponse.json(
-      { ok: false, configured: false, message: "GFXA_ADMIN_TOKEN is not set, so the review queue is closed." },
+      { ok: false, message: "Supabase is not configured — set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." },
       { status: 503 }
     );
   }
-  if (!isAdmin(request)) return deny();
 
-  const store = getStore();
-  const all = await store.list();
+  const params = new URL(request.url).searchParams;
+  const filter = params.get("status");
+  const status = (["pending", "verified", "rejected"] as const).find((s) => s === filter);
+
+  const { data, error } = await listRequests(status);
+  if (error) return NextResponse.json({ ok: false, message: error }, { status: 502 });
+
+  const all = data ?? [];
   const count = (s: VerificationStatus) => all.filter((r) => r.status === s).length;
+
+  const byBroker: Record<string, { pending: number; verified: number; rejected: number }> = {};
+  for (const r of all) {
+    byBroker[r.broker] ??= { pending: 0, verified: 0, rejected: 0 };
+    byBroker[r.broker][r.status] += 1;
+  }
+
+  // Signed on the way out so a reviewer can open a proof without the bucket
+  // being public. Five minutes, minted per request.
+  const requests = await Promise.all(
+    all.map(async (r) => ({
+      ...r,
+      proofPath: undefined,
+      proofUrl: r.proofPath ? await signProof(r.proofPath) : null,
+    }))
+  );
 
   return NextResponse.json(
     {
       ok: true,
-      durable: store.durable,
-      requests: all,
+      durable: true,
+      backend: "supabase",
+      requests,
       stats: {
         pending: count("pending"),
         verified: count("verified"),
         rejected: count("rejected"),
-        byBroker: all.reduce<Record<string, number>>((acc, r) => {
-          acc[r.broker] = (acc[r.broker] ?? 0) + 1;
-          return acc;
-        }, {}),
+        byBroker,
         depositsUsd: all.filter((r) => r.status === "verified").reduce((s, r) => s + (r.depositUsd ?? 0), 0),
       },
     },
@@ -55,30 +85,5 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAdmin(request)) return deny();
-
-  let body: { id?: string; action?: string; depositUsd?: number; note?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, message: "Malformed request." }, { status: 400 });
-  }
-
-  const id = (body.id ?? "").trim();
-  const action = body.action;
-  if (!id || (action !== "approve" && action !== "reject")) {
-    return NextResponse.json({ ok: false, message: "Need an id and approve or reject." }, { status: 400 });
-  }
-
-  const updated = await getStore().update(id, {
-    status: action === "approve" ? "verified" : "rejected",
-    // The figure comes from what the admin read in the IB portal; it is left
-    // null rather than invented when they did not enter one.
-    depositUsd: typeof body.depositUsd === "number" && body.depositUsd >= 0 ? body.depositUsd : null,
-    note: (body.note ?? "").trim().slice(0, 300) || null,
-    reviewedAt: Date.now(),
-  });
-
-  if (!updated) return NextResponse.json({ ok: false, message: "No such request." }, { status: 404 });
-  return NextResponse.json({ ok: true, request: updated }, { headers: { "Cache-Control": "no-store" } });
+  return reviewFrom(request);
 }

@@ -100,7 +100,6 @@ function GatePanel({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [durable, setDurable] = useState(true);
 
   useEffect(() => {
     const info = getIBInfo();
@@ -128,7 +127,6 @@ function GatePanel({
       });
       const j = await res.json();
       setMsg(j.message ?? (res.ok ? "Submitted." : "Something went wrong."));
-      if (j.durable === false) setDurable(false);
       if (res.ok && j.ok) {
         onVerified({ verified: j.status === "verified", status: j.status, broker, account }, email);
       }
@@ -234,12 +232,6 @@ function GatePanel({
         </button>
 
         {msg ? <p className="text-[12px] leading-relaxed text-ink">{msg}</p> : null}
-        {!durable ? (
-          <p className="text-[11.5px] leading-relaxed text-[#fbbf24]">
-            Heads up for the operator: no durable store is configured, so this request lives only in
-            server memory and will be lost on the next deploy.
-          </p>
-        ) : null}
       </form>
     </Shell>
   );

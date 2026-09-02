@@ -48,5 +48,5 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   profile: ProfilePanel,
   membership: MembershipPanel,
   settings: SettingsPanel,
-  admin: AdminPanel,
+  verification: AdminPanel,
 };

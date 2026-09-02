@@ -1,15 +1,16 @@
 import type { Broker } from "./brokers";
+import { PROOF_BUCKET, TABLE, hasSupabase, supabaseAdmin } from "./supabaseAdmin";
 
 /**
- * Store for deposit-verification requests.
+ * Store for deposit-verification requests, backed by Supabase.
  *
- * **This default is not durable.** There is no database wired to this project,
- * and a Vercel function's memory does not survive a redeploy or span instances,
- * so pending requests written here can disappear. It is enough to exercise the
- * flow end to end and it keeps the shape a real store has to implement, but the
- * feature is not production-ready until `IBStore` is backed by something that
- * persists — Vercel KV, Postgres, Supabase. The admin panel says so out loud
- * rather than letting anyone assume the queue is safe.
+ * The previous in-memory fallback could not back this feature at all: Next
+ * bundles every route handler separately, so the Map written by `/api/ib/verify`
+ * was a different Map from the one `/api/ib/status` read, and a submitted
+ * request came back as `status: null`. It appeared to work in production only
+ * because both calls happened to land on the same warm instance — which is worse
+ * than failing outright, because it looks fine in testing and loses reviews
+ * later. A real table removes the class of problem.
  */
 
 export type VerificationStatus = "pending" | "verified" | "rejected";
@@ -23,7 +24,6 @@ export interface VerificationRequest {
   account: string;
   server: string | null;
   method: VerificationMethod;
-  /** Attribution captured when they clicked through, if any. */
   ibCode: string | null;
   ibClickTime: number | null;
   /** Filled by an admin from the broker's IB portal, not by the applicant. */
@@ -32,158 +32,224 @@ export interface VerificationRequest {
   note: string | null;
   createdAt: number;
   reviewedAt: number | null;
-  /** Set when the applicant attached a screenshot; the image itself is not kept. */
   hasProof: boolean;
+  /** Object path inside the private proofs bucket, never a public URL. */
+  proofPath: string | null;
 }
 
-export interface IBStore {
-  put(r: VerificationRequest): Promise<void>;
-  byEmail(email: string): Promise<VerificationRequest | null>;
-  list(): Promise<VerificationRequest[]>;
-  update(id: string, patch: Partial<VerificationRequest>): Promise<VerificationRequest | null>;
-  /** False when the backing store cannot survive a redeploy. */
-  durable: boolean;
+/** Column names as they exist in the table; the app shape stays camelCase. */
+interface Row {
+  id: string;
+  email: string;
+  broker: string;
+  account_number: string;
+  server: string | null;
+  method: string;
+  ib_code: string | null;
+  ib_click_time: number | string | null;
+  deposit: number | string | null;
+  status: string;
+  rejected_reason: string | null;
+  screenshot_url: string | null;
+  created_at: string;
+  verified_at: string | null;
 }
 
-const mem = new Map<string, VerificationRequest>();
+const num = (v: number | string | null): number | null => {
+  if (v === null || v === "") return null;
+  const n = typeof v === "number" ? v : Number.parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+function toRequest(r: Row): VerificationRequest {
+  return {
+    id: r.id,
+    email: r.email,
+    broker: r.broker as Broker,
+    account: r.account_number,
+    server: r.server,
+    method: r.method === "screenshot" ? "screenshot" : "account",
+    ibCode: r.ib_code,
+    ibClickTime: num(r.ib_click_time),
+    depositUsd: num(r.deposit),
+    status: (["pending", "verified", "rejected"].includes(r.status) ? r.status : "pending") as VerificationStatus,
+    note: r.rejected_reason,
+    createdAt: new Date(r.created_at).getTime(),
+    reviewedAt: r.verified_at ? new Date(r.verified_at).getTime() : null,
+    hasProof: !!r.screenshot_url,
+    proofPath: r.screenshot_url,
+  };
+}
+
+export interface NewRequest {
+  email: string;
+  broker: Broker;
+  account: string;
+  server: string | null;
+  method: VerificationMethod;
+  ibCode: string | null;
+  ibClickTime: number | null;
+  proofPath: string | null;
+}
+
+export interface StoreResult<T> {
+  ok: boolean;
+  data: T | null;
+  /** Surfaced rather than swallowed — a schema mismatch should be obvious. */
+  error: string | null;
+}
+
+const NOT_CONFIGURED = "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.";
+
+export function storeReady(): boolean {
+  return hasSupabase();
+}
+
+export async function createRequest(input: NewRequest): Promise<StoreResult<VerificationRequest>> {
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, data: null, error: NOT_CONFIGURED };
+
+  const { data, error } = await db
+    .from(TABLE)
+    .insert({
+      email: input.email,
+      broker: input.broker,
+      account_number: input.account,
+      server: input.server,
+      method: input.method,
+      ib_code: input.ibCode,
+      ib_click_time: input.ibClickTime,
+      status: "pending",
+      screenshot_url: input.proofPath,
+    })
+    .select()
+    .single();
+
+  if (error) return { ok: false, data: null, error: error.message };
+  return { ok: true, data: toRequest(data as Row), error: null };
+}
 
 /**
- * In-process fallback.
+ * The record that decides access for one address.
  *
- * Next bundles every route handler separately, so this Map is a *different* Map
- * in each route — a request written by /verify is invisible to /status. It is
- * kept only so the code paths run in development; it cannot back the feature.
- * `durable: false` is what the UI keys off to say so.
+ * A verified row wins over a newer pending one, so re-applying while already
+ * approved cannot lock someone out of their own access.
  */
-export const memoryStore: IBStore = {
-  durable: false,
-  async put(r) {
-    mem.set(r.id, r);
-  },
-  async byEmail(email) {
-    const key = email.trim().toLowerCase();
-    const all = Array.from(mem.values())
-      .filter((r) => r.email === key)
-      .sort((a, b) => b.createdAt - a.createdAt);
-    return all.find((r) => r.status === "verified") ?? all[0] ?? null;
-  },
-  async list() {
-    return Array.from(mem.values()).sort((a, b) => b.createdAt - a.createdAt);
-  },
-  async update(id, patch) {
-    const cur = mem.get(id);
-    if (!cur) return null;
-    const next = { ...cur, ...patch };
-    mem.set(id, next);
-    return next;
-  },
-};
+export async function getByEmail(email: string): Promise<StoreResult<VerificationRequest | null>> {
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, data: null, error: NOT_CONFIGURED };
 
-/* ------------------------------------------------------------------ KV store */
+  const { data, error } = await db
+    .from(TABLE)
+    .select("*")
+    .eq("email", email.trim().toLowerCase())
+    .order("created_at", { ascending: false })
+    .limit(20);
 
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+  if (error) return { ok: false, data: null, error: error.message };
+  const rows = (data ?? []) as Row[];
+  const mapped = rows.map(toRequest);
+  return { ok: true, data: mapped.find((r) => r.status === "verified") ?? mapped[0] ?? null, error: null };
+}
+
+export async function listRequests(status?: VerificationStatus): Promise<StoreResult<VerificationRequest[]>> {
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, data: null, error: NOT_CONFIGURED };
+
+  let q = db.from(TABLE).select("*").order("created_at", { ascending: false }).limit(500);
+  if (status) q = q.eq("status", status);
+
+  const { data, error } = await q;
+  if (error) return { ok: false, data: null, error: error.message };
+  return { ok: true, data: ((data ?? []) as Row[]).map(toRequest), error: null };
+}
+
+export async function updateStatus(
+  id: string,
+  status: VerificationStatus,
+  opts: { depositUsd?: number | null; reason?: string | null } = {}
+): Promise<StoreResult<VerificationRequest>> {
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, data: null, error: NOT_CONFIGURED };
+
+  const patch: Record<string, unknown> = { status };
+  if (status === "verified") patch.verified_at = new Date().toISOString();
+  if (opts.depositUsd !== undefined) patch.deposit = opts.depositUsd;
+  if (opts.reason !== undefined) patch.rejected_reason = opts.reason;
+
+  const { data, error } = await db.from(TABLE).update(patch).eq("id", id).select().single();
+  if (error) return { ok: false, data: null, error: error.message };
+  return { ok: true, data: toRequest(data as Row), error: null };
+}
 
 /**
- * Vercel KV / Upstash over their REST API — plain fetch, no client library.
+ * Submissions from one address in the last 24 hours.
  *
- * Provisioning Vercel KV on the project sets both variables automatically, and
- * this takes over the moment they exist.
+ * Counted in the table rather than in process memory, so the limit holds across
+ * instances — the previous counter only throttled whichever lambda answered.
  */
-async function kv<T = unknown>(command: unknown[]): Promise<T | null> {
-  if (!KV_URL || !KV_TOKEN) return null;
-  try {
-    const res = await fetch(KV_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${KV_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify(command),
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { result?: T };
-    return (json?.result ?? null) as T | null;
-  } catch {
-    return null;
-  }
+export async function countRecent(email: string): Promise<number> {
+  const db = supabaseAdmin();
+  if (!db) return 0;
+
+  const since = new Date(Date.now() - 86400_000).toISOString();
+  const { count, error } = await db
+    .from(TABLE)
+    .select("id", { count: "exact", head: true })
+    .eq("email", email.trim().toLowerCase())
+    .gte("created_at", since);
+
+  return error ? 0 : count ?? 0;
 }
 
-const REQ = (id: string) => `ib:req:${id}`;
-const INDEX = "ib:index";
-
-const parse = (raw: unknown): VerificationRequest | null => {
-  if (typeof raw !== "string") return null;
-  try {
-    return JSON.parse(raw) as VerificationRequest;
-  } catch {
-    return null;
-  }
-};
-
-export const kvStore: IBStore = {
-  durable: true,
-  async put(r) {
-    await kv(["SET", REQ(r.id), JSON.stringify(r)]);
-    await kv(["SADD", INDEX, r.id]);
-  },
-  async list() {
-    const ids = (await kv<string[]>(["SMEMBERS", INDEX])) ?? [];
-    if (!ids.length) return [];
-    const raw = (await kv<unknown[]>(["MGET", ...ids.map(REQ)])) ?? [];
-    return raw
-      .map(parse)
-      .filter((r): r is VerificationRequest => r !== null)
-      .sort((a, b) => b.createdAt - a.createdAt);
-  },
-  async byEmail(email) {
-    const key = email.trim().toLowerCase();
-    const all = (await this.list()).filter((r) => r.email === key);
-    // A verified record wins over a newer pending one, so re-applying while
-    // already approved cannot lock someone out of their own access.
-    return all.find((r) => r.status === "verified") ?? all[0] ?? null;
-  },
-  async update(id, patch) {
-    const cur = parse(await kv(["GET", REQ(id)]));
-    if (!cur) return null;
-    const next = { ...cur, ...patch };
-    await kv(["SET", REQ(id), JSON.stringify(next)]);
-    return next;
-  },
-};
-
-export function getStore(): IBStore {
-  return KV_URL && KV_TOKEN ? kvStore : memoryStore;
-}
-
-/* ------------------------------------------------------------- rate limiting */
-
-const attempts = new Map<string, number[]>();
-const DAY = 86400_000;
+/* --------------------------------------------------------------------- proofs */
 
 /**
- * Five submissions per email per day. Best-effort: this counter lives in the
- * verify route's own module memory, so it throttles per instance rather than
- * globally. It raises the cost of flooding the queue; it is not a hard cap.
+ * Uploads a deposit screenshot to a **private** bucket.
+ *
+ * The brief asked for a public bucket and a stored `publicUrl`. These images
+ * carry account numbers, names and balances; a public bucket makes every one of
+ * them readable by anyone who has or guesses the URL, with no way to revoke it.
+ * The object path is stored instead, and the admin route mints a short-lived
+ * signed URL when a reviewer actually opens one.
  */
-export function tooManyAttempts(email: string, limit = 5): boolean {
-  const key = email.trim().toLowerCase();
-  const now = Date.now();
-  const recent = (attempts.get(key) ?? []).filter((t) => now - t < DAY);
-  if (recent.length >= limit) {
-    attempts.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  attempts.set(key, recent);
-  return false;
+export async function uploadProof(
+  email: string,
+  bytes: Uint8Array,
+  contentType: string
+): Promise<StoreResult<string>> {
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, data: null, error: NOT_CONFIGURED };
+
+  const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+  const safe = email.replace(/[^a-z0-9]/gi, "_").slice(0, 40);
+  const path = `${safe}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error } = await db.storage.from(PROOF_BUCKET).upload(path, bytes, {
+    contentType,
+    upsert: false,
+  });
+  if (error) return { ok: false, data: null, error: error.message };
+  return { ok: true, data: path, error: null };
 }
 
-export const ADMIN_TOKEN_HEADER = "x-gfxa-admin";
+/** Signed for five minutes — long enough to look, short enough not to circulate. */
+export async function signProof(path: string): Promise<string | null> {
+  const db = supabaseAdmin();
+  if (!db) return null;
+  const { data, error } = await db.storage.from(PROOF_BUCKET).createSignedUrl(path, 300);
+  return error ? null : data?.signedUrl ?? null;
+}
 
-/** Constant-ish comparison; the token never appears in a URL or a log line. */
+/* ---------------------------------------------------------------------- admin */
+
+export const ADMIN_TOKEN_HEADER = "x-admin-token";
+
+/** Constant-time comparison; the token never appears in a URL or a log line. */
 export function isAdmin(request: Request): boolean {
   const expected = process.env.GFXA_ADMIN_TOKEN;
   if (!expected) return false;
-  const got = request.headers.get(ADMIN_TOKEN_HEADER);
+  const got = request.headers.get(ADMIN_TOKEN_HEADER) ?? request.headers.get("x-gfxa-admin");
   if (!got || got.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < expected.length; i++) diff |= got.charCodeAt(i) ^ expected.charCodeAt(i);

@@ -81,7 +81,7 @@ export function DashboardApp() {
         <main className="flex-1 px-5 pb-28 pt-6 lg:px-8 lg:pb-12">
           {/* The admin queue is never gated — whoever reviews deposits has to be
               able to reach it before anyone is verified. */}
-          {tab.slug === "admin" ? (
+          {tab.slug === "verification" ? (
             <Panel pair={pair} />
           ) : (
             <IBGate>

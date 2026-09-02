@@ -1,37 +1,41 @@
 import { NextResponse } from "next/server";
-import { getStore, tooManyAttempts, type VerificationRequest } from "@/lib/ibStore";
+import { countRecent, createRequest, getByEmail, storeReady, uploadProof } from "@/lib/ibStore";
 import { isBroker } from "@/lib/brokers";
 
-/*
- * Node, not Edge. The store keeps state in module memory, and each Edge route is
- * its own isolate — a request written by /verify was not visible to /status at
- * all. Node shares module state across routes within an instance, which is the
- * most this can do until a real store is wired.
- */
 export const runtime = "nodejs";
 
 /**
  * Records a request to have a deposit checked.
  *
- * **No password is collected.** The brief asked for the reader's MT4/MT5
+ * **No password is collected.** The original brief asked for the reader's MT4/MT5
  * investor password so a balance could be read through MetaApi. That is a live
- * credential to a third party's brokerage account: it exposes full balance,
- * equity, open positions and trade history, most brokers' terms forbid sharing
- * it, and one breach of this store would expose every member's account. It also
- * buys nothing here — no broker in the community exposes deposits through a
- * public partner API, so an admin has to open the IB portal and look either way.
- * Collecting a credential that does not remove the manual step is pure downside.
- *
- * So this takes the account number and email needed to find the person in the
- * broker's portal, and an admin confirms the deposit there.
+ * credential to a third party's brokerage account — full balance, equity, open
+ * positions and trade history — most brokers' terms forbid sharing it, and one
+ * breach of this table would expose every member's account. It also buys nothing:
+ * no broker in the community exposes deposits through a public partner API, so an
+ * admin opens the IB portal and looks either way.
  */
 
-const MAX = { email: 254, account: 40, server: 60, note: 300 };
+const MAX = { email: 254, account: 40, server: 60 };
+const MAX_PROOF_BYTES = 5_000_000;
+const RATE_LIMIT = 5;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
-const clean = (v: unknown, max: number) =>
-  typeof v === "string" ? v.trim().slice(0, max) : "";
+/** Decodes a data URL, refusing anything that is not an image we accept. */
+function decodeProof(raw: unknown): { bytes: Uint8Array; contentType: string } | null {
+  if (typeof raw !== "string") return null;
+  const m = raw.match(/^data:(image\/(png|jpeg|jpg|webp));base64,(.+)$/);
+  if (!m) return null;
+  try {
+    const buf = Buffer.from(m[3], "base64");
+    if (!buf.length || buf.length > MAX_PROOF_BYTES) return null;
+    return { bytes: new Uint8Array(buf), contentType: m[1] };
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -41,12 +45,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Malformed request." }, { status: 400 });
   }
 
+  // Refused loudly rather than quietly dropped, so no client starts sending one.
+  if ("password" in body || "investorPassword" in body || "investor_password" in body) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "We never ask for your investor or master password — anyone asking you for a trading password is not us. Send only the account number; an admin confirms the deposit in the broker's IB portal.",
+      },
+      { status: 400 }
+    );
+  }
+
   const email = clean(body.email, MAX.email).toLowerCase();
-  const account = clean(body.account, MAX.account);
+  const account = clean(body.account ?? body.account_number, MAX.account);
   const server = clean(body.server, MAX.server) || null;
   const broker = clean(body.broker, 20);
-  const method = body.method === "screenshot" ? "screenshot" : "account";
-  const hasProof = method === "screenshot" && body.hasProof === true;
 
   if (!EMAIL.test(email)) {
     return NextResponse.json({ ok: false, message: "That email address doesn't look right." }, { status: 400 });
@@ -61,62 +75,69 @@ export async function POST(request: Request) {
     );
   }
 
-  // Anything that looks like a credential is refused rather than quietly dropped,
-  // so nobody builds a client that keeps sending one.
-  if ("password" in body || "investorPassword" in body) {
+  if (!storeReady()) {
     return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "This platform never asks for your investor or master password. Remove it and send only the account number — an admin confirms the deposit in the broker's IB portal.",
-      },
-      { status: 400 }
+      { ok: false, message: "Verification is not accepting submissions right now. Try again shortly." },
+      { status: 503 }
     );
   }
 
-  if (tooManyAttempts(email)) {
+  const existing = await getByEmail(email);
+  if (existing.data?.status === "verified") {
+    return NextResponse.json({ ok: true, id: existing.data.id, status: "verified", message: "Already verified." });
+  }
+
+  // Counted in the table, so the limit holds across instances rather than
+  // throttling only whichever lambda happens to answer.
+  if ((await countRecent(email)) >= RATE_LIMIT) {
     return NextResponse.json(
-      { ok: false, message: "Too many submissions today. Try again tomorrow, or reply to the pending request." },
+      { ok: false, message: `Too many submissions today — ${RATE_LIMIT} per day. Try again tomorrow.` },
       { status: 429 }
     );
   }
 
-  const store = getStore();
-  const existing = await store.byEmail(email);
-  if (existing?.status === "verified") {
-    return NextResponse.json({ ok: true, status: "verified", id: existing.id, message: "Already verified." });
+  let proofPath: string | null = null;
+  const proof = decodeProof(body.screenshot ?? body.proof);
+  if (proof) {
+    const up = await uploadProof(email, proof.bytes, proof.contentType);
+    if (!up.ok) {
+      return NextResponse.json(
+        { ok: false, message: `Could not store the screenshot: ${up.error}` },
+        { status: 502 }
+      );
+    }
+    proofPath = up.data;
   }
 
   const cookie = request.headers.get("cookie") ?? "";
   const match = cookie.match(/(?:^|;\s*)gfxa_ib=([^;]+)/);
   const attribution = match ? decodeURIComponent(match[1]) : null;
-  const ibCode = attribution?.includes("_") ? attribution.slice(attribution.indexOf("_") + 1) : null;
+  const cookieCode = attribution?.includes("_") ? attribution.slice(attribution.indexOf("_") + 1) : null;
 
-  const record: VerificationRequest = {
-    id: `ib_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+  const created = await createRequest({
     email,
     broker,
     account,
     server,
-    method,
-    ibCode,
+    method: proofPath ? "screenshot" : "account",
+    ibCode: clean(body.ib_code ?? body.ibCode, 60) || cookieCode,
     ibClickTime: typeof body.ibClickTime === "number" ? body.ibClickTime : null,
-    depositUsd: null,
-    status: "pending",
-    note: null,
-    createdAt: Date.now(),
-    reviewedAt: null,
-    hasProof,
-  };
+    proofPath,
+  });
 
-  await store.put(record);
+  if (!created.ok) {
+    return NextResponse.json(
+      { ok: false, message: `Could not record the request: ${created.error}` },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json(
     {
       ok: true,
-      id: record.id,
+      id: created.data!.id,
       status: "pending",
-      durable: store.durable,
+      durable: true,
       message:
         "Submitted. An admin will confirm the deposit in the broker's IB portal and unlock your access — usually within 24 hours.",
     },

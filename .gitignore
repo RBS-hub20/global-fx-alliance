@@ -7,3 +7,7 @@ out
 next-env.d.ts
 .vercel
 .env*
+
+# The example carries no values — it documents which keys exist, so it belongs
+# in the repo even though every other .env file is excluded above.
+!.env.local.example

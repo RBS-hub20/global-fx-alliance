@@ -9,6 +9,9 @@ import { Card, CardHead, PanelHeader, Select, Skeleton, Toast } from "@/componen
 import { DISCLAIMER } from "@/lib/ai";
 import { COMMANDS, answerWithContext, runCommand } from "@/lib/aiCommands";
 import { getBestWorst, getPairStats } from "@/lib/journalStore";
+import { buildJournalAggregate } from "@/lib/journalAggregate";
+import type { JournalAggregate } from "@/lib/aiProvider";
+import { TIMEFRAMES } from "@/lib/timeframes";
 import { getCurrentSessionInfo, getGreeting, humanMinutes, type SessionInfo } from "@/lib/sessionTime";
 import { PAIRS } from "@/lib/market";
 import { KEYS, usePersistentState } from "@/lib/storage";
@@ -24,6 +27,29 @@ interface Msg {
   text: string;
   sources?: string[];
   at?: string;
+  /** Which engine wrote it — the badge on a reply must match how it was made. */
+  provider?: "OpenAI" | "Local";
+}
+
+/**
+ * Posts to an AI route, returning null whenever the model is unavailable —
+ * no key, quota exhausted, timeout, network. Every caller then falls back to the
+ * deterministic composition, so the feature degrades to what it was rather than
+ * to an error.
+ */
+async function askAI<T>(path: string, body: unknown): Promise<T | null> {
+  try {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.available ? (j as T) : null;
+  } catch {
+    return null;
+  }
 }
 
 const GREETING_MSG: Msg = {
@@ -74,6 +100,7 @@ export function AiToolsPanel() {
   const [toast, setToast] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
+  const [aiOn, setAiOn] = useState<boolean | null>(null);
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [journal, setJournal] = useState<ReturnType<typeof getBestWorst> | null>(null);
   const [radar, setRadar] = useState<{ symbol: string; type: string; confidence: string; price: number }[]>([]);
@@ -93,6 +120,16 @@ export function AiToolsPanel() {
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Whether a model is wired up, so the badge is honest before the first reply.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/ai/chat")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive) setAiOn(!!j?.available); })
+      .catch(() => { if (alive) setAiOn(false); });
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {
@@ -142,11 +179,27 @@ export function AiToolsPanel() {
       trackEvent(EVENTS.terminalQuery, { query: q.slice(0, 80), surface: "ai-tools" });
 
       try {
-        const res = q.startsWith("/") ? await runCommand(q) : await answerWithContext(q);
-        setHistory((prev) => [
-          ...prev,
-          { role: "ai", text: res.text, sources: res.sources, at: new Date().toISOString() },
-        ]);
+        // Aggregated statistics only — the trade list never leaves the browser.
+        const journalAgg = buildJournalAggregate();
+        const llm = await askAI<{ answer: string; sources: string[] }>("/api/ai/chat", {
+          message: q,
+          journal: journalAgg,
+        });
+
+        if (llm) {
+          setAiOn(true);
+          setHistory((prev) => [
+            ...prev,
+            { role: "ai", text: llm.answer, sources: llm.sources, provider: "OpenAI", at: new Date().toISOString() },
+          ]);
+        } else {
+          setAiOn(false);
+          const res = q.startsWith("/") ? await runCommand(q) : await answerWithContext(q);
+          setHistory((prev) => [
+            ...prev,
+            { role: "ai", text: res.text, sources: res.sources, provider: "Local", at: new Date().toISOString() },
+          ]);
+        }
       } catch {
         setHistory((prev) => [
           ...prev,
@@ -231,6 +284,16 @@ export function AiToolsPanel() {
                 <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
               </span>
               Market Assistant
+              {aiOn !== null ? (
+                <span
+                  title={aiOn ? "Answers written by GPT-4o-mini from this platform's real data" : "Answers composed on-device from this platform's real data — no model configured"}
+                  className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.1em] ${
+                    aiOn ? "bg-brand-green/[0.13] text-brand-green" : "bg-white/[0.06] text-ink-muted"
+                  }`}
+                >
+                  {aiOn ? "REAL • OPENAI" : "LOCAL ENGINE"}
+                </span>
+              ) : null}
               {journal ? (
                 <span
                   className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.1em] ${
@@ -267,6 +330,11 @@ export function AiToolsPanel() {
                       </div>
                       {m.role === "ai" && m.sources?.length ? (
                         <p className="mt-1.5 px-1 font-mono text-[10px] leading-relaxed text-[#8A93A8]">
+                          {m.provider ? (
+                            <span className={m.provider === "OpenAI" ? "text-brand-green/70" : "text-[#8A93A8]"}>
+                              {m.provider === "OpenAI" ? "GPT-4o-mini" : "Local engine"} ·{" "}
+                            </span>
+                          ) : null}
                           Sources: {m.sources.join(" · ")}
                         </p>
                       ) : null}
@@ -327,6 +395,11 @@ export function AiToolsPanel() {
               Answers are assembled from this platform&apos;s own data — real quotes, the pattern
               scanner, your imported statement and the session clock. Education &amp; market
               intelligence. Not financial advice.
+            </p>
+            <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-[#8A93A8]">
+              {aiOn
+                ? "Privacy: your statement stays in this browser. Only aggregated statistics — trade count, win rate, best and worst hour, pair and session, and a one-line summary of your last loss — are sent to OpenAI to write the reply. Individual trades, prices, account and broker details are never sent."
+                : "Privacy: nothing leaves this browser. Replies are composed on-device from your imported statement and this platform's market endpoints."}
             </p>
           </div>
         </section>
@@ -391,11 +464,25 @@ function MarketSummaryCard({
 }) {
   const [text, setText] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
+  const [provider, setProvider] = useState<"OpenAI" | "Local" | null>(null);
   const [busy, setBusy] = useState(false);
 
   const generate = async () => {
     setBusy(true);
     try {
+      // The model narrates facts the route computed; if it is not available the
+      // local composition below reads the same endpoints itself.
+      const llm = await askAI<{ summary: string; sources: string[] }>("/api/ai/summary", {
+        journal: buildJournalAggregate(),
+      });
+      if (llm) {
+        setText(llm.summary);
+        setSources(llm.sources);
+        setProvider("OpenAI");
+        return;
+      }
+      setProvider("Local");
+
       const majors = ["EUR/USD", "GBP/USD", "XAU/USD", "BTC/USD"];
       const [quotes, news] = await Promise.all([
         Promise.all(
@@ -452,8 +539,12 @@ function MarketSummaryCard({
         title="AI Market Summary"
         icon={FileText}
         right={
-          <span className="rounded-full bg-brand-green/[0.13] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-brand-green">
-            Real inputs
+          <span
+            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${
+              provider === "OpenAI" ? "bg-brand-green/[0.13] text-brand-green" : "bg-white/[0.06] text-ink-muted"
+            }`}
+          >
+            {provider === "OpenAI" ? "GPT-4o-mini" : provider === "Local" ? "Local engine" : "Real inputs"}
           </span>
         }
       />
@@ -495,11 +586,24 @@ function TradeIdeaCard({
   const [text, setText] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
   const [confidence, setConfidence] = useState<string | null>(null);
+  const [provider, setProvider] = useState<"OpenAI" | "Local" | null>(null);
   const [busy, setBusy] = useState(false);
 
   const generate = async () => {
     setBusy(true);
     try {
+      const llm = await askAI<{
+        idea: string; sources: string[]; confidence: string | null;
+      }>("/api/ai/idea", { pair, timeframe: tf, journal: buildJournalAggregate() });
+      if (llm) {
+        setText(llm.idea);
+        setSources(llm.sources);
+        setConfidence(llm.confidence);
+        setProvider("OpenAI");
+        return;
+      }
+      setProvider("Local");
+
       const [mkt, pat] = await Promise.all([
         fetch(`/api/market/live?pair=${encodeURIComponent(pair)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch(`/api/patterns/live?symbols=${encodeURIComponent(pair)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -563,15 +667,26 @@ function TradeIdeaCard({
         title="AI Trade Idea"
         icon={Lightbulb}
         right={
-          confidence ? (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${
-                confidence === "high" ? "bg-brand-green/[0.13] text-brand-green" : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
-              }`}
-            >
-              {confidence}
-            </span>
-          ) : null
+          <span className="flex items-center gap-1.5">
+            {provider ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${
+                  provider === "OpenAI" ? "bg-brand-green/[0.13] text-brand-green" : "bg-white/[0.06] text-ink-muted"
+                }`}
+              >
+                {provider === "OpenAI" ? "GPT-4o-mini" : "Local engine"}
+              </span>
+            ) : null}
+            {confidence ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${
+                  confidence === "high" ? "bg-brand-green/[0.13] text-brand-green" : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
+                }`}
+              >
+                {confidence}
+              </span>
+            ) : null}
+          </span>
         }
       />
       <div className="p-5">
@@ -580,7 +695,7 @@ function TradeIdeaCard({
             {PAIRS.map((p) => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
           </Select>
           <Select label="Timeframe" value={tf} onChange={(e) => setTf(e.target.value)}>
-            {["5M", "15M", "1H"].map((t) => <option key={t} value={t}>{t}</option>)}
+            {TIMEFRAMES.map((t) => <option key={t} value={t}>{t}</option>)}
           </Select>
         </div>
 

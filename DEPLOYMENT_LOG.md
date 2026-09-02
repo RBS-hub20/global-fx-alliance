@@ -801,3 +801,62 @@ be proven end to end here. Parsing, UTC normalisation, error-in-200-body handlin
 skip-when-no-key path are all covered; what remains unverified is live behaviour under a
 funded key. That will confirm itself the moment the env var is set — the badge will read
 `Real · TwelveData` instead of `Real · Yahoo`.
+
+---
+
+## AI Tools — real GPT-4o-mini narration (2026-09-02)
+
+The assistant now writes its replies with `gpt-4o-mini` when `OPENAI_API_KEY` is set, via
+three Edge routes: `/api/ai/chat`, `/api/ai/summary`, `/api/ai/idea`.
+
+### The model narrates; it never sources
+
+Every figure the model is permitted to state is computed server-side in `lib/aiContext.ts`
+from the same providers the charts use — `getRealCandles` (TwelveData → Yahoo → cache →
+modelled), the pattern detector, the auto S/R clusterer and the session clock — then handed
+over as a `CONTEXT` block with an explicit instruction to state nothing else. The `Sources:`
+line under each reply is assembled in code, not written by the model, so provenance cannot be
+embellished. This is why a hallucinated price is a prompt violation here rather than a
+plausible completion.
+
+Verified CONTEXT block (local, no Twelve Data key, so the Yahoo rung answered):
+
+```
+XAU/USD 4351.60 -2.82% — real via Yahoo (GC=F), 400 bars
+  resistance: 4365.50 (1 touch), 4375.70 (3 touches), 4419.90 (5 touches)
+  RSI(14) 31.2 (Neutral), trend up, ATR 16.98
+EUR/USD 1.1581 -0.15% — real via Yahoo (EURUSD=X), 400 bars
+BTC/USD 77598.58 -1.29% — real via Yahoo (BTC-USD), 400 bars
+PATTERN RADAR: 5 live, 1 at high confidence.
+```
+
+### Privacy
+
+The imported statement stays in `localStorage`. What crosses the network is assembled in one
+place — `lib/journalAggregate.ts` — and is limited to the `JournalAggregate` shape: trade
+count, win rate, net, best/worst hour, best/worst pair, best/worst session, hold-time averages,
+a revenge-sizing flag, and a one-line summary of the most recent loss. No trade list, no entry
+or exit prices, no account number, no broker, no file name. The panel says so in its own words
+under the input, and the wording changes depending on whether a model is actually configured.
+
+### Degrading without a key
+
+With no key the routes return `available: false` **before doing any upstream work**, and the
+client answers from the existing deterministic command engine, which reads the same real data
+without a model. A bad or rate-limited key takes the same path: `callAI` returns null on 401,
+429, timeout or a malformed body, and the reply is composed locally rather than erroring.
+
+| Check | Result |
+| --- | --- |
+| `GET /api/ai/chat` with no key | `{"available":false,"model":null}` — no upstream calls made |
+| `POST` chat / summary / idea, no key | `{"available":false,"provider":"Local"}`, client falls back |
+| Invalid key | `callAI` → `null` → local composition, no error surfaced |
+| Trade Idea timeframes | 5M · 15M · 1H · 2H · 4H · D1, matching Chart Snap |
+| `lint` / `tsc` / `build` | clean · 7/7 static · `/dashboard` **181 kB**, no new dependencies |
+
+### Two badges, because they mean different things
+
+`REAL • OPENAI` / `LOCAL ENGINE` reports which engine wrote the reply. `JOURNAL n` / `SAMPLE n`
+reports whether the book being discussed is the reader's own import or the built-in sample.
+`SAMPLE 54` was never a statement about the market data — quotes and patterns were already
+real — it means no statement has been imported yet.

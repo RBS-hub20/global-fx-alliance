@@ -117,7 +117,7 @@ export async function POST(request: Request) {
         bias: snap.read.bias,
         confidence: snap.read.confidence,
         level: snap.read.level,
-        distance: snap.read.distance,
+        distance: snap.read.distance === null ? null : Number(snap.read.distance.toFixed(getPair(snap.symbol).decimals)),
         distanceAtr: snap.read.distanceAtr,
         rsi: snap.read.rsi,
         rsiLabel: snap.read.rsiLabel,

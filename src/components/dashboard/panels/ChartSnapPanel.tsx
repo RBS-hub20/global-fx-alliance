@@ -6,6 +6,7 @@ import {
   Camera, Check, Copy, Info, Loader2, RotateCcw, Share2, Upload, X, Zap,
 } from "lucide-react";
 import { Card, CardHead, Field, PanelHeader, Pills, Select, Skeleton, Toast } from "@/components/ui/Primitives";
+import { FormattedAI } from "@/components/ui/FormattedAI";
 import { DEFAULT_PROFILE, planToText, type Style, type TradePlan, type TradeProfile } from "@/lib/chartSnap";
 import { PAIRS } from "@/lib/market";
 import { TIMEFRAMES, TIMEFRAME_SPEC, type Timeframe } from "@/lib/timeframes";
@@ -643,7 +644,7 @@ function StructureCard({
             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue">
               Bakit ganito ang basa
             </p>
-            <div className="whitespace-pre-line text-[12.5px] leading-relaxed text-ink-muted">{explainer}</div>
+            <FormattedAI text={explainer} />
           </div>
         ) : null}
 

@@ -1070,3 +1070,41 @@ button, so leaving it on does not run up model usage in the background.
 The chart is loaded with `next/dynamic`, matching Market Analysis. Importing it
 statically first put lightweight-charts in the main bundle and pushed `/dashboard`
 from 184 kB to 238 kB; code-split it costs 2 kB and loads only in live mode.
+
+---
+
+## Markdown was reaching the reader as literal asterisks (2026-09-02)
+
+The Chart Snap explainer rendered the model's output with `whitespace-pre-line`,
+so `**4335.04**` arrived on screen with the asterisks intact. The assistant chat
+had its own small parser and was fine; Chart Snap never got one.
+
+`components/ui/FormattedAI.tsx` is now the single renderer for both, and the
+chat's private copy is deleted.
+
+### No react-markdown
+
+It would pull remark and mdast for roughly 40 kB gzipped to render four
+constructs. The model only ever emits `**bold**`, backtick code, `- ` bullets and
+rule lines; eighty lines handle those with no dependency. First load moved
+**186 kB → 187 kB**.
+
+### Two rules that make it readable rather than merely correct
+
+- **Headings.** A line opening with a short bold phrase that ends in a full stop
+  or colon is a section heading — `**Bakit ganito.** Ang structure ay…` — so it
+  renders as one instead of as a bold run buried in the paragraph.
+- **Pills only for figures.** Only bold spans containing a digit get the pill
+  treatment. Pilling every bold span turns a paragraph into a ransom note;
+  pilling `4335.04`, `54%` and `99.3 pips` makes the numbers findable at a glance
+  while ordinary emphasis stays plain bold. Negative values — `-$68.80`, `-1.31%`
+  — carry their sign in colour.
+
+Numbers use the existing `num-mono` (tabular-nums) so columns of figures align,
+and weight is 600 rather than 700. Inter was already the body font.
+
+Two tones: `panel` for Chart Snap's surface, `terminal` for the assistant's
+green-on-black, so neither surface had to be restyled to share the renderer.
+
+Verified: five headings detected, fourteen figure pills, one plain-bold emphasis,
+and no asterisk survives rendering.

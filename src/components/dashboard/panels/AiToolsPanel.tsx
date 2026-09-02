@@ -6,6 +6,7 @@ import {
   ArrowUp, BookOpen, ChevronRight, Eraser, FileText, Lightbulb, Loader2, Radar, Sparkles,
 } from "lucide-react";
 import { Card, CardHead, PanelHeader, Select, Skeleton, Toast } from "@/components/ui/Primitives";
+import { FormattedAI } from "@/components/ui/FormattedAI";
 import { AiMark } from "@/components/brand/AiMark";
 import { DISCLAIMER } from "@/lib/ai";
 import { COMMANDS, answerWithContext, runCommand } from "@/lib/aiCommands";
@@ -77,40 +78,6 @@ const GREETING_MSG: Msg = {
   role: "ai",
   text: "Ask me about a pair, today's calendar, or what is driving the dollar. I explain structure — I don't hand out signals. Type `/help` for what I can read.",
 };
-
-/** Renders **bold**, `code` and `- ` bullets — the only markup the engine emits. */
-function Rich({ text }: { text: string }) {
-  return (
-    <>
-      {text.split("\n").map((line, i) => {
-        if (!line.trim()) return <span key={i} className="block h-2.5" />;
-        if (/^---+$/.test(line.trim()))
-          return <span key={i} className="my-2 block h-px bg-[#00ff88]/15" />;
-        const bullet = line.startsWith("- ");
-        const content = bullet ? line.slice(2) : line;
-        const parts = content.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-        const rendered = parts.map((p, j) =>
-          p.startsWith("**") && p.endsWith("**") ? (
-            <strong key={j} className="font-semibold text-[#fbbf24]">{p.slice(2, -2)}</strong>
-          ) : p.startsWith("`") && p.endsWith("`") ? (
-            <code key={j} className="rounded bg-[#00ff88]/10 px-1 text-[#00ff88]">{p.slice(1, -1)}</code>
-          ) : (
-            <span key={j}>{p}</span>
-          )
-        );
-        return bullet ? (
-          <span key={i} className="flex gap-2">
-            <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#00ff88]" aria-hidden />
-            <span>{rendered}</span>
-          </span>
-        ) : (
-          <span key={i} className="block">{rendered}</span>
-        );
-      })}
-    </>
-  );
-}
-
 
 /* -------------------------------------------------------------- structure card */
 
@@ -477,7 +444,7 @@ export function AiToolsPanel() {
                             : "border border-[#00ff88]/15 bg-[#00ff88]/[0.04] text-[#c8d0dc]"
                         }`}
                       >
-                        <Rich text={m.text} />
+                        <FormattedAI text={m.text} tone="terminal" />
                       </div>
                       {m.snap ? <SnapCard snap={m.snap} /> : null}
                       {m.role === "ai" && m.sources?.length ? (
@@ -741,7 +708,7 @@ function MarketSummaryCard({
           <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
         ) : text ? (
           <>
-            <div className="text-[13px] leading-relaxed text-ink-muted"><Rich text={text} /></div>
+            <FormattedAI text={text} />
             {sources.length ? (
               <p className="mt-3 text-[10.5px] text-ink-muted/70">Sources: {sources.join(" · ")}</p>
             ) : null}
@@ -891,8 +858,8 @@ function TradeIdeaCard({
           <div className="mt-4 space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /></div>
         ) : text ? (
           <>
-            <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.02] p-4 text-[13px] leading-relaxed text-ink-muted">
-              <Rich text={text} />
+            <div className="mt-4 rounded-lg border border-white/[0.08] bg-white/[0.02] p-4">
+              <FormattedAI text={text} />
             </div>
             {sources.length ? <p className="mt-3 text-[10.5px] text-ink-muted/70">Sources: {sources.join(" · ")}</p> : null}
             <ActionRow pair={pair} />

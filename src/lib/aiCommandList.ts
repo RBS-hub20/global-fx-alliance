@@ -14,6 +14,9 @@ export interface CommandDef {
 
 export const COMMANDS: CommandDef[] = [
   { cmd: "/help", what: "List every command" },
+  { cmd: "/snap", args: "<pair> <timeframe>", what: "Read the live structure — e.g. /snap XAU/USD 1H" },
+  { cmd: "/screenshot", args: "<pair> <timeframe>", what: "Same read, against a chart you are looking at" },
+  { cmd: "/pair", args: "<pair>", what: "Change the instrument the panel is set to" },
   { cmd: "/explain last loss", what: "Break down your most recent losing trade" },
   { cmd: "/why", args: "<symbol> moved", what: "Real price, headlines and patterns for an instrument" },
   { cmd: "/my best hour", what: "Your best and worst hour, in Dubai time" },

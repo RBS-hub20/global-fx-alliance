@@ -3,8 +3,11 @@ import { SYSTEM_PROMPT, callAI, hasOpenAIKey, journalToContext, type JournalAggr
 import {
   AI_MAJORS, buildSources, instrumentContext, patternContext, readInstrument, readMarket, sessionContext,
 } from "@/lib/aiContext";
-import { PAIRS } from "@/lib/market";
+import { getPair, PAIRS } from "@/lib/market";
 import { COMMANDS } from "@/lib/aiCommandList";
+import { parseCommand } from "@/lib/commandParser";
+import { runSnap, explainerPrompt } from "@/lib/snapAnalysis";
+import { isTimeframe, type Timeframe } from "@/lib/timeframes";
 
 export const runtime = "edge";
 
@@ -62,7 +65,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ available: false, provider: "Local" }, { headers: { "Cache-Control": "no-store" } });
   }
 
-  let body: { message?: string; journal?: JournalAggregate | null };
+  let body: {
+    message?: string;
+    journal?: JournalAggregate | null;
+    /** Whatever the dropdowns hold, used when the command omits them. */
+    pair?: string;
+    timeframe?: string;
+  };
   try {
     body = await request.json();
   } catch {
@@ -78,6 +87,68 @@ export async function POST(request: Request) {
   const key = `${message.toLowerCase()}|${journal?.totalTrades ?? 0}|${journal?.netPL ?? 0}|${Math.floor(Date.now() / CACHE_TTL_MS)}`;
   const hit = cached(key);
   if (hit) return NextResponse.json(hit, { headers: { "Cache-Control": "no-store" } });
+
+  /* ------------------------------------------------- /snap and /screenshot */
+
+  const parsed = parseCommand(message);
+  if (parsed.type === "snap" || parsed.type === "screenshot") {
+    const fallbackPair = body.pair && PAIRS.some((p) => p.symbol === body.pair) ? body.pair : "XAU/USD";
+    const snapPair = parsed.pair ?? fallbackPair;
+    const snapTf: Timeframe = parsed.timeframe ?? (isTimeframe(body.timeframe) ? body.timeframe : "1H");
+
+    const snap = await runSnap(snapPair, snapTf, journal);
+    const written = await callAI(SYSTEM_PROMPT, `${snap.context}\n\n${explainerPrompt(snap)}`, 800);
+
+    if (!written) {
+      return NextResponse.json(
+        { available: false, provider: "Local", note: "AI unavailable — answered locally" },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    const snapPayload = {
+      available: true,
+      provider: written.provider,
+      answer: written.text,
+      kind: "snap" as const,
+      read: {
+        state: snap.read.state,
+        label: snap.read.label,
+        bias: snap.read.bias,
+        confidence: snap.read.confidence,
+        level: snap.read.level,
+        distance: snap.read.distance,
+        distanceAtr: snap.read.distanceAtr,
+        rsi: snap.read.rsi,
+        rsiLabel: snap.read.rsiLabel,
+        pattern: snap.read.pattern
+          ? { type: snap.read.pattern.type, direction: snap.read.pattern.direction, confidence: snap.read.pattern.confidence }
+          : null,
+        cautions: snap.read.cautions,
+      },
+      plan: snap.plan,
+      symbol: snap.symbol,
+      timeframe: snap.timeframe,
+      price: snap.instrument.quote.price,
+      decimals: getPair(snap.symbol).decimals,
+      isReal: snap.instrument.quote.isReal,
+      source: snap.instrument.quote.source,
+      symbolUsed: snap.instrument.quote.symbolUsed,
+      bars: snap.instrument.quote.bars,
+      session: snap.session,
+      sources: buildSources({
+        quotes: [snap.instrument.quote],
+        patternCount: snap.instrument.patterns.length,
+        journal: journal ? { totalTrades: journal.totalTrades, isReal: journal.isReal } : null,
+        extra: [
+          snap.read.level ? `Auto S/R ${snap.read.level.price} (${snap.read.level.touches} touches)` : "Auto S/R",
+          "Session clock",
+        ],
+      }),
+    };
+    store(key, snapPayload);
+    return NextResponse.json(snapPayload, { headers: { "Cache-Control": "no-store" } });
+  }
 
   const isHelp = /^\/(help|commands|\?)\b/i.test(message);
   const symbol = isHelp ? null : detectSymbol(message);

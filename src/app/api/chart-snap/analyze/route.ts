@@ -5,6 +5,7 @@ import { getPair, PAIRS } from "@/lib/market";
 import { getRealCandles } from "@/lib/marketProvider";
 import { isTimeframe, specFor, touchesForHighConfidence, type Timeframe } from "@/lib/timeframes";
 import { buildTradePlan, DEFAULT_PROFILE, type Style, type TradeProfile } from "@/lib/chartSnap";
+import { readStructure } from "@/lib/structureRead";
 
 export const runtime = "edge";
 
@@ -147,6 +148,22 @@ export async function POST(request: Request) {
     profile,
   });
 
+  // The same structure read the assistant's /snap returns, so both surfaces
+  // describe one chart identically. Computed here without a model call, so it
+  // lands with the rest of the analysis rather than waiting on the explainer.
+  const read = readStructure({
+    symbol,
+    timeframe,
+    candles: scaled,
+    price,
+    supports: levels.filter((l) => l.type === "support"),
+    resistances: levels.filter((l) => l.type === "resistance"),
+    patterns,
+    rsi: indicators?.rsi ?? null,
+    rsiLabel: indicators?.rsiLabel ?? "n/a",
+    atr: indicators?.atr ?? null,
+  });
+
   /* ------------------------------------ screenshot vs live comparison */
   const diff = screenshotPrice !== null ? price - screenshotPrice : null;
   const diffPct = diff !== null && screenshotPrice ? (diff / screenshotPrice) * 100 : null;
@@ -159,6 +176,23 @@ export async function POST(request: Request) {
       interval: spec.twelve,
       minTouchesForHigh: minTouches,
       decimals: pair.decimals,
+
+      read: {
+        state: read.state,
+        label: read.label,
+        bias: read.bias,
+        confidence: read.confidence,
+        level: read.level,
+        distance: read.distance === null ? null : Number(read.distance.toFixed(pair.decimals)),
+        distanceAtr: read.distanceAtr,
+        rsi: read.rsi,
+        rsiLabel: read.rsiLabel,
+        pattern: read.pattern
+          ? { type: read.pattern.type, direction: read.pattern.direction, confidence: read.pattern.confidence }
+          : null,
+        observations: read.observations,
+        cautions: read.cautions,
+      },
 
       // Stated plainly so no client can present this as image analysis.
       imageAnalysed: false,

@@ -10,6 +10,7 @@ import { DEFAULT_PROFILE, planToText, type Style, type TradePlan, type TradeProf
 import { PAIRS } from "@/lib/market";
 import { TIMEFRAMES } from "@/lib/timeframes";
 import { getBestWorst, getPairStats } from "@/lib/journalStore";
+import { buildJournalAggregate } from "@/lib/journalAggregate";
 import { getCurrentSessionInfo, humanMinutes } from "@/lib/sessionTime";
 import { addSharedPost } from "@/lib/communityPosts";
 import { readStore, writeStore } from "@/lib/storage";
@@ -49,6 +50,15 @@ interface Analysis {
   structure: { supports: { price: number; touches: number }[]; resistances: { price: number; touches: number }[] };
   patterns: { type: string; direction: string; confidence: string; price: number; description: string }[];
   indicators: { rsi: number | null; rsiLabel: string; atrPct: number | null; macd: string | null } | null;
+  read: {
+    state: string; label: string; bias: "bullish" | "bearish" | "neutral";
+    confidence: "high" | "medium" | "low";
+    level: { price: number; touches: number; type: "support" | "resistance" } | null;
+    distance: number | null; distanceAtr: number | null;
+    rsi: number | null; rsiLabel: string;
+    pattern: { type: string; direction: string; confidence: string } | null;
+    observations: string[]; cautions: string[];
+  } | null;
   tradePlan: TradePlan | null;
   sources: string[];
   disclaimer: string;
@@ -66,6 +76,8 @@ export function ChartSnapPanel() {
   const [step, setStep] = useState(0);
   const [result, setResult] = useState<Analysis | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [explainer, setExplainer] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -116,8 +128,28 @@ export function ChartSnapPanel() {
         setError(j?.message ?? "Analysis failed. Try again in a moment.");
         return;
       }
-      setResult(await res.json());
+      const json = (await res.json()) as Analysis;
+      setResult(json);
       trackEvent(EVENTS.chartSnap, { pair: symbol, timeframe });
+
+      // The computed read is already on screen; the prose arrives after. Failure
+      // here is silent — the analysis stands on its own without it.
+      setExplainer(null);
+      setExplaining(true);
+      fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `/snap ${symbol} ${timeframe}`,
+          journal: buildJournalAggregate(),
+          pair: symbol,
+          timeframe,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (j?.available && j.answer) setExplainer(j.answer as string); })
+        .catch(() => {})
+        .finally(() => setExplaining(false));
     } catch {
       setError("Could not reach the analyzer. Check your connection and retry.");
     } finally {
@@ -258,6 +290,10 @@ export function ChartSnapPanel() {
             </Card>
           ) : null}
 
+          {result?.read ? (
+            <StructureCard a={result} explainer={explainer} explaining={explaining} />
+          ) : null}
+
           {error ? (
             <p role="alert" className="rounded-lg border border-brand-danger/30 bg-brand-danger/[0.08] px-4 py-3 text-[12.5px] text-brand-danger">
               {error}
@@ -274,6 +310,93 @@ export function ChartSnapPanel() {
 
       <Toast message={toast} />
     </div>
+  );
+}
+
+const BIAS_TONE: Record<string, string> = {
+  bullish: "border-brand-green/40 bg-brand-green/[0.1] text-brand-green",
+  bearish: "border-brand-danger/40 bg-brand-danger/[0.1] text-brand-danger",
+  neutral: "border-white/[0.14] bg-white/[0.05] text-ink",
+};
+
+/**
+ * What the structure is doing, and why it might be wrong.
+ *
+ * The badge reports a state and a bias, never an order type: this panel reads
+ * charts, it does not tell anyone to transact. The written explainer lands a
+ * moment after the numbers, so nothing waits on a model call.
+ */
+function StructureCard({
+  a, explainer, explaining,
+}: {
+  a: Analysis;
+  explainer: string | null;
+  explaining: boolean;
+}) {
+  const r = a.read!;
+  const f = (v: number) => v.toFixed(a.decimals);
+
+  return (
+    <Card>
+      <CardHead
+        title="What the structure is doing"
+        right={
+          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+            {r.confidence} confidence
+          </span>
+        }
+      />
+      <div className="space-y-4 p-5">
+        <div className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2.5 ${BIAS_TONE[r.bias] ?? BIAS_TONE.neutral}`}>
+          <span className="text-[13px] font-semibold">{r.label}</span>
+          {r.level ? (
+            <span className="num-mono text-[12px] opacity-90">
+              {f(r.level.price)} · {r.level.touches} {r.level.touches === 1 ? "touch" : "touches"}
+              {r.distanceAtr !== null ? ` · ${r.distanceAtr}×ATR away` : ""}
+            </span>
+          ) : null}
+        </div>
+
+        <ul className="space-y-2">
+          {r.observations.map((o, i) => (
+            <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-ink-muted">
+              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-blue" aria-hidden />
+              <span>{o}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="rounded-lg border border-[#fbbf24]/25 bg-[#fbbf24]/[0.05] p-4">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-[#fbbf24]">
+            Bakit pwedeng mali
+          </p>
+          <ul className="space-y-1.5">
+            {r.cautions.map((c, i) => (
+              <li key={i} className="flex gap-2 text-[12px] leading-relaxed text-ink-muted">
+                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#fbbf24]" aria-hidden />
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {explaining ? (
+          <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /></div>
+        ) : explainer ? (
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-4">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue">
+              Bakit ganito ang basa
+            </p>
+            <div className="whitespace-pre-line text-[12.5px] leading-relaxed text-ink-muted">{explainer}</div>
+          </div>
+        ) : null}
+
+        <p className="text-[11px] leading-relaxed text-ink-muted/70">
+          An observation of structure, not a recommendation. Any numbers below are an illustration of how
+          risk is measured, sized on your profile&apos;s example balance.
+        </p>
+      </div>
+    </Card>
   );
 }
 

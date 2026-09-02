@@ -12,7 +12,10 @@ import { COMMANDS, answerWithContext, runCommand } from "@/lib/aiCommands";
 import { getBestWorst, getPairStats } from "@/lib/journalStore";
 import { buildJournalAggregate } from "@/lib/journalAggregate";
 import type { JournalAggregate } from "@/lib/aiProvider";
-import { TIMEFRAMES } from "@/lib/timeframes";
+import { TIMEFRAMES, type Timeframe } from "@/lib/timeframes";
+import { parseCommand } from "@/lib/commandParser";
+import type { StructureRead } from "@/lib/structureRead";
+import type { TradePlan } from "@/lib/chartSnap";
 import { getCurrentSessionInfo, getGreeting, humanMinutes, type SessionInfo } from "@/lib/sessionTime";
 import { PAIRS } from "@/lib/market";
 import { KEYS, usePersistentState } from "@/lib/storage";
@@ -30,6 +33,23 @@ interface Msg {
   at?: string;
   /** Which engine wrote it — the badge on a reply must match how it was made. */
   provider?: "OpenAI" | "Local";
+  /** Present on /snap replies: the computed read the prose was written from. */
+  snap?: SnapReply;
+}
+
+export interface SnapReply {
+  symbol: string;
+  timeframe: string;
+  price: number;
+  decimals: number;
+  isReal: boolean;
+  source: string;
+  symbolUsed: string | null;
+  bars: number;
+  read: Pick<StructureRead, "state" | "label" | "bias" | "confidence" | "level" | "distance" | "distanceAtr" | "rsi" | "rsiLabel" | "cautions"> & {
+    pattern: { type: string; direction: string; confidence: string } | null;
+  };
+  plan: TradePlan;
 }
 
 /**
@@ -91,6 +111,102 @@ function Rich({ text }: { text: string }) {
   );
 }
 
+
+/* -------------------------------------------------------------- structure card */
+
+const BIAS_TONE: Record<string, string> = {
+  bullish: "border-brand-green/40 bg-brand-green/[0.1] text-brand-green",
+  bearish: "border-danger/40 bg-danger/[0.1] text-danger",
+  neutral: "border-white/[0.14] bg-white/[0.05] text-ink",
+};
+
+/**
+ * The computed half of a /snap reply.
+ *
+ * It reports what the structure is doing, not what to do about it — the badge
+ * carries a bias and a level, never an order type. The risk block underneath is
+ * the same illustrative geometry Chart Snap shows, on the profile's example
+ * balance rather than the reader's own.
+ */
+function SnapCard({ snap }: { snap: SnapReply }) {
+  const d = snap.decimals;
+  const f = (v: number) => v.toFixed(d);
+  const r = snap.read;
+
+  return (
+    <div className="mt-2 space-y-3 rounded-lg border border-white/[0.1] bg-white/[0.02] p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[12px] font-bold text-white">{snap.symbol}</span>
+        <span className="rounded border border-white/[0.12] px-1.5 py-0.5 font-mono text-[10px] text-ink-muted">{snap.timeframe}</span>
+        <span className="num-mono text-[12px] text-ink">{f(snap.price)}</span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${
+            snap.isReal ? "bg-brand-green/[0.13] text-brand-green" : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
+          }`}
+        >
+          {snap.isReal ? `Real · ${snap.source}` : "Modelled"}
+        </span>
+        <span className="ml-auto text-[10px] text-ink-muted">{snap.bars} bars</span>
+      </div>
+
+      <div className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 ${BIAS_TONE[r.bias] ?? BIAS_TONE.neutral}`}>
+        <span className="text-[12.5px] font-semibold">{r.label}</span>
+        {r.level ? (
+          <span className="num-mono text-[12px] opacity-90">
+            {f(r.level.price)} · {r.level.touches} {r.level.touches === 1 ? "touch" : "touches"}
+            {r.distanceAtr !== null ? ` · ${r.distanceAtr}×ATR away` : ""}
+          </span>
+        ) : null}
+        <span className="ml-auto rounded-full bg-black/25 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em]">
+          {r.confidence} confidence
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11.5px] sm:grid-cols-3">
+        {[
+          ["Reference", f(snap.plan.entry)],
+          ["Invalidation", `${f(snap.plan.stopLoss)} (${snap.plan.stopPips}p)`],
+          ["Objective 1", `${f(snap.plan.target1)} · ${snap.plan.rr1}`],
+          ["Objective 2", `${f(snap.plan.target2)} · ${snap.plan.rr2}`],
+          ["RSI(14)", r.rsi !== null ? `${r.rsi.toFixed(1)} ${r.rsiLabel}` : "n/a"],
+          ["Pattern", r.pattern ? `${r.pattern.type} (${r.pattern.confidence})` : "none flagged"],
+        ].map(([k, v]) => (
+          <div key={k} className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-[0.08em] text-ink-muted">{k}</span>
+            <span className="num-mono text-ink">{v}</span>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-[10.5px] leading-relaxed text-ink-muted/80">
+        Geometry is illustrative, sized on the profile&apos;s example balance — not a position for your account.
+        {snap.plan.stopBasis ? ` Invalidation from ${snap.plan.stopBasis}.` : ""}
+      </p>
+
+      <details className="group">
+        <summary className="cursor-pointer list-none text-[11.5px] font-semibold text-[#fbbf24]">
+          Bakit pwedeng mali — {r.cautions.length} ways this read breaks
+        </summary>
+        <ul className="mt-2 space-y-1.5">
+          {r.cautions.map((c, i) => (
+            <li key={i} className="flex gap-2 text-[11.5px] leading-relaxed text-ink-muted">
+              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#fbbf24]" aria-hidden />
+              <span>{c}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <div className="flex flex-wrap gap-2 border-t border-white/[0.08] pt-3">
+        <Link href={tabHref("market-analysis", snap.symbol)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">View chart</Link>
+        <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">Check journal</Link>
+        <Link href={tabHref("pattern-radar")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">Pattern radar</Link>
+        <Link href={tabHref("chart-snap")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">Chart Snap</Link>
+      </div>
+    </div>
+  );
+}
+
 export function AiToolsPanel() {
   const { value: history, setValue: setHistory, hydrated } = usePersistentState<Msg[]>(
     KEYS.chat,
@@ -102,6 +218,9 @@ export function AiToolsPanel() {
   const endRef = useRef<HTMLDivElement>(null);
 
   const [aiOn, setAiOn] = useState<boolean | null>(null);
+  // What /snap falls back to when the command omits pair or timeframe.
+  const [cmdPair, setCmdPair] = useState("XAU/USD");
+  const [cmdTf, setCmdTf] = useState<Timeframe>("1H");
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [journal, setJournal] = useState<ReturnType<typeof getBestWorst> | null>(null);
   const [radar, setRadar] = useState<{ symbol: string; type: string; confidence: string; price: number }[]>([]);
@@ -174,6 +293,23 @@ export function AiToolsPanel() {
         return;
       }
 
+      // /pair only moves the dropdown — no reason to spend a model call on it.
+      const parsed = parseCommand(q);
+      if (parsed.type === "pair") {
+        if (parsed.pair) {
+          setCmdPair(parsed.pair);
+          setInput("");
+          flash(`Pair set to ${parsed.pair}`);
+        } else {
+          flash("Unknown instrument — try /pair XAU/USD");
+        }
+        return;
+      }
+      if (parsed.type === "snap" || parsed.type === "screenshot") {
+        if (parsed.pair) setCmdPair(parsed.pair);
+        if (parsed.timeframe) setCmdTf(parsed.timeframe);
+      }
+
       setHistory((prev) => [...prev, { role: "user", text: q, at: new Date().toISOString() }]);
       setInput("");
       setThinking(true);
@@ -182,16 +318,24 @@ export function AiToolsPanel() {
       try {
         // Aggregated statistics only — the trade list never leaves the browser.
         const journalAgg = buildJournalAggregate();
-        const llm = await askAI<{ answer: string; sources: string[] }>("/api/ai/chat", {
-          message: q,
-          journal: journalAgg,
-        });
+        const llm = await askAI<{ answer: string; sources: string[]; kind?: string; snap?: SnapReply } & Partial<SnapReply>>(
+          "/api/ai/chat",
+          { message: q, journal: journalAgg, pair: cmdPair, timeframe: cmdTf }
+        );
 
         if (llm) {
           setAiOn(true);
+          const snap =
+            llm.kind === "snap" && llm.read && llm.plan
+              ? ({
+                  symbol: llm.symbol, timeframe: llm.timeframe, price: llm.price, decimals: llm.decimals,
+                  isReal: llm.isReal, source: llm.source, symbolUsed: llm.symbolUsed, bars: llm.bars,
+                  read: llm.read, plan: llm.plan,
+                } as SnapReply)
+              : undefined;
           setHistory((prev) => [
             ...prev,
-            { role: "ai", text: llm.answer, sources: llm.sources, provider: "OpenAI", at: new Date().toISOString() },
+            { role: "ai", text: llm.answer, sources: llm.sources, provider: "OpenAI", snap, at: new Date().toISOString() },
           ]);
         } else {
           setAiOn(false);
@@ -210,7 +354,7 @@ export function AiToolsPanel() {
         setThinking(false);
       }
     },
-    [setHistory, thinking]
+    [setHistory, thinking, cmdPair, cmdTf]
   );
 
   /* --------------------------------------------- prompts from real context */
@@ -222,6 +366,7 @@ export function AiToolsPanel() {
     if (journal?.worstHourDubai) out.push("/my best hour");
     if (session?.active.length || session?.next) out.push("/session");
     if (journal?.revenge.detected) out.push("/my revenge");
+    out.push(`/snap ${journal?.worstPair?.key ?? "XAU/USD"} 1H`);
     out.push("/explain last loss");
     out.push("/help");
     return Array.from(new Set(out)).slice(0, 6);
@@ -229,9 +374,9 @@ export function AiToolsPanel() {
 
   const placeholder = journal
     ? journal.isReal
-      ? `Ask about your last loss, your best hour, or why gold moved — I can read your ${journal.count} trades. Type /help`
-      : `Ask about a pair, the session, or type /help — journal answers use a ${journal.count}-trade sample until you import your own`
-    : "Ask AI…  (type /help)";
+      ? `Type /snap XAU/USD 1H, ask about your last loss, or /help — I can read your ${journal.count} trades`
+      : `Type /snap XAU/USD 1H or /help — journal answers use a ${journal.count}-trade sample until you import your own`
+    : "Type /snap XAU/USD 1H or /help";
 
   return (
     <div className="space-y-5">
@@ -334,6 +479,7 @@ export function AiToolsPanel() {
                       >
                         <Rich text={m.text} />
                       </div>
+                      {m.snap ? <SnapCard snap={m.snap} /> : null}
                       {m.role === "ai" && m.sources?.length ? (
                         <p className="mt-1.5 px-1 font-mono text-[10px] leading-relaxed text-[#8A93A8]">
                           {m.provider ? (
@@ -383,6 +529,42 @@ export function AiToolsPanel() {
                 {thinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" strokeWidth={2.4} />}
               </button>
             </form>
+
+            <div className="mt-3 flex flex-wrap items-end gap-2 border-b border-[#00ff88]/10 pb-3">
+              <label className="flex flex-col gap-1">
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#00ff88]/50">Pair</span>
+                <select
+                  value={cmdPair}
+                  onChange={(e) => setCmdPair(e.target.value)}
+                  aria-label="Instrument for /snap"
+                  className="rounded border border-[#00ff88]/25 bg-black/50 px-2 py-1.5 font-mono text-[11.5px] text-[#00ff88] outline-none focus:border-[#00ff88]/60"
+                >
+                  {PAIRS.map((p) => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#00ff88]/50">Timeframe</span>
+                <select
+                  value={cmdTf}
+                  onChange={(e) => setCmdTf(e.target.value as Timeframe)}
+                  aria-label="Timeframe for /snap"
+                  className="rounded border border-[#00ff88]/25 bg-black/50 px-2 py-1.5 font-mono text-[11.5px] text-[#00ff88] outline-none focus:border-[#00ff88]/60"
+                >
+                  {TIMEFRAMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => send(`/snap ${cmdPair} ${cmdTf}`)}
+                disabled={thinking}
+                className="rounded border border-[#00ff88]/40 bg-[#00ff88]/10 px-3 py-1.5 font-mono text-[11.5px] font-semibold text-[#00ff88] transition-all duration-200 hover:bg-[#00ff88]/20 disabled:opacity-40"
+              >
+                Snap structure
+              </button>
+              <span className="text-[10.5px] leading-tight text-ink-muted/70">
+                Reads the live chart. Structure and levels — not a trade call.
+              </span>
+            </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
               {prompts.map((c) => (

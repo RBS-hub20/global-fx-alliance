@@ -120,7 +120,7 @@ function GatePanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email, broker, account, server: server || null,
-          method: proof ? "screenshot" : "account",
+          method: proof ? "screenshot" : "form",
           hasProof: proof,
           ibClickTime: info?.clickTime ?? null,
         }),

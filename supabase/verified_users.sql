@@ -11,7 +11,7 @@ create table if not exists public.verified_users (
   broker          text        not null check (broker in ('VTMarkets','PUPrime','Vantage')),
   account_number  text        not null,
   server          text,
-  method          text        not null default 'account' check (method in ('account','screenshot')),
+  method          text        not null default 'form'    check (method in ('form','screenshot')),
   ib_code         text,
   ib_click_time   bigint,
   -- What an admin read in the broker's IB portal. Null until reviewed, never a
@@ -45,7 +45,7 @@ on conflict (id) do update set public = false;
 -- Safe to run repeatedly.
 
 alter table public.verified_users add column if not exists server          text;
-alter table public.verified_users add column if not exists method          text default 'account';
+alter table public.verified_users add column if not exists method          text default 'form';
 alter table public.verified_users add column if not exists ib_code         text;
 alter table public.verified_users add column if not exists ib_click_time   bigint;
 alter table public.verified_users add column if not exists deposit         numeric;

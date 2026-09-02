@@ -14,7 +14,8 @@ import { PROOF_BUCKET, TABLE, hasSupabase, supabaseAdmin } from "./supabaseAdmin
  */
 
 export type VerificationStatus = "pending" | "verified" | "rejected";
-export type VerificationMethod = "account" | "screenshot";
+/** Matches the table's own check constraint: a plain submission is "form". */
+export type VerificationMethod = "form" | "screenshot";
 
 export interface VerificationRequest {
   id: string;
@@ -70,7 +71,7 @@ function toRequest(r: Row): VerificationRequest {
     broker: r.broker as Broker,
     account: r.account_number,
     server: r.server ?? null,
-    method: r.method === "screenshot" ? "screenshot" : "account",
+    method: r.method === "screenshot" ? "screenshot" : "form",
     ibCode: r.ib_code ?? null,
     ibClickTime: num(r.ib_click_time ?? null),
     depositUsd: num(r.deposit ?? null),

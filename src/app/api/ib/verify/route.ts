@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     broker,
     account,
     server,
-    method: proofPath ? "screenshot" : "account",
+    method: proofPath ? "screenshot" : "form",
     ibCode: clean(body.ib_code ?? body.ibCode, 60) || cookieCode,
     ibClickTime: typeof body.ibClickTime === "number" ? body.ibClickTime : null,
     proofPath,

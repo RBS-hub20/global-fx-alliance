@@ -6,6 +6,7 @@ import {
   ArrowUp, BookOpen, ChevronRight, Eraser, FileText, Lightbulb, Loader2, Radar, Sparkles,
 } from "lucide-react";
 import { Card, CardHead, PanelHeader, Select, Skeleton, Toast } from "@/components/ui/Primitives";
+import { AiMark } from "@/components/brand/AiMark";
 import { DISCLAIMER } from "@/lib/ai";
 import { COMMANDS, answerWithContext, runCommand } from "@/lib/aiCommands";
 import { getBestWorst, getPairStats } from "@/lib/journalStore";
@@ -280,8 +281,13 @@ export function AiToolsPanel() {
         <section className="flex flex-col overflow-hidden rounded-2xl border border-[#00ff88]/20 bg-[#0a0a0a] shadow-glow">
           <header className="flex items-center justify-between gap-3 border-b border-[#00ff88]/15 px-5 py-4">
             <h3 className="flex items-center gap-2.5 font-mono text-[12px] font-bold uppercase tracking-[0.14em] text-[#00ff88]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#00ff88]/30 bg-[#00ff88]/10 text-[#00ff88]">
-                <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#00ff88]/30 bg-black/40">
+                <AiMark
+                  width={19}
+                  height={19}
+                  title="GFXA AI"
+                  className="drop-shadow-[0_0_6px_rgba(0,217,255,0.55)]"
+                />
               </span>
               Market Assistant
               {aiOn !== null ? (

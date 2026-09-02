@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUp, Sparkles } from "lucide-react";
+import { ArrowUp } from "lucide-react";
+import { AiMark } from "@/components/brand/AiMark";
 import { AI_CHIPS } from "@/lib/data";
 
 export function AiAssistant() {
@@ -14,7 +15,7 @@ export function AiAssistant() {
       <div className="relative p-6">
         <div className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-blue/30 bg-brand-blue/10 text-brand-blue">
-            <Sparkles className="h-4 w-4" strokeWidth={2} />
+            <AiMark width={17} height={17} title="GFXA AI" className="drop-shadow-[0_0_6px_rgba(0,217,255,0.5)]" />
           </span>
           <h2 className="text-[12px] font-bold uppercase tracking-[0.14em] text-white">
             GFXA AI Market Assistant

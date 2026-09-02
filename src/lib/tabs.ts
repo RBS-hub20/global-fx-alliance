@@ -39,6 +39,8 @@ export const TABS: TabDef[] = [
   { slug: "calendar", label: "Economic Calendar", icon: CalendarDays, group: "Tools", blurb: "Scheduled releases and what they tend to move." },
   { slug: "journal", label: "Trading Journal", icon: NotebookPen, group: "Tools", blurb: "Log every trade and let the numbers argue back." },
   { slug: "chart-snap", label: "Chart Snap", icon: Camera, group: "Tools", blurb: "Screenshot your chart, get a worked plan from live data." },
+  // TabIcon swaps this for the GFXA AI brand mark; Sparkles remains the fallback
+  // for any consumer reading the registry directly.
   { slug: "ai", label: "AI Tools", icon: Sparkles, group: "Tools", blurb: "Ask the market a question. Education, not advice." },
 
   { slug: "profile", label: "My Profile", icon: UserRound, group: "Account", blurb: "Your identity across the Alliance." },

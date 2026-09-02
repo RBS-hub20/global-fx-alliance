@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TabIcon } from "./TabIcon";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { TABS, TAB_GROUPS, tabHref } from "@/lib/tabs";
@@ -41,7 +42,9 @@ export function Sidebar({
                           : "text-ink-muted hover:bg-white/[0.05] hover:text-ink"
                       }`}
                     >
-                      <tab.icon
+                      <TabIcon
+                        tab={tab}
+                        onFilled={on}
                         className={`h-[17px] w-[17px] shrink-0 ${
                           on ? "text-white" : "text-ink-muted group-hover:text-ink"
                         }`}

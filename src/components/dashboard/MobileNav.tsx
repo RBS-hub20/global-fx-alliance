@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MOBILE_TABS, TAB_BY_SLUG, tabHref } from "@/lib/tabs";
+import { TabIcon } from "./TabIcon";
 
 /** Fixed bottom bar below 1024px; the sidebar becomes a drawer at that breakpoint. */
 export function MobileNav({ active }: { active: string }) {
@@ -20,7 +21,12 @@ export function MobileNav({ active }: { active: string }) {
                   on ? "text-brand-blue" : "text-ink-muted"
                 }`}
               >
-                <tab.icon className="h-[19px] w-[19px]" strokeWidth={on ? 2.1 : 1.8} />
+                <TabIcon
+                  tab={tab}
+                  onFilled={!on && t.slug === "ai"}
+                  className={`h-[19px] w-[19px] ${on && t.slug === "ai" ? "drop-shadow-[0_0_6px_rgba(0,217,255,0.6)]" : ""}`}
+                  strokeWidth={on ? 2.1 : 1.8}
+                />
                 <span className="text-[10px] font-medium leading-none">{t.label}</span>
               </Link>
             </li>

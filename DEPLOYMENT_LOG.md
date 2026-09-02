@@ -899,3 +899,49 @@ contract — about 40 points above spot. So a chat reply sourced from Twelve Dat
 (`GC=F 4359.80`) can disagree, each correctly labelled. Closing that gap means
 preferring a recently-cached Twelve Data spot price over a live Yahoo futures one
 for metals, which is a change to the provider chain rather than to these routes.
+
+---
+
+## GFXA AI brand mark (2026-09-02)
+
+The generic `Sparkles` glyph is replaced by the AI mark — a ribboned "A" in
+electric blue (`#3FE4FF → #0055F0`) with a four-point star in its counter, on an
+optional navy plate.
+
+### Drawn, not imported
+
+The supplied artwork was a 1024px JPEG with the navy plate baked in. That plate
+cannot sit on the app's own surfaces without carrying its own background, and the
+raster turns muddy at the 17–24px the mark is actually used at — which is why the
+brief reached for a `mix-blend` workaround. Rebuilt as geometry it is transparent
+where it needs to be, crisp at every size, needs no PNG ladder, and costs about a
+kilobyte. Gradients live in `<AiMarkDefs />`, mounted once in the root layout,
+following the emblem's existing sprite pattern — per-instance `<defs>` need
+generated ids, and generated ids trip React's hydration check.
+
+### Where it appears, and in which state
+
+| Surface | Treatment |
+| --- | --- |
+| Market Assistant card header | full colour, 19px, cyan drop-shadow, inside the existing green-bordered box |
+| Dashboard AI Assistant widget | full colour, 17px, cyan drop-shadow |
+| Sidebar, AI Tools row inactive | full colour — a blue accent among the monochrome glyphs |
+| Sidebar, AI Tools row **active** | flat white silhouette (`mono`) — the blue gradient has almost no contrast on the filled brand-blue row |
+| Mobile bottom bar, active | full colour with `drop-shadow-[0_0_6px_rgba(0,217,255,0.6)]` |
+| Mobile bottom bar, inactive | `mono`, inheriting the muted tint of its four neighbours |
+
+`drop-shadow` rather than `box-shadow`: the latter would draw a rectangular halo
+around the icon's box instead of following its outline.
+
+`TabIcon` is the single place the swap happens, so the sidebar and the mobile bar
+cannot drift apart. `TABS` still declares `Sparkles` for the AI tab as the
+fallback for any consumer reading the registry directly.
+
+### Assets and a caveat
+
+`public/icons/gfxa-ai.svg` (with plate) and `gfxa-ai-mark.svg` (transparent) are
+exports for uses that cannot mount a React component. They mirror the geometry in
+`AiMark.tsx` rather than sharing it — a `<img>` tag cannot produce the
+`currentColor` variant the navs need — so a change to the mark has to be copied
+across. No PNG ladder was generated: this machine has no `sharp`, `rsvg-convert`
+or ImageMagick, and nothing in the app consumes a raster.

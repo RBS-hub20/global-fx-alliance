@@ -138,6 +138,9 @@ export async function POST(request: Request) {
       id: created.data!.id,
       status: "pending",
       durable: true,
+      // Present when the table is missing columns; harmless for the applicant,
+      // a prompt for the operator to run supabase/verified_users.sql.
+      droppedColumns: created.droppedColumns?.length ? created.droppedColumns : undefined,
       message:
         "Submitted. An admin will confirm the deposit in the broker's IB portal and unlock your access — usually within 24 hours.",
     },

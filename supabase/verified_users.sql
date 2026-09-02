@@ -39,3 +39,16 @@ alter table public.verified_users enable row level security;
 insert into storage.buckets (id, name, public)
 values ('verification-proofs', 'verification-proofs', false)
 on conflict (id) do update set public = false;
+
+-- ---------------------------------------------------------------------------
+-- Migration for a table that already exists with fewer columns.
+-- Safe to run repeatedly.
+
+alter table public.verified_users add column if not exists server          text;
+alter table public.verified_users add column if not exists method          text default 'account';
+alter table public.verified_users add column if not exists ib_code         text;
+alter table public.verified_users add column if not exists ib_click_time   bigint;
+alter table public.verified_users add column if not exists deposit         numeric;
+alter table public.verified_users add column if not exists rejected_reason text;
+alter table public.verified_users add column if not exists screenshot_url  text;
+alter table public.verified_users add column if not exists verified_at     timestamptz;

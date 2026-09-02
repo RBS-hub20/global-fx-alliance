@@ -52,8 +52,15 @@ export async function GET(request: Request) {
       lastBarTime: last?.time ?? null,
       timestamp: new Date().toISOString(),
     },
-    // Matches the provider's own 60s freshness window; polling faster than this
-    // returns the same numbers while spending Twelve Data's 8-per-minute budget.
-    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } }
+    /*
+     * Short, and deliberately without stale-while-revalidate.
+     *
+     * With `swr=120` the CDN kept serving a 94-second-old body — and if that body
+     * was captured during a Twelve Data blip it was Yahoo's GC=F futures price,
+     * about forty points off spot, behind a badge reading LIVE. A live ticker
+     * cannot serve stale. Bursts still collapse at the CDN for 15s, and the
+     * provider's own 60s memo is what actually protects the request budget.
+     */
+    { headers: { "Cache-Control": "public, s-maxage=15" } }
   );
 }

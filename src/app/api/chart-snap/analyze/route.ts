@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { fetchYahooOHLC } from "@/lib/fetchRealOHLC";
 import { detectPatterns } from "@/lib/patternDetector";
 import { detectSwings, findSupportResistance, computeIndicators } from "@/lib/indicators";
-import { candlesFor, getPair, PAIRS, RANGES, type Range } from "@/lib/market";
-import { specFor } from "@/lib/yahooSymbols";
+import { getPair, PAIRS } from "@/lib/market";
+import { getRealCandles } from "@/lib/marketProvider";
+import { isTimeframe, specFor, touchesForHighConfidence, type Timeframe } from "@/lib/timeframes";
 import { buildTradePlan, DEFAULT_PROFILE, type Style, type TradeProfile } from "@/lib/chartSnap";
 
 export const runtime = "edge";
@@ -29,7 +29,7 @@ function toNum(v: FormDataEntryValue | null, fallback: number): number {
 
 export async function POST(request: Request) {
   let symbol = "EUR/USD";
-  let timeframe: Range = "1D";
+  let timeframe: Timeframe = "1H";
   let screenshotPrice: number | null = null;
   let imageBytes = 0;
   let imageName: string | null = null;
@@ -53,8 +53,8 @@ export async function POST(request: Request) {
     const rawSymbol = (form.get("symbol") as string | null)?.toUpperCase().trim();
     if (rawSymbol && PAIRS.some((p) => p.symbol === rawSymbol)) symbol = rawSymbol;
 
-    const rawTf = (form.get("timeframe") as string | null)?.toUpperCase().trim() as Range | undefined;
-    if (rawTf && RANGES.includes(rawTf)) timeframe = rawTf;
+    const rawTf = (form.get("timeframe") as string | null)?.toUpperCase().trim();
+    if (isTimeframe(rawTf)) timeframe = rawTf;
 
     const sp = form.get("screenshotPrice");
     const spNum = typeof sp === "string" ? Number.parseFloat(sp) : NaN;
@@ -73,10 +73,10 @@ export async function POST(request: Request) {
   const pair = getPair(symbol);
   const spec = specFor(timeframe);
 
-  /* ------------------------------------------------- real candles */
-  const real = await fetchYahooOHLC(symbol, spec.range, spec.interval);
-  const isReal = !!real && real.ohlc.length >= 20;
-  const ohlc = isReal ? real!.ohlc : candlesFor(pair.symbol, timeframe);
+  /* --- real candles: Twelve Data -> Yahoo -> cache -> modelled ---- */
+  const feed = await getRealCandles(symbol, timeframe, screenshotPrice ?? undefined);
+  const isReal = feed.isReal;
+  const ohlc = feed.candles;
 
   /*
    * Anchor priority: a live quote, then the price the reader read off their own
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
    * the reader supplied, so it beats a synthetic series — and a plan is never
    * built around a modelled anchor without saying so.
    */
-  const livePrice = isReal ? (real!.marketPrice ?? ohlc[ohlc.length - 1].close) : null;
+  const livePrice = isReal ? feed.price : null;
   const price = livePrice ?? screenshotPrice ?? ohlc[ohlc.length - 1].close;
   const anchor: "live" | "screenshot" | "modeled" =
     livePrice !== null ? "live" : screenshotPrice !== null ? "screenshot" : "modeled";
@@ -124,7 +124,16 @@ export async function POST(request: Request) {
     .slice(0, 3)
     .map((l) => ({ price: Number(l.price.toFixed(pair.decimals)), touches: l.touches, strength: l.strength }));
 
-  const patterns = detectPatterns(scaled, symbol, spec.interval, pair.decimals);
+  // Smaller candles are noisier, so a level needs more touches before a pattern
+  // sitting on it earns "high" — three on 5M/15M, two on the daily.
+  const minTouches = touchesForHighConfidence(timeframe);
+  const patterns = detectPatterns(scaled, symbol, timeframe, pair.decimals).map((pt) =>
+    pt.confidence === "high" &&
+    pt.level !== null &&
+    !([...supports, ...resistances].some((l) => Math.abs(l.price - pt.level!) < 1e-9 && l.touches >= minTouches))
+      ? { ...pt, confidence: "medium" as const }
+      : pt
+  );
   const indicators = computeIndicators(scaled);
   const top = patterns[0] ?? null;
 
@@ -147,7 +156,8 @@ export async function POST(request: Request) {
       ok: true,
       symbol,
       timeframe,
-      interval: spec.interval,
+      interval: spec.twelve,
+      minTouchesForHigh: minTouches,
       decimals: pair.decimals,
 
       // Stated plainly so no client can present this as image analysis.
@@ -160,11 +170,13 @@ export async function POST(request: Request) {
         price: Number(price.toFixed(pair.decimals)),
         bars: ohlc.length,
         isReal,
-        source: isReal ? "yahoo" : anchor === "screenshot" ? "your-screenshot" : "modeled",
-        symbolUsed: isReal ? real!.symbolUsed : null,
-        cached: isReal ? !!real!.cached : false,
-        ageSeconds: isReal ? (real!.ageSeconds ?? 0) : null,
-        stale: isReal ? !!real!.stale : false,
+        source: isReal ? feed.source : anchor === "screenshot" ? "your-screenshot" : "modeled",
+        provider: feed.source,
+        symbolUsed: feed.symbolUsed,
+        cached: feed.ageSeconds > 0,
+        ageSeconds: feed.ageSeconds,
+        stale: feed.stale,
+        aggregated: feed.aggregated,
       },
       anchor,
       planAvailable,
@@ -219,7 +231,7 @@ export async function POST(request: Request) {
 
       sources: [
         isReal
-          ? `Yahoo ${real!.symbolUsed} real (${ohlc.length} bars${real!.stale ? `, cached ${real!.ageSeconds}s ago` : ""})`
+          ? `${feed.source}${feed.symbolUsed && feed.symbolUsed !== symbol ? ` ${feed.symbolUsed}` : ""} real · ${ohlc.length} ${timeframe} bars${feed.aggregated ? " (aggregated from 1H)" : ""}${feed.stale ? `, cached ${feed.ageSeconds}s ago` : ""}`
           : anchor === "screenshot"
             ? "Your screenshot price"
             : "Modelled candles",

@@ -8,7 +8,7 @@ import {
 import { Card, CardHead, Field, PanelHeader, Pills, Select, Skeleton, Toast } from "@/components/ui/Primitives";
 import { DEFAULT_PROFILE, planToText, type Style, type TradePlan, type TradeProfile } from "@/lib/chartSnap";
 import { PAIRS } from "@/lib/market";
-import { RANGES } from "@/lib/market";
+import { TIMEFRAMES } from "@/lib/timeframes";
 import { getBestWorst, getPairStats } from "@/lib/journalStore";
 import { getCurrentSessionInfo, humanMinutes } from "@/lib/sessionTime";
 import { addSharedPost } from "@/lib/communityPosts";
@@ -36,7 +36,9 @@ interface Analysis {
   market: {
     price: number; bars: number; isReal: boolean; source: string; symbolUsed: string | null;
     cached?: boolean; ageSeconds?: number | null; stale?: boolean;
+    provider?: string; aggregated?: boolean;
   };
+  minTouchesForHigh: number;
   anchor: "live" | "screenshot" | "modeled";
   planAvailable: boolean;
   planUnavailableReason: string | null;
@@ -55,7 +57,7 @@ interface Analysis {
 export function ChartSnapPanel() {
   const [profile, setProfile] = useState<TradeProfile>(DEFAULT_PROFILE);
   const [symbol, setSymbol] = useState("XAU/USD");
-  const [timeframe, setTimeframe] = useState("1D");
+  const [timeframe, setTimeframe] = useState("1H");
   const [screenshotPrice, setScreenshotPrice] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -215,7 +217,7 @@ export function ChartSnapPanel() {
                 {PAIRS.map((p) => <option key={p.symbol} value={p.symbol}>{p.symbol}</option>)}
               </Select>
               <Select label="Timeframe" value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
-                {RANGES.map((r) => <option key={r} value={r}>{r}</option>)}
+                {TIMEFRAMES.map((r) => <option key={r} value={r}>{r}</option>)}
               </Select>
               <Field
                 label="Price on screenshot"
@@ -373,12 +375,22 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
               : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
           }`}>
             {a.anchor === "live"
-              ? `Real · ${a.market.symbolUsed} ${a.market.price}${a.market.stale ? ` · cached ${a.market.ageSeconds}s` : ""}`
+              ? `Real · ${a.market.provider}${a.market.symbolUsed && a.market.symbolUsed !== a.symbol ? ` ${a.market.symbolUsed}` : ""} ${a.market.price}${a.market.stale ? ` · cached ${a.market.ageSeconds}s` : ""}`
               : a.anchor === "screenshot"
                 ? `Your screenshot · ${a.market.price}`
                 : "Modelled"}
           </span>
         </div>
+
+        <p className="text-[11.5px] leading-relaxed text-ink-muted">
+          {a.market.bars} {a.timeframe} candles
+          {a.market.aggregated ? " (2H/4H rolled up from 1H — Yahoo has no native interval)" : ""}
+          {a.anchor === "live" ? ` from ${a.market.provider}` : ""}. Levels and patterns below are
+          derived from these candles, at this timeframe.
+          {["5M", "15M"].includes(a.timeframe)
+            ? ` On ${a.timeframe} a level needs ${a.minTouchesForHigh} touches before a pattern on it reads high — short candles are noisy.`
+            : ""}
+        </p>
 
         {/* screenshot vs live */}
         {a.validation.compared ? (

@@ -730,3 +730,74 @@ gold candles, which is why the work went into caching and anchoring rather than 
 | Gold, no screenshot price, Yahoo 429 | **plan withheld** with reason, no invented entry |
 | Staleness check | suppressed when there is no real quote to compare against |
 | `lint` / `tsc` / `build` | clean · first load **180 kB** |
+
+---
+
+## Update — Keyed provider + intraday timeframes (Sep 1, 2026)
+
+### Provider chain
+
+`src/lib/marketProvider.ts` replaces direct Yahoo calls with an explicit chain:
+
+**cache (60s fresh) → Twelve Data (keyed) → Yahoo (keyless) → cache (15m stale-if-error) → modelled**
+
+Every result reports which rung produced it, so nothing downstream guesses whether a
+number is real. Twelve Data sits ahead of Yahoo because it is keyed rather than
+IP-throttled and covers `XAU/USD` and `XAG/USD` natively, where Yahoo only exposes gold
+through the `GC=F` futures proxy.
+
+**Entirely optional.** With no `TWELVE_DATA_API_KEY` configured, `hasTwelveDataKey()` is
+false, the rung is skipped and Yahoo serves as before — verified running with no key, all
+requests resolving `provider: Yahoo`.
+
+Twelve Data also reports quota and key failures with **HTTP 200 and an error code in the
+body**, so the client checks the payload rather than trusting the status line.
+
+To enable: add `TWELVE_DATA_API_KEY` in Vercel → Settings → Environment Variables. Free
+tier is 800 requests/day and 8/minute, comfortable behind the cache. See `.env.local.example`.
+
+### Timeframes: 5M · 15M · 1H · 2H · 4H · D1
+
+`src/lib/timeframes.ts` maps each to both providers.
+
+**Yahoo has no 2H or 4H interval** — it tops out at 90m for intraday. Those are aggregated
+from 60m bars: buckets aligned to the epoch, `open` from the first bar, `high`/`low` the
+extremes, `close` from the last, volume summed. Aligning to the epoch rather than to the
+first candle keeps the buckets identical no matter when the request runs. The response sets
+`aggregated: true` and the UI says so.
+
+**Confidence tiers by candle size.** A level needs **3 touches** on 5M/15M/1H/2H to support a
+high-confidence pattern, **2** on 4H/D1 — short candles are noisy, and a two-touch level on a
+5-minute chart is not the same evidence as one on a daily.
+
+### Verification
+
+| Timeframe | Provider | Bars | Aggregated | Stop distance |
+| --- | --- | --- | --- | --- |
+| 5M | Yahoo | 400 | no | 2 pips |
+| 15M | Yahoo | 400 | no | 3 pips |
+| 1H | Yahoo | 400 | no | 9 pips |
+| 2H | Yahoo | 202 | **yes** | 14 pips |
+| 4H | Yahoo | 105 | **yes** | 47 pips |
+| D1 | Yahoo | 260 | no | 95 pips |
+
+Stop distance scaling with candle size is the sanity check that the timeframe is genuinely
+being applied rather than ignored.
+
+| Check | Result |
+| --- | --- |
+| **Gold now real** | `Yahoo GC=F real · 400 15M bars` at **4,351.30** — the 2,648.90 regression is gone |
+| Screenshot 4304.02 vs live 4351.30 | `STALE SCREENSHOT`, +1.099% |
+| Screenshot 4350.00 vs live 4351.80 | `PRICE MATCHES LIVE`, +0.041% |
+| Aggregation unit tests | **17/17** — bucket boundaries, OHLC roll-up, volume sum, epoch alignment, empty input |
+| No API key configured | chain falls through to Yahoo cleanly, nothing breaks |
+| `lint` / `tsc` / `build` | clean · first load **180 kB**, no new dependencies |
+
+### Honest note on Twelve Data
+
+The Twelve Data rung is **written and wired but not yet exercised against a real key** — the
+public `demo` key returns a price for EUR/USD but 401s on XAU/USD, so the gold path could not
+be proven end to end here. Parsing, UTC normalisation, error-in-200-body handling and the
+skip-when-no-key path are all covered; what remains unverified is live behaviour under a
+funded key. That will confirm itself the moment the env var is set — the badge will read
+`Real · TwelveData` instead of `Real · Yahoo`.

@@ -27,6 +27,7 @@ export const EVENTS = {
   chapterJoined: "chapter_joined",
   journalImported: "journal_imported",
   patternViewed: "pattern_viewed",
+  chartSnap: "chart_snap_analyzed",
 } as const;
 
 export function trackEvent(name: string, props?: Props): void {

@@ -621,3 +621,62 @@ states plainly that there is no member-positioning feed yet, and points the read
 | Memory | survives reload; Clear wipes both |
 | All tabs | **19/19 unique, 0 console errors** |
 | `lint` / `tsc` / `build` | clean · `/dashboard` 73.1 kB, first load **174 kB**, no new dependencies |
+
+---
+
+## Update — Chart Snap Analyzer (Sep 1, 2026)
+
+Screenshot to worked trade plan. Tabs go 19 → **20** (`?tab=chart-snap`, under Tools).
+
+### The design decision that shaped it
+
+The brief specified `chartVision.ts` doing *"mock pattern detection: randomly pick from
+[Bullish Engulfing, Bearish Engulfing, …] + confidence HIGH/MEDIUM"*.
+
+That was not built. A feature that says *"we analyzed your chart"* and returns a **randomly
+drawn pattern wearing a HIGH-confidence badge** is fabricated analysis attached directly to
+a position-sizing decision — the reader would size real money against a coin flip.
+
+The honest version is also the stronger one: **the reader names the instrument and
+timeframe** — visible on their own chart — and the plan is computed from live Yahoo candles,
+the real `patternDetector`, real auto-drawn S/R and their own imported statement. A banner
+at the top of the panel says plainly that the image is not read, and the API returns
+`imageAnalysed: false` so no client can present it otherwise. The screenshot is displayed
+for reference and never stored or forwarded.
+
+### What it produces
+
+Bias, reference entry, invalidation, two objectives with R multiples, and position size from
+the saved Trade Profile (% of account or fixed $, three styles). The invalidation prefers a
+**real level price has already respected**, with ATR only as fallback — and `stopBasis`
+states which was used.
+
+Merged client-side: your win rate on that instrument, a warning when the current Dubai hour
+is your worst, a note when you hold losers longer (suggesting Target 1 over Target 2), and
+the live session board.
+
+**Share to community** writes to local storage and the post genuinely appears in the
+Community feed — there is no backend, so that is the honest implementation.
+
+### Three bugs found while building
+
+1. **Staleness checked against a modelled price.** When Yahoo missed and the series fell back
+   to modelled candles, entering a real screenshot price of 4400 reported *"STALE SCREENSHOT
+   −39.8%"* — blaming the reader's chart when it was our own fallback that was off.
+   Comparison is now gated on `isReal`, and says why it cannot check otherwise.
+2. **Style note misdescribed the plan.** It read "tight invalidation" even when a structural
+   level, not the style's ATR multiple, set the stop. It now describes what actually happened.
+3. **Duplicate React keys in the Community feed.** StrictMode invokes effects twice in
+   development, so shared posts were prepended twice. Merge now dedupes by id.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `POST /api/chart-snap/analyze` | 200 across three profiles; risk scaled exactly ($100 / $50 / $100) |
+| Real path | EUR/USD returned `real: true`, `EURUSD=X`, 63 bars, stop from *resistance at 1.1585 (5 touches)* |
+| Fallback path | modelled candles labelled **MODELLED**, staleness comparison correctly suppressed |
+| Filename detection | `XAUUSD-tradingview.png` auto-selected XAU/USD |
+| Share to community | post persisted and rendered in the Community tab |
+| All tabs | **20/20 unique, 0 console errors** |
+| `lint` / `tsc` / `build` | clean · `/dashboard` 78 kB, first load **179 kB**, no new dependencies |

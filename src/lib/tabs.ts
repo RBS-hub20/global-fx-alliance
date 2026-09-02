@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Globe2, LineChart, Newspaper, Star, Radar, ClipboardList, Users, MessagesSquare,
-  GraduationCap, Trophy, MapPin, Calculator, CalendarDays, NotebookPen, Sparkles,
+  GraduationCap, Trophy, MapPin, Calculator, CalendarDays, NotebookPen, Camera, Sparkles,
   UserRound, BadgeCheck, Settings, type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +38,7 @@ export const TABS: TabDef[] = [
   { slug: "calculator", label: "Trading Calculator", icon: Calculator, group: "Tools", blurb: "Position size, pip value, profit and margin." },
   { slug: "calendar", label: "Economic Calendar", icon: CalendarDays, group: "Tools", blurb: "Scheduled releases and what they tend to move." },
   { slug: "journal", label: "Trading Journal", icon: NotebookPen, group: "Tools", blurb: "Log every trade and let the numbers argue back." },
+  { slug: "chart-snap", label: "Chart Snap", icon: Camera, group: "Tools", blurb: "Screenshot your chart, get a worked plan from live data." },
   { slug: "ai", label: "AI Tools", icon: Sparkles, group: "Tools", blurb: "Ask the market a question. Education, not advice." },
 
   { slug: "profile", label: "My Profile", icon: UserRound, group: "Account", blurb: "Your identity across the Alliance." },

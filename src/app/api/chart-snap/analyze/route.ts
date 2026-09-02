@@ -1,0 +1,191 @@
+import { NextResponse } from "next/server";
+import { fetchYahooOHLC } from "@/lib/fetchRealOHLC";
+import { detectPatterns } from "@/lib/patternDetector";
+import { detectSwings, findSupportResistance, computeIndicators } from "@/lib/indicators";
+import { candlesFor, getPair, PAIRS, RANGES, type Range } from "@/lib/market";
+import { specFor } from "@/lib/yahooSymbols";
+import { buildTradePlan, DEFAULT_PROFILE, type Style, type TradeProfile } from "@/lib/chartSnap";
+
+export const runtime = "edge";
+
+/**
+ * Chart Snap analysis.
+ *
+ * The uploaded image is **not** parsed — there is no vision model behind this,
+ * and guessing a pattern from a picture while showing a confidence badge would
+ * be inventing analysis for a decision that sizes real money. The reader names
+ * the instrument and timeframe; everything returned is computed from live
+ * candles, the real pattern scanner and the real auto-drawn levels.
+ *
+ * The image is read only to record its size and is never stored or forwarded.
+ */
+
+const MAX_BYTES = 8_000_000;
+
+function toNum(v: FormDataEntryValue | null, fallback: number): number {
+  const n = typeof v === "string" ? Number.parseFloat(v) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export async function POST(request: Request) {
+  let symbol = "EUR/USD";
+  let timeframe: Range = "1D";
+  let screenshotPrice: number | null = null;
+  let imageBytes = 0;
+  let imageName: string | null = null;
+  const profile: TradeProfile = { ...DEFAULT_PROFILE };
+
+  try {
+    const form = await request.formData();
+
+    const file = form.get("file");
+    if (file && typeof file !== "string") {
+      if (file.size > MAX_BYTES) {
+        return NextResponse.json(
+          { ok: false, message: "Image too large — keep screenshots under 8 MB." },
+          { status: 413 }
+        );
+      }
+      imageBytes = file.size;
+      imageName = file.name ?? null;
+    }
+
+    const rawSymbol = (form.get("symbol") as string | null)?.toUpperCase().trim();
+    if (rawSymbol && PAIRS.some((p) => p.symbol === rawSymbol)) symbol = rawSymbol;
+
+    const rawTf = (form.get("timeframe") as string | null)?.toUpperCase().trim() as Range | undefined;
+    if (rawTf && RANGES.includes(rawTf)) timeframe = rawTf;
+
+    const sp = form.get("screenshotPrice");
+    const spNum = typeof sp === "string" ? Number.parseFloat(sp) : NaN;
+    if (Number.isFinite(spNum) && spNum > 0) screenshotPrice = spNum;
+
+    profile.mode = (form.get("mode") as string) === "fixed" ? "fixed" : "percent";
+    profile.balance = toNum(form.get("balance"), DEFAULT_PROFILE.balance);
+    profile.riskPct = toNum(form.get("riskPct"), DEFAULT_PROFILE.riskPct);
+    profile.fixedRisk = toNum(form.get("fixedRisk"), DEFAULT_PROFILE.fixedRisk);
+    const style = form.get("style") as Style | null;
+    if (style && ["Conservative", "Balanced", "Aggressive"].includes(style)) profile.style = style;
+  } catch {
+    // Fall through with defaults; the analysis still runs on real data.
+  }
+
+  const pair = getPair(symbol);
+  const spec = specFor(timeframe);
+
+  /* ------------------------------------------------- real candles */
+  const real = await fetchYahooOHLC(symbol, spec.range, spec.interval);
+  const isReal = !!real && real.ohlc.length >= 20;
+  const ohlc = isReal ? real!.ohlc : candlesFor(pair.symbol, timeframe);
+
+  const price = isReal ? (real!.marketPrice ?? ohlc[ohlc.length - 1].close) : ohlc[ohlc.length - 1].close;
+
+  const swings = detectSwings(ohlc, 5);
+  const levels = findSupportResistance(swings, price, 0.1, ohlc.length);
+  const supports = levels
+    .filter((l) => l.type === "support")
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, 3)
+    .map((l) => ({ price: Number(l.price.toFixed(pair.decimals)), touches: l.touches, strength: l.strength }));
+  const resistances = levels
+    .filter((l) => l.type === "resistance")
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, 3)
+    .map((l) => ({ price: Number(l.price.toFixed(pair.decimals)), touches: l.touches, strength: l.strength }));
+
+  const patterns = detectPatterns(ohlc, symbol, spec.interval, pair.decimals);
+  const indicators = computeIndicators(ohlc);
+  const top = patterns[0] ?? null;
+
+  const plan = buildTradePlan({
+    symbol,
+    price,
+    atr: indicators?.atr ?? null,
+    supports,
+    resistances,
+    pattern: top,
+    profile,
+  });
+
+  /* ------------------------------------ screenshot vs live comparison */
+  const diff = screenshotPrice !== null ? price - screenshotPrice : null;
+  const diffPct = diff !== null && screenshotPrice ? (diff / screenshotPrice) * 100 : null;
+
+  return NextResponse.json(
+    {
+      ok: true,
+      symbol,
+      timeframe,
+      interval: spec.interval,
+      decimals: pair.decimals,
+
+      // Stated plainly so no client can present this as image analysis.
+      imageAnalysed: false,
+      imageNote:
+        "The screenshot is displayed for your reference only. It is not parsed, stored or sent anywhere — the analysis below is computed from live market data for the instrument you selected.",
+      image: { bytes: imageBytes, name: imageName },
+
+      market: {
+        price: Number(price.toFixed(pair.decimals)),
+        bars: ohlc.length,
+        isReal,
+        source: isReal ? "yahoo" : "modeled",
+        symbolUsed: isReal ? real!.symbolUsed : null,
+      },
+
+      /*
+       * Staleness is only meaningful against a real quote. When the upstream
+       * misses and the series falls back to modelled candles, comparing the
+       * reader's screenshot to that would report their chart as ~40% stale when
+       * it is our own fallback that is off.
+       */
+      validation:
+        screenshotPrice === null
+          ? { compared: false, note: "No price entered from the screenshot, so nothing to compare." }
+          : !isReal
+          ? {
+              compared: false,
+              screenshotPrice,
+              note: "Live pricing is unavailable right now, so your screenshot cannot be checked for staleness. The levels below come from modelled candles — treat them as illustrative.",
+            }
+          : {
+              compared: true,
+              screenshotPrice,
+              realPrice: Number(price.toFixed(pair.decimals)),
+              diff: Number((diff ?? 0).toFixed(pair.decimals)),
+              diffPct: Number((diffPct ?? 0).toFixed(3)),
+              isStale: Math.abs(diffPct ?? 0) > 1,
+              badge: Math.abs(diffPct ?? 0) > 1 ? "STALE SCREENSHOT" : "PRICE MATCHES LIVE",
+            },
+
+      structure: { supports, resistances },
+      patterns,
+      indicators: indicators
+        ? {
+            rsi: indicators.rsi,
+            rsiLabel: indicators.rsiLabel,
+            atr: indicators.atr,
+            atrPct: indicators.atrPct,
+            macd: indicators.macd?.bias ?? null,
+            ema20: indicators.ema20,
+            ema200: indicators.ema200,
+          }
+        : null,
+
+      tradePlan: plan,
+      profileUsed: profile,
+
+      // The client merges its own journal; localStorage is not readable here.
+      journalContext: { mergeOnClient: true },
+
+      sources: [
+        isReal ? `Yahoo ${real!.symbolUsed} real (${ohlc.length} bars)` : "Modelled candles",
+        "Auto S/R",
+        `Pattern Radar (${patterns.length})`,
+      ],
+      disclaimer:
+        "Worked example for study. Not a signal, not a recommendation, not financial advice.",
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}

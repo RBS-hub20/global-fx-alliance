@@ -4,6 +4,7 @@ import { MarketOverviewPanel } from "./MarketOverviewPanel";
 import { MarketAnalysisPanel } from "./MarketAnalysisPanel";
 import { MarketNewsPanel } from "./MarketNewsPanel";
 import { JournalAnalyticsPanel } from "./JournalAnalyticsPanel";
+import { ChartSnapPanel } from "./ChartSnapPanel";
 import { PatternRadarPanel } from "@/components/dashboard/PatternRadar";
 import { WatchlistPanel } from "./WatchlistPanel";
 import { CommunityPanel } from "./CommunityPanel";
@@ -41,6 +42,7 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   calculator: CalculatorPanel,
   calendar: CalendarPanel,
   journal: JournalPanel,
+  "chart-snap": ChartSnapPanel,
   ai: AiToolsPanel,
   profile: ProfilePanel,
   membership: MembershipPanel,

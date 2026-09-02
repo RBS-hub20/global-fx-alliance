@@ -23,6 +23,9 @@ fair-value-gap retests over the same real candles the chart draws.
 **AI Tools** — a market assistant that reads your imported statement, the pattern scanner,
 live quotes and the session clock, with slash commands like `/explain last loss`,
 `/my best hour` and `/why gold moved`. Conversation persists locally.
+**Chart Snap** — drop a screenshot from any platform, name the instrument, and get a worked
+plan built from live candles, real auto-drawn levels and your own statement. The image is
+never parsed, stored or uploaded.
 
 **GFXA Terminal** — the Market Analysis tab is a Bloomberg-style workstation: a pro
 candlestick chart that draws its own support, resistance, trendline and fair-value

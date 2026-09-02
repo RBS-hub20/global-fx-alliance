@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, Heart, MessageCircle, Send, Share2 } from "lucide-react";
 import { Card, PanelHeader, Pills, Toast } from "@/components/ui/Primitives";
 import { KEYS, usePersistentState } from "@/lib/storage";
 import { PROFILE } from "@/lib/content";
+import { getSharedPosts } from "@/lib/communityPosts";
 
 type Kind = "Analysis" | "Question" | "Update";
 
@@ -41,6 +42,30 @@ export function CommunityPanel() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [draft, setDraft] = useState("");
   const [posts, setPosts] = useState<FeedPost[]>(SEED);
+
+  // Analyses shared from Chart Snap live in local storage, so they actually
+  // appear here rather than vanishing when the tab changes.
+  useEffect(() => {
+    const shared = getSharedPosts();
+    if (!shared.length) return;
+    setPosts((prev) => {
+      // StrictMode invokes effects twice in development, so merging blindly
+      // prepends the same shared posts again and collides on React keys.
+      const existing = new Set(prev.map((p) => p.id));
+      const incoming = shared.filter((s) => !existing.has(s.id));
+      if (!incoming.length) return prev;
+      return [
+      ...incoming.map((s) => ({
+        id: s.id, author: PROFILE.name, initials: PROFILE.initials, flag: PROFILE.flag,
+        country: PROFILE.country, role: PROFILE.role, verified: true, following: true,
+        time: new Date(s.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        body: s.meta ? `${s.body}\n\n${s.meta}` : s.body,
+        likes: 0, comments: 0, kind: "Analysis" as Kind,
+      })),
+      ...prev,
+      ];
+    });
+  }, []);
   const [toast, setToast] = useState<string | null>(null);
   const { value: liked, setValue: setLiked } = usePersistentState<string[]>(KEYS.likes, []);
 

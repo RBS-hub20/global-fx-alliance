@@ -4,6 +4,7 @@ import {
   AI_MAJORS, buildSources, instrumentContext, patternContext, readInstrument, readMarket, sessionContext,
 } from "@/lib/aiContext";
 import { PAIRS } from "@/lib/market";
+import { COMMANDS } from "@/lib/aiCommandList";
 
 export const runtime = "edge";
 
@@ -78,12 +79,16 @@ export async function POST(request: Request) {
   const hit = cached(key);
   if (hit) return NextResponse.json(hit, { headers: { "Cache-Control": "no-store" } });
 
-  const symbol = detectSymbol(message);
+  const isHelp = /^\/(help|commands|\?)\b/i.test(message);
+  const symbol = isHelp ? null : detectSymbol(message);
   const { line: session } = sessionContext();
 
   // A named instrument gets a deep read; a broad question gets the majors.
+  // `/help` needs neither, so it skips the upstream calls entirely.
   const focus = symbol ? await readInstrument(symbol, "1H") : null;
-  const market = await readMarket(symbol ? AI_MAJORS.filter((s) => s !== symbol).slice(0, 3) : AI_MAJORS, "1H");
+  const market = isHelp
+    ? { reads: [], patterns: [] }
+    : await readMarket(symbol ? AI_MAJORS.filter((s) => s !== symbol).slice(0, 3) : AI_MAJORS, "1H");
 
   const quotes = [...(focus ? [focus.quote] : []), ...market.reads.map((r) => r.quote)];
   const patterns = [...(focus?.patterns ?? []), ...market.patterns];
@@ -106,9 +111,18 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n");
 
-  const commandHelp = message.startsWith("/")
-    ? "\n\nThe reader typed a slash command. Answer it directly and completely from the context above."
-    : "";
+  const vocabulary = COMMANDS.map((c) => `${c.cmd}${c.args ? ` ${c.args}` : ""} — ${c.what}`).join("\n");
+  const commandHelp = isHelp
+    ? [
+        "",
+        "",
+        "The reader asked for the command list. Open with one short line, then list exactly these and nothing else,",
+        "one per line, each starting with a dash and wrapping the command itself in backticks:",
+        vocabulary,
+      ].join("\n")
+    : message.startsWith("/")
+      ? `\n\nThe reader typed a slash command. Answer it directly and completely from the context above. The full vocabulary is: ${COMMANDS.map((c) => c.cmd).join(", ")}.`
+      : "";
 
   const result = await callAI(SYSTEM_PROMPT, `${context}\n\nREADER: ${message}${commandHelp}`, 700);
 
@@ -125,12 +139,14 @@ export async function POST(request: Request) {
     available: true,
     provider: result.provider,
     answer: result.text,
-    sources: buildSources({
-      quotes,
-      patternCount: patterns.length,
-      journal: journal ? { totalTrades: journal.totalTrades, isReal: journal.isReal } : null,
-      extra: ["Session clock"],
-    }),
+    sources: isHelp
+      ? ["GFXA command reference"]
+      : buildSources({
+          quotes,
+          patternCount: patterns.length,
+          journal: journal ? { totalTrades: journal.totalTrades, isReal: journal.isReal } : null,
+          extra: ["Session clock"],
+        }),
     session,
     patternCount: patterns.length,
     symbol,

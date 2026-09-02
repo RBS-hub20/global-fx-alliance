@@ -23,24 +23,8 @@ export interface CommandResult {
   sources: string[];
 }
 
-export interface CommandDef {
-  cmd: string;
-  args?: string;
-  what: string;
-}
-
-export const COMMANDS: CommandDef[] = [
-  { cmd: "/help", what: "List every command" },
-  { cmd: "/explain last loss", what: "Break down your most recent losing trade" },
-  { cmd: "/why", args: "<symbol> moved", what: "Real price, headlines and patterns for an instrument" },
-  { cmd: "/my best hour", what: "Your best and worst hour, in Dubai time" },
-  { cmd: "/my worst pair", what: "The instrument costing you the most" },
-  { cmd: "/my revenge", what: "Whether you size up after losing streaks" },
-  { cmd: "/pattern radar", args: "<symbol>", what: "Live patterns for one instrument" },
-  { cmd: "/community sentiment", args: "<symbol>", what: "Aggregate positioning (illustrative)" },
-  { cmd: "/session", what: "What is open now and how you trade it" },
-  { cmd: "/clear", what: "Wipe the conversation" },
-];
+export { COMMANDS, type CommandDef } from "./aiCommandList";
+import { COMMANDS } from "./aiCommandList";
 
 const j2 = (n: number) => (n >= 0 ? `+${n.toFixed(2)}` : n.toFixed(2));
 const money = (n: number) => `${n < 0 ? "-" : ""}$${Math.abs(n).toFixed(2)}`;

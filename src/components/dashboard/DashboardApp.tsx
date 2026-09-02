@@ -7,6 +7,7 @@ import { Sidebar } from "./Sidebar";
 import { TopHeader } from "./TopHeader";
 import { MobileNav } from "./MobileNav";
 import { PANELS } from "./panels";
+import { IBGate } from "./IBGate";
 import { resolveTab } from "@/lib/tabs";
 import { EVENTS, trackEvent } from "@/lib/analytics";
 
@@ -78,7 +79,15 @@ export function DashboardApp() {
           onOpenNav={() => setDrawer(true)}
         />
         <main className="flex-1 px-5 pb-28 pt-6 lg:px-8 lg:pb-12">
-          <Panel pair={pair} />
+          {/* The admin queue is never gated — whoever reviews deposits has to be
+              able to reach it before anyone is verified. */}
+          {tab.slug === "admin" ? (
+            <Panel pair={pair} />
+          ) : (
+            <IBGate>
+              <Panel pair={pair} />
+            </IBGate>
+          )}
         </main>
       </div>
 

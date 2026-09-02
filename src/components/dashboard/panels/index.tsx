@@ -1,3 +1,4 @@
+import { AdminPanel } from "./AdminPanel";
 import type { ComponentType } from "react";
 import { OverviewPanel } from "./OverviewPanel";
 import { MarketOverviewPanel } from "./MarketOverviewPanel";
@@ -47,4 +48,5 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   profile: ProfilePanel,
   membership: MembershipPanel,
   settings: SettingsPanel,
+  admin: AdminPanel,
 };

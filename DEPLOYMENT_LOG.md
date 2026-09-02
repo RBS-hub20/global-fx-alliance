@@ -1108,3 +1108,71 @@ green-on-black, so neither surface had to be restyled to share the renderer.
 
 Verified: five headings detected, fourteen figure pills, one plain-bold emphasis,
 and no asterisk survives rendering.
+
+---
+
+## Partner deposit gating (2026-09-02)
+
+`?ib=` attribution, a locked dashboard overlay for the three community brokers,
+a submission flow and an admin review queue.
+
+### No investor password is collected
+
+The brief asked for the reader's MT4/MT5 investor password so MetaApi could read
+a balance. That is not shipped. An investor password is a live credential to
+someone else's brokerage account — it exposes balance, equity, open positions and
+full trade history, most brokers' terms forbid sharing it, and one breach of this
+store would expose every member's account.
+
+It also buys nothing. No broker in the community exposes deposits through a
+public partner API — Vantage's IB Access API has no balance or fund-movement
+endpoint at all, and its `allocationData` records partner-portfolio assignments
+rather than money; VT Markets and PU Prime deposits live in their client and IB
+portals. An admin has to open the portal and look either way, so collecting a
+credential would not remove the manual step.
+
+The flow therefore takes the **account number and email** — enough to find the
+person in the broker's portal — and the verify route **rejects any payload
+carrying a `password` or `investorPassword` field** with an explanation, so no
+client can quietly start sending one. The gate says the same thing to the reader,
+which also inoculates members against anyone phishing them for a trading password
+in the community's name.
+
+The brief's MVP shortcut — "if account length >5 and investorPassword length >3
+… return balance 150, deposit 100" — is not shipped either. That would store real
+credentials in order to display a balance nobody measured.
+
+### This is a conversion step, not access control
+
+Worth stating plainly. The project has no accounts system, no session and no
+middleware. The check clears from devtools, and every panel behind the gate reads
+API routes that answer without it. It asks people who arrived through a partner
+link to finish the step; it does not keep anyone out who does not want to be kept
+out. Real gating needs authentication and the checks moved into the routes.
+
+### The queue needs a real store
+
+`getStore()` returns a KV-backed store when `KV_REST_API_URL` and
+`KV_REST_API_TOKEN` are set — Vercel KV over its REST API, plain `fetch`, no
+client library — and otherwise an in-memory fallback that **cannot back the
+feature**: Next bundles every route handler separately, so the Map written by
+`/api/ib/verify` is a different Map from the one `/api/ib/status` reads. That was
+measured, not assumed — a submitted request came back `status: null` until the KV
+path existed. The admin panel says so in a banner rather than letting anyone
+assume the queue is safe.
+
+### Verified
+
+| Check | Result |
+| --- | --- |
+| Payload containing `investorPassword` | **400**, with the reason |
+| Malformed email / short account | 400 |
+| Six submissions from one email | `200 200 200 200 200 429` |
+| `/api/ib/admin` with no / wrong token | **401** both |
+| `/api/ib/admin` with the token | 200, `durable: false` surfaced |
+| `?broker=VTMarkets&ib=TESTVT` | captured, broker preselected, link shows the code |
+| Submit → pending state | renders, naming the broker and account |
+| Admin panel | non-durable banner + empty queue |
+
+The three IB routes run on Node rather than Edge — the store keeps module state,
+and each Edge route is its own isolate.

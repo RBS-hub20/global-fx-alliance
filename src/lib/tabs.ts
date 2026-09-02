@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Globe2, LineChart, Newspaper, Star, Radar, ClipboardList, Users, MessagesSquare,
   GraduationCap, Trophy, MapPin, Calculator, CalendarDays, NotebookPen, Camera, Sparkles,
-  UserRound, BadgeCheck, Settings, type LucideIcon,
+  UserRound, BadgeCheck, Settings, ShieldCheck, type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -46,6 +46,9 @@ export const TABS: TabDef[] = [
   { slug: "profile", label: "My Profile", icon: UserRound, group: "Account", blurb: "Your identity across the Alliance." },
   { slug: "membership", label: "Membership", icon: BadgeCheck, group: "Account", blurb: "Your plan, benefits and billing." },
   { slug: "settings", label: "Settings", icon: Settings, group: "Account", blurb: "Preferences, notifications and privacy." },
+  // Reachable by URL for whoever holds the token; the panel and the route both
+  // refuse without it, so listing it costs nothing.
+  { slug: "admin", label: "Verification", icon: ShieldCheck, group: "Account", blurb: "Deposit verification queue. Needs the admin token." },
 ];
 
 export const TAB_GROUPS: TabDef["group"][] = ["Main", "Community", "Tools", "Account"];

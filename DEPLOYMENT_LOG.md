@@ -860,3 +860,42 @@ without a model. A bad or rate-limited key takes the same path: `callAI` returns
 reports whether the book being discussed is the reader's own import or the built-in sample.
 `SAMPLE 54` was never a statement about the market data — quotes and patterns were already
 real — it means no statement has been imported yet.
+
+### Verified live (2026-09-02)
+
+| Check | Result |
+| --- | --- |
+| `GET /api/ai/chat` on production | `{"available":true,"model":"gpt-4o-mini"}` — the key was already set in Vercel |
+| `/explain last loss` | quoted the exact aggregate sent, invented nothing |
+| `/help` | lists the real command vocabulary |
+| Probe: "what percent of traders are bullish on gold?" | *"The platform has no live positioning feed"* — refused to invent a figure |
+| Probe: "what is silver at, and what did the Fed decide yesterday?" | *"unavailable in the provided context"* for both |
+| Generate summary | session, FX, metals, crypto, radar, book — every figure traceable to the sources line |
+| Generate idea, 6 timeframes × 4 pairs | all real; stop distance scales 2 → 15 pips on EUR/USD, 50 → 207 on gold |
+| Tabs / console | 20 tabs reachable, **0 console errors** |
+
+### Three defects found and fixed during verification
+
+1. **`/help` answered with a market recap.** The route never put the command list
+   in the model's context. `COMMANDS` moved to a runtime-neutral module both the
+   client engine and the Edge route read, and `/help` now skips the quote fetches
+   it never needed.
+2. **Stop distance was off by an order of magnitude.** The route derived a pip size
+   from the decimal count instead of using the `pipSize` each instrument already
+   carries — EUR/USD ten times too small, gold ten times too large, BTC a hundred
+   times. Only JPY crosses happened to land correctly. Chart Snap already used
+   `pair.pipSize` and was unaffected.
+3. **Worked examples could risk less than the spread.** A quiet Asian session put
+   EUR/USD 15M ATR at 0.0002, producing a two-pip invalidation against a 0.6-pip
+   spread. The stop now floors at twice the instrument's spread and the prompt
+   says when the floor applied.
+
+### Known limitation: gold can differ between two cards
+
+Twelve Data's free tier allows 8 requests a minute. When a burst exceeds it, that
+symbol falls through to Yahoo, which carries gold only as the `GC=F` futures
+contract — about 40 points above spot. So a chat reply sourced from Twelve Data
+(`XAU/USD 4319.79`) and a summary generated seconds later from Yahoo
+(`GC=F 4359.80`) can disagree, each correctly labelled. Closing that gap means
+preferring a recently-cached Twelve Data spot price over a live Yahoo futures one
+for metals, which is a change to the provider chain rather than to these routes.

@@ -101,6 +101,9 @@ export function readStructure(i: ReadInputs): StructureRead {
   const pair = getPair(i.symbol);
   const d = pair.decimals;
   const f = (v: number) => v.toFixed(d);
+  // Distances are quoted with their unit. Left bare, the model narrating this
+  // guessed one — it called 7.16 points of gold "7.16 pips", which is off by ten.
+  const dist = (v: number) => `${f(v)} (${(v / pair.pipSize).toFixed(1)} pips)`;
   const atr = i.atr && i.atr > 0 ? i.atr : i.price * 0.0012;
 
   const support = [...i.supports].filter((s) => s.price <= i.price).sort((a, b) => b.price - a.price)[0] ?? null;
@@ -147,7 +150,7 @@ export function readStructure(i: ReadInputs): StructureRead {
   const observations: string[] = [];
   observations.push(
     level
-      ? `Price ${f(i.price)} is ${f(distance as number)} from ${level.type} ${f(level.price)}, a level it has touched ${level.touches} ${level.touches === 1 ? "time" : "times"} — ${((distance as number) / atr).toFixed(2)}×ATR away.`
+      ? `Price ${f(i.price)} is ${dist(distance as number)} from ${level.type} ${f(level.price)}, a level it has touched ${level.touches} ${level.touches === 1 ? "time" : "times"} — ${((distance as number) / atr).toFixed(2)}×ATR away.`
       : `Price ${f(i.price)} sits between levels, with the nearest support ${support ? f(support.price) : "unmapped"} and resistance ${resistance ? f(resistance.price) : "unmapped"}. Nothing is close enough to read from.`
   );
 

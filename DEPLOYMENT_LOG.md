@@ -945,3 +945,72 @@ exports for uses that cannot mount a React component. They mirror the geometry i
 `currentColor` variant the navs need — so a change to the mark has to be copied
 across. No PNG ladder was generated: this machine has no `sharp`, `rsvg-convert`
 or ImageMagick, and nothing in the app consumes a raster.
+
+---
+
+## /snap — command parser, pair choice and the Bakit explainer (2026-09-02)
+
+`lib/commandParser.ts` is one parser behind `/snap`, `/screenshot` and `/pair`,
+shared by the assistant and Chart Snap so the same instrument and candle size
+read identically on both surfaces. It resolves `XAUUSD`, `xau/usd`, `gold`,
+`cable`, `EUR USD` and bare `/snap`, falling back to the pair and timeframe
+dropdowns for whatever the command omits. `/pair` never reaches the network — it
+moves the dropdown client-side. 16/16 parser tests pass.
+
+### What the read reports
+
+`lib/structureRead.ts` classifies price against the levels it has actually
+respected:
+
+| State | Meaning |
+| --- | --- |
+| `BOUNCING_SUPPORT` | price traded into support and closed back above it |
+| `APPROACHING_SUPPORT` | bullish context, but price has not tested the level yet |
+| `REJECTING_RESISTANCE` | price traded into resistance and closed back below |
+| `APPROACHING_RESISTANCE` | bearish context, level not yet tested |
+| `MID_RANGE` | nothing within 1.2×ATR on either side — nothing to read |
+
+Verified live across pairs and timeframes:
+
+| Pair | TF | State | Bias | Conf | Level |
+| --- | --- | --- | --- | --- | --- |
+| XAU/USD | 1H | BOUNCING_SUPPORT | bullish | medium | 4326.76 |
+| USD/JPY | 5M | REJECTING_RESISTANCE | bearish | **high** | 159.68, 8 touches |
+| BTC/USD | D1 | APPROACHING_SUPPORT | bullish | medium | 76000 |
+| EUR/USD | 15M | MID_RANGE | neutral | low | none |
+
+### Why there is no BUY / SELL badge
+
+The brief asked for `BUY` / `SELL` / `BUY_LIMIT` / `SELL_LIMIT`. Every input that
+would need is present, and the retest-versus-bounce distinction the order types
+encode is exactly what the states above carry. What is not shipped is the
+instruction: a directive order type attached to a price and a position size,
+tuned to one reader's own win-rate history, is personalised trading advice
+whatever label sits next to it — and this platform's own promise, set in the
+first brief, is "NOT signal-selling" and "I explain structure — I don't hand out
+signals". The read describes the chart; the decision stays the reader's. The
+explainer prompt forbids order language outright.
+
+The risk geometry is unchanged from what Chart Snap already shipped: illustrative,
+on the profile's example balance, never sized against a real account.
+
+### Cautions are not a footnote
+
+`cautions` is never shorter than `observations` — level break, stop-run
+ambiguity, a pattern below high confidence, the calendar, and the reader's own
+worst hour or weakest instrument when they apply. In the UI it is its own
+**Bakit pwedeng mali** block, not a disclaimer line.
+
+### Two defects found in verification
+
+1. **Bias could contradict the state.** Taking `patterns[0]` blindly produced
+   "Bouncing off support / bearish". The read now prefers the pattern that agrees
+   with the level in play; when none does, bias goes neutral, confidence drops to
+   low, and the disagreement itself becomes an observation.
+2. **The model invented a unit.** Given a bare distance it wrote "7.16 pips" for
+   7.16 points of gold — off by ten, since gold's pip is 0.1. Distances are now
+   quoted with both the raw move and the pip count, and the prompt forbids
+   relabelling points as pips.
+
+Level prices are also rounded to instrument decimals; the cluster average was
+reaching the UI as `4375.700032552083`.

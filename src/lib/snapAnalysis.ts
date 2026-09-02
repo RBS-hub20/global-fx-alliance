@@ -89,7 +89,7 @@ export async function runSnap(
     "",
     `STRUCTURE READ: ${read.label} (${read.state}), bias ${read.bias}, ${read.confidence} confidence.`,
     read.level
-      ? `LEVEL IN PLAY: ${read.level.type} ${f(read.level.price)}, touched ${read.level.touches}, ${f(read.distance ?? 0)} away (${read.distanceAtr}×ATR).`
+      ? `LEVEL IN PLAY: ${read.level.type} ${f(read.level.price)}, touched ${read.level.touches}, ${f(read.distance ?? 0)} away — that is ${((read.distance ?? 0) / pair.pipSize).toFixed(1)} pips, ${read.distanceAtr}×ATR. Quote distances with the unit given; never call points "pips".`
       : "LEVEL IN PLAY: none — price is mid-range.",
     "",
     "OBSERVATIONS:",
@@ -100,7 +100,7 @@ export async function runSnap(
     "",
     "WORKED RISK EXAMPLE (already computed — quote exactly, never recalculate):",
     `- reference price ${f(plan.entry)}`,
-    `- invalidation ${f(plan.stopLoss)} (${plan.stopPips} pips; ${plan.stopBasis})`,
+    `- invalidation ${f(plan.stopLoss)} — ${f(Math.abs(plan.entry - plan.stopLoss))} away, which is ${plan.stopPips} pips (${plan.stopBasis})`,
     `- objectives ${f(plan.target1)} (${plan.rr1}) and ${f(plan.target2)} (${plan.rr2})`,
     `- on the profile's $${DEFAULT_PROFILE.balance.toLocaleString()} illustration risking ${plan.riskPctOfBalance}% ($${plan.riskUsd}), that is ${plan.lots} lots`,
     "",

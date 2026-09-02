@@ -78,10 +78,41 @@ export async function POST(request: Request) {
   const isReal = !!real && real.ohlc.length >= 20;
   const ohlc = isReal ? real!.ohlc : candlesFor(pair.symbol, timeframe);
 
-  const price = isReal ? (real!.marketPrice ?? ohlc[ohlc.length - 1].close) : ohlc[ohlc.length - 1].close;
+  /*
+   * Anchor priority: a live quote, then the price the reader read off their own
+   * screenshot, then modelled candles. The screenshot number is real information
+   * the reader supplied, so it beats a synthetic series — and a plan is never
+   * built around a modelled anchor without saying so.
+   */
+  const livePrice = isReal ? (real!.marketPrice ?? ohlc[ohlc.length - 1].close) : null;
+  const price = livePrice ?? screenshotPrice ?? ohlc[ohlc.length - 1].close;
+  const anchor: "live" | "screenshot" | "modeled" =
+    livePrice !== null ? "live" : screenshotPrice !== null ? "screenshot" : "modeled";
 
-  const swings = detectSwings(ohlc, 5);
-  const levels = findSupportResistance(swings, price, 0.1, ohlc.length);
+  /*
+   * When neither a live quote nor a screenshot price exists, the modelled series
+   * can sit far from spot. Emitting entry/stop/target numbers off that would put
+   * a wrong reference price in front of someone sizing a position, so the plan is
+   * withheld and the reason returned instead.
+   */
+  const planAvailable = anchor !== "modeled";
+
+  // Rescale modelled candles onto the screenshot anchor so the levels derived
+  // from them sit in the same price regime as the reader's chart.
+  const scale = anchor === "screenshot" && ohlc.length ? price / ohlc[ohlc.length - 1].close : 1;
+  const scaled =
+    scale === 1
+      ? ohlc
+      : ohlc.map((b) => ({
+          ...b,
+          open: b.open * scale,
+          high: b.high * scale,
+          low: b.low * scale,
+          close: b.close * scale,
+        }));
+
+  const swings = detectSwings(scaled, 5);
+  const levels = findSupportResistance(swings, price, 0.1, scaled.length);
   const supports = levels
     .filter((l) => l.type === "support")
     .sort((a, b) => b.strength - a.strength)
@@ -93,8 +124,8 @@ export async function POST(request: Request) {
     .slice(0, 3)
     .map((l) => ({ price: Number(l.price.toFixed(pair.decimals)), touches: l.touches, strength: l.strength }));
 
-  const patterns = detectPatterns(ohlc, symbol, spec.interval, pair.decimals);
-  const indicators = computeIndicators(ohlc);
+  const patterns = detectPatterns(scaled, symbol, spec.interval, pair.decimals);
+  const indicators = computeIndicators(scaled);
   const top = patterns[0] ?? null;
 
   const plan = buildTradePlan({
@@ -129,9 +160,17 @@ export async function POST(request: Request) {
         price: Number(price.toFixed(pair.decimals)),
         bars: ohlc.length,
         isReal,
-        source: isReal ? "yahoo" : "modeled",
+        source: isReal ? "yahoo" : anchor === "screenshot" ? "your-screenshot" : "modeled",
         symbolUsed: isReal ? real!.symbolUsed : null,
+        cached: isReal ? !!real!.cached : false,
+        ageSeconds: isReal ? (real!.ageSeconds ?? 0) : null,
+        stale: isReal ? !!real!.stale : false,
       },
+      anchor,
+      planAvailable,
+      planUnavailableReason: planAvailable
+        ? null
+        : "Live pricing is unavailable and no screenshot price was entered, so there is no trustworthy anchor to build a plan from. Enter the price shown on your chart and run it again.",
 
       /*
        * Staleness is only meaningful against a real quote. When the upstream
@@ -172,14 +211,18 @@ export async function POST(request: Request) {
           }
         : null,
 
-      tradePlan: plan,
+      tradePlan: planAvailable ? plan : null,
       profileUsed: profile,
 
       // The client merges its own journal; localStorage is not readable here.
       journalContext: { mergeOnClient: true },
 
       sources: [
-        isReal ? `Yahoo ${real!.symbolUsed} real (${ohlc.length} bars)` : "Modelled candles",
+        isReal
+          ? `Yahoo ${real!.symbolUsed} real (${ohlc.length} bars${real!.stale ? `, cached ${real!.ageSeconds}s ago` : ""})`
+          : anchor === "screenshot"
+            ? "Your screenshot price"
+            : "Modelled candles",
         "Auto S/R",
         `Pattern Radar (${patterns.length})`,
       ],

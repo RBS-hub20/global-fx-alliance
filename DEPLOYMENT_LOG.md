@@ -680,3 +680,53 @@ Community feed — there is no backend, so that is the honest implementation.
 | Share to community | post persisted and rendered in the Community tab |
 | All tabs | **20/20 unique, 0 console errors** |
 | `lint` / `tsc` / `build` | clean · `/dashboard` 78 kB, first load **179 kB**, no new dependencies |
+
+---
+
+## Fix — Chart Snap was quoting a 2024 gold price (Sep 1, 2026)
+
+**Reported:** Chart Snap showed XAU/USD entry **2,648.90** against a screenshot reading
+**4,304.02** — a reference entry ~40% away from spot, in front of someone sizing a position.
+
+### Root cause
+
+Two faults compounding:
+
+1. **Yahoo was returning 429.** Three routes (`market/live`, `patterns/live`,
+   `chart-snap/analyze`) each fetched independently on every request, with Chart Snap on
+   `no-store`. That volume tripped Yahoo's per-IP limit — confirmed on both the local IP
+   and Vercel's edge IPs.
+2. **The seeded fallback was a 2024-era number.** With the upstream down, gold fell back to
+   `2648.90`, which was correct when the engine was written and had since drifted ~40%.
+   The badge said MODELLED, but a wrong number with an honest label is still a wrong number.
+
+### Fixes
+
+- **Isolate-level cache with stale-if-error** in `fetchRealOHLC`. Fresh results are reused
+  for 60s; beyond that a cached result is still served when the upstream fails, flagged
+  `stale` with its age. A real price from minutes ago beats a modelled one from last year.
+  This also cuts upstream calls sharply, which is what caused the 429s.
+- **Anchor priority** in Chart Snap: live quote → **the price the reader typed off their own
+  screenshot** → modelled. The screenshot number is real information the user supplied, so it
+  outranks a synthetic series. Modelled candles are rescaled onto that anchor so the derived
+  levels sit in the same price regime.
+- **The plan is withheld entirely** when there is neither a live quote nor a screenshot
+  price. `planAvailable: false` with the reason, instead of numbers built on an untrustworthy
+  anchor.
+- **Gold re-based** from 2,648.90 to 4,422.90 with proportional levels, so the last-resort
+  fallback is at least in the right regime.
+
+### Also checked
+
+`exchangerate-api` carries fiat only — no XAU, XAG or BTC. Stooq now requires JavaScript
+proof-of-work and cannot be called server-side. There is no viable second keyless source for
+gold candles, which is why the work went into caching and anchoring rather than another feed.
+
+### Verification
+
+| Case | Result |
+| --- | --- |
+| Gold, screenshot price 4304.02, Yahoo 429 | entry **4304.02**, stop 4297.97, targets 4313.10 / 4322.17 — correct regime |
+| Gold, no screenshot price, Yahoo 429 | **plan withheld** with reason, no invented entry |
+| Staleness check | suppressed when there is no real quote to compare against |
+| `lint` / `tsc` / `build` | clean · first load **180 kB** |

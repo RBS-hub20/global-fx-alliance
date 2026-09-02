@@ -33,7 +33,13 @@ interface Analysis {
   decimals: number;
   imageAnalysed: boolean;
   imageNote: string;
-  market: { price: number; bars: number; isReal: boolean; source: string; symbolUsed: string | null };
+  market: {
+    price: number; bars: number; isReal: boolean; source: string; symbolUsed: string | null;
+    cached?: boolean; ageSeconds?: number | null; stale?: boolean;
+  };
+  anchor: "live" | "screenshot" | "modeled";
+  planAvailable: boolean;
+  planUnavailableReason: string | null;
   validation: {
     compared: boolean; screenshotPrice?: number; realPrice?: number;
     diff?: number; diffPct?: number; isStale?: boolean; badge?: string; note?: string;
@@ -41,7 +47,7 @@ interface Analysis {
   structure: { supports: { price: number; touches: number }[]; resistances: { price: number; touches: number }[] };
   patterns: { type: string; direction: string; confidence: string; price: number; description: string }[];
   indicators: { rsi: number | null; rsiLabel: string; atrPct: number | null; macd: string | null } | null;
-  tradePlan: TradePlan;
+  tradePlan: TradePlan | null;
   sources: string[];
   disclaimer: string;
 }
@@ -213,15 +219,16 @@ export function ChartSnapPanel() {
               </Select>
               <Field
                 label="Price on screenshot"
-                placeholder="optional"
+                placeholder="e.g. 4304.02"
                 inputMode="decimal"
                 value={screenshotPrice}
                 onChange={(e) => setScreenshotPrice(e.target.value)}
               />
             </div>
             <p className="px-5 pb-5 text-[11.5px] leading-relaxed text-ink-muted/80">
-              Entering the price you see lets the analyzer tell you whether your screenshot is still
-              current — a stale chart is the most common reason a plan stops making sense.
+              Worth filling in. It lets the analyzer check whether your chart is still current, and
+              if the live feed is rate-limited it becomes the anchor for the plan — without it, no
+              plan is generated rather than one built on a price that may have drifted.
             </p>
           </Card>
 
@@ -336,6 +343,7 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
   const atWorstHour = journal.worstHourDubai?.key === hourKey;
 
   const share = () => {
+    if (!p) return;
     addSharedPost(
       `${a.symbol} ${a.timeframe} — ${top ? `${top.type} (${top.confidence})` : "structure review"}. Reference entry ${f(p.entry)}, invalidation ${f(p.stopLoss)}, objectives ${f(p.target1)} / ${f(p.target2)}. Educational example, not a signal.`,
       `Chart Snap · ${a.market.isReal ? `real ${a.market.symbolUsed}` : "modelled"}`
@@ -360,9 +368,15 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             {a.timeframe} · {a.interval}
           </span>
           <span className={`rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] ${
-            a.market.isReal ? "bg-brand-green/[0.13] text-brand-green" : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
+            a.anchor === "live"
+              ? "bg-brand-green/[0.13] text-brand-green"
+              : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
           }`}>
-            {a.market.isReal ? `Real · ${a.market.symbolUsed}` : "Modelled"}
+            {a.anchor === "live"
+              ? `Real · ${a.market.symbolUsed} ${a.market.price}${a.market.stale ? ` · cached ${a.market.ageSeconds}s` : ""}`
+              : a.anchor === "screenshot"
+                ? `Your screenshot · ${a.market.price}`
+                : "Modelled"}
           </span>
         </div>
 
@@ -375,6 +389,13 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             <span className="ml-2 text-ink-muted">
               screenshot {a.validation.screenshotPrice} vs live {a.validation.realPrice} ({a.validation.diffPct}%)
             </span>
+          </div>
+        ) : null}
+
+        {!a.planAvailable || !p ? (
+          <div className="rounded-lg border border-[#fbbf24]/35 bg-[#fbbf24]/[0.07] px-3.5 py-3.5 text-[12.5px] leading-relaxed text-[#fbbf24]">
+            <span className="block font-bold uppercase tracking-[0.1em]">No plan generated</span>
+            <span className="mt-1.5 block text-ink">{a.planUnavailableReason}</span>
           </div>
         ) : null}
 
@@ -393,6 +414,7 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
           </p>
         )}
 
+        {p ? (
         <dl className="divide-y divide-white/[0.06] border-y border-white/[0.08]">
           {[
             { k: "Bias", v: p.direction, tone: p.direction === "bullish" ? "text-brand-green" : p.direction === "bearish" ? "text-brand-danger" : "text-ink" },
@@ -408,11 +430,14 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             </div>
           ))}
         </dl>
+        ) : null}
 
-        <p className="text-[12px] leading-relaxed text-ink-muted">
-          <span className="font-semibold text-ink">Where the stop came from:</span> {p.stopBasis}.
-          Style {p.style} — {p.styleNote}.
-        </p>
+        {p ? (
+          <p className="text-[12px] leading-relaxed text-ink-muted">
+            <span className="font-semibold text-ink">Where the stop came from:</span> {p.stopBasis}.
+            Style {p.style} — {p.styleNote}.
+          </p>
+        ) : null}
 
         {/* journal + session, merged client-side */}
         <div className="space-y-2.5 rounded-lg border border-white/[0.08] bg-white/[0.02] p-3.5">
@@ -449,6 +474,7 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
         </p>
 
         <div className="flex flex-wrap gap-2">
+          {p ? (
           <button
             type="button"
             onClick={async () => {
@@ -462,12 +488,14 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             <Copy className="h-3.5 w-3.5" strokeWidth={2} />
             Copy plan
           </button>
+          ) : null}
           <Link href={tabHref("market-analysis", a.symbol)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
             View on chart
           </Link>
           <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
             Check journal
           </Link>
+          {p ? (
           <button
             type="button"
             onClick={share}
@@ -476,6 +504,7 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             <Share2 className="h-3.5 w-3.5" strokeWidth={2} />
             Share to community
           </button>
+          ) : null}
         </div>
 
         <p className="border-t border-white/[0.08] pt-4 text-[11px] leading-relaxed text-ink-muted/70">

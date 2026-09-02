@@ -59,10 +59,13 @@ export const PAIRS: Pair[] = [
     seed: 37,
   },
   {
+    // Re-based to the current market. The previous reference (2,648.90) was set
+    // when the seeded engine was written and had drifted ~40% from spot, so any
+    // fallback quoted a reference entry that was not merely modelled but wrong.
     symbol: "XAU/USD", name: "Gold / US Dollar", base: "XAU", quote: "USD",
-    price: 2648.9, change: 19.98, changePct: 0.76, decimals: 2, pipSize: 0.1,
-    high24: 2659.4, low24: 2621.3, spread: 22,
-    rsi: 72, support: 2610, resistance: 2680, ma20: 2612.4, ma50: 2564.8, ma200: 2438.1,
+    price: 4422.9, change: 33.36, changePct: 0.76, decimals: 2, pipSize: 0.1,
+    high24: 4448.0, low24: 4381.2, spread: 22,
+    rsi: 72, support: 4360, resistance: 4470, ma20: 4386.5, ma50: 4298.4, ma200: 4062.7,
     seed: 59,
   },
   {

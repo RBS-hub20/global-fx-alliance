@@ -16,6 +16,28 @@ const TIMEOUT_MS = 5000;
 /** Cap the payload; indicators need a few hundred bars at most. */
 const MAX_BARS = 400;
 
+/*
+ * Upstream cache.
+ *
+ * Yahoo rate-limits per IP, and three routes (market, patterns, chart-snap) were
+ * each fetching independently on every request — enough to trip 429s, at which
+ * point gold silently fell back to a seeded 2024-era price ~40% away from
+ * reality and presented it as a reference entry.
+ *
+ * Fresh results are reused for a minute. Beyond that a cached result is still
+ * served when the upstream fails, flagged `stale`, because a real price from
+ * minutes ago is far closer to the truth than a modelled one from last year.
+ */
+const FRESH_MS = 60_000;
+const STALE_MS = 15 * 60_000;
+
+interface CacheEntry {
+  at: number;
+  data: RealOhlcResult;
+}
+
+const ohlcCache = new Map<string, CacheEntry>();
+
 export interface RealOhlcResult {
   ohlc: Candle[];
   source: "yahoo";
@@ -26,6 +48,12 @@ export interface RealOhlcResult {
   currency: string | null;
   /** FX is OTC and reports no volume; the chart hides the histogram when false. */
   hasVolume: boolean;
+  /** Served from cache rather than a fresh upstream call. */
+  cached?: boolean;
+  /** Age of the cached data in seconds. */
+  ageSeconds?: number;
+  /** True when the upstream failed and a cached result was used instead. */
+  stale?: boolean;
 }
 
 interface YahooQuote {
@@ -139,11 +167,33 @@ export async function fetchYahooOHLC(
   interval = "5m"
 ): Promise<RealOhlcResult | null> {
   lastStatus = 0;
+  const key = `${pair}:${range}:${interval}`;
+  const hit = ohlcCache.get(key);
+  const now = Date.now();
+
+  if (hit && now - hit.at < FRESH_MS) {
+    return { ...hit.data, cached: true, ageSeconds: Math.round((now - hit.at) / 1000), stale: false };
+  }
+
   for (const symbol of getCandidates(pair)) {
     const json = await fetchOne(symbol, range, interval);
     if (!json) continue;
     const parsed = parseYahoo(json);
-    if (parsed) return { ...parsed, source: "yahoo", symbolUsed: symbol };
+    if (parsed) {
+      const data: RealOhlcResult = { ...parsed, source: "yahoo", symbolUsed: symbol };
+      ohlcCache.set(key, { at: now, data });
+      if (ohlcCache.size > 200) {
+        // Bound isolate memory; oldest key wins eviction.
+        const oldest = Array.from(ohlcCache.entries()).sort((a, b) => a[1].at - b[1].at)[0];
+        if (oldest) ohlcCache.delete(oldest[0]);
+      }
+      return { ...data, cached: false, ageSeconds: 0, stale: false };
+    }
+  }
+
+  // Upstream missed. A recent real result still beats modelled candles.
+  if (hit && now - hit.at < STALE_MS) {
+    return { ...hit.data, cached: true, ageSeconds: Math.round((now - hit.at) / 1000), stale: true };
   }
   return null;
 }

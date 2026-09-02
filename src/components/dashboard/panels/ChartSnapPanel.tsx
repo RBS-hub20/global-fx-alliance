@@ -771,8 +771,14 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             : ""}
         </p>
 
-        {/* screenshot vs live */}
-        {a.validation.compared ? (
+        {/* Live mode has no screenshot to compare against, so it reports what the
+            plan was anchored to instead of an empty staleness row. */}
+        {a.liveChart ? (
+          <div className="rounded-lg border border-brand-green/30 bg-brand-green/[0.06] px-3.5 py-3 text-[12.5px] text-brand-green">
+            <span className="font-bold uppercase tracking-[0.1em]">Anchored live</span>
+            <span className="ml-2 text-ink-muted">{a.validation.note}</span>
+          </div>
+        ) : a.validation.compared ? (
           <div className={`rounded-lg border px-3.5 py-3 text-[12.5px] ${
             a.validation.isStale ? "border-[#fbbf24]/35 bg-[#fbbf24]/[0.07] text-[#fbbf24]" : "border-brand-green/30 bg-brand-green/[0.06] text-brand-green"
           }`}>

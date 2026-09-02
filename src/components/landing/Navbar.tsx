@@ -73,7 +73,8 @@ export function Navbar() {
       <div ref={sentinel} aria-hidden className="absolute left-0 top-3 h-px w-px" />
 
       <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-200 ${
+      style={{ top: "var(--gfxa-banner-h, 0px)" }}
+      className={`fixed inset-x-0 z-50 transition-all duration-200 ${
         scrolled
           ? "border-b border-white/[0.08] bg-[rgba(7,10,18,0.72)] backdrop-blur-xl"
           : "border-b border-transparent"

@@ -1,5 +1,5 @@
 import { Navbar } from "@/components/landing/Navbar";
-import { WaitlistBanner } from "@/components/launch/Waitlist";
+import { LiveBanner } from "@/components/launch/LiveBanner";
 import { SocialProof } from "@/components/launch/SocialProof";
 import { Hero } from "@/components/landing/Hero";
 import { WhySection } from "@/components/landing/WhySection";
@@ -17,9 +17,9 @@ import { Footer } from "@/components/landing/Footer";
 export default function LandingPage() {
   return (
     <>
-      <WaitlistBanner />
+      <LiveBanner />
       <Navbar />
-      <main>
+      <main style={{ paddingTop: "var(--gfxa-banner-h, 0px)" }}>
         <Hero />
         <SocialProof />
         <WhySection />

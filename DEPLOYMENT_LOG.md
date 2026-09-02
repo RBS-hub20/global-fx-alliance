@@ -1229,3 +1229,48 @@ that line the anon key could read every applicant's email and account number.
 | Admin: no token / wrong token | **401** both |
 
 `supabase-js` is server-only, so `/dashboard` first load is unchanged at **191 kB**.
+
+---
+
+## Waitlist removed — the platform is live (2026-09-03)
+
+The "GFXA Pro is launching soon — founding members get early access" strip, its
+modal, the footer email capture, `lib/waitlist.ts` and `/api/waitlist` are all
+deleted. The route stored nothing by design — it validated, rate-limited and
+deliberately kept no address — so nothing was lost with it.
+
+In its place a **Live now** strip in Trading Green rather than the old blue,
+pointing at the dashboard gate. The remaining reference to the word "waitlist" in
+the source is one comment explaining what the banner replaced.
+
+### Why the CTAs point at the gate, not at a broker
+
+The brief suggested sending the hero straight to a broker with `?ib=`. The
+partner codes are still unset — the pending row in Supabase carries
+`SET_YOUR_CODE` as its `ib_code` — so a direct broker link today would send
+traffic to VT Markets **without attribution and earn nothing**. Every CTA goes to
+`/dashboard?tab=chart-snap&ref=…`, where the gate presents the broker choice and
+records the click. Once `NEXT_PUBLIC_IB_*` are set in Vercel the gate emits real
+codes with no further change.
+
+### A layout bug this surfaced
+
+The navbar is `fixed top-0` and the banner sat in normal flow, so the two drew
+over each other — true of the old strip as well, just less visible because it
+never wrapped. On a 390px viewport the logo landed on top of the banner copy.
+
+The banner is now fixed too and publishes its measured height as
+`--gfxa-banner-h`, which the navbar's `top` and the landing `<main>` padding both
+read. Measured with a `ResizeObserver` rather than hard-coded, because the copy
+wraps at narrow widths and a fixed offset would be wrong on exactly the screens
+that wrap. Dismissing sets the variable to 0 and the navbar closes back to the
+top; the choice persists.
+
+| Check | Result |
+| --- | --- |
+| `waitlist` / `founding member` / `launching soon` in rendered page | none |
+| `POST /api/waitlist` | **404** |
+| Banner ↔ navbar overlap at 390px | fixed; `--gfxa-banner-h` 49px desktop, taller when wrapped |
+| Dismiss | banner hidden, variable 0px, navbar back to `top: 0`, persisted |
+| CTAs | hero, nav, footer and banner all resolve to the dashboard gate |
+| Landing bundle | **7.33 kB → 4.84 kB** (106 kB first load) |

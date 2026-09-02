@@ -17,7 +17,6 @@ declare global {
 }
 
 export const EVENTS = {
-  waitlistSignup: "waitlist_signup",
   terminalQuery: "terminal_query",
   pairSelected: "pair_selected",
   timeframeChanged: "chart_timeframe_changed",

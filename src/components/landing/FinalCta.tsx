@@ -25,7 +25,7 @@ export function FinalCta() {
         </p>
         <div className="mt-11">
           <Link
-            href="/dashboard?ref=final-cta"
+            href="/dashboard?tab=chart-snap&ref=final-cta"
             className="btn-primary !px-9 !py-4 text-[15px] shadow-glow-lg"
           >
             JOIN GLOBAL FX ALLIANCE

@@ -148,7 +148,7 @@ export function SocialProof() {
             ))}
           </div>
           <p className="text-[12.5px] text-ink-muted">
-            Founding members are joining now — chapters open in 8 countries
+            Members are joining now — chapters open in 8 countries
           </p>
         </div>
 

@@ -39,15 +39,8 @@ export const LAUNCH_STAGE = "pre-launch" as const;
 export const COPY = {
   tagline: "The Global Community for Forex Traders",
   heroClaim: "A Bloomberg-style AI terminal and pro auto-drawn charts, built for traders who want to understand the market — not be told what to trade.",
-  waitlistHeadline: "Be a founding member of GFXA Pro",
-  waitlistSub: "Early access to the AI Terminal, pro charts and your country chapter.",
   seoDescription:
     "A Bloomberg-style AI terminal for forex traders: 4-agent market analysis, TradingView-grade charts with auto-drawn support, resistance and fair-value gaps, trading calculator, economic calendar and journal. Educational only — not financial advice.",
   ogSubtitle: "AI Terminal · Pro Auto-Drawn Charts · Global Chapters",
 } as const;
 
-export const WAITLIST_BENEFITS = [
-  "Pro auto-drawn charts — support, resistance, trendlines, fair-value gaps",
-  "Bloomberg-style AI terminal with four analyst agents",
-  "Your country chapter, and the tools that go with it",
-] as const;

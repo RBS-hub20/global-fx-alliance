@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ExternalLink, Facebook, Send, Youtube, Instagram, Music2, type LucideIcon } from "lucide-react";
+import { ArrowRight, ExternalLink, Facebook, Send, Youtube, Instagram, Music2, type LucideIcon } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { DISCLAIMER } from "@/lib/data";
 import { FOOTER_COLUMNS, SOCIAL_LINKS } from "@/lib/links";
-import { WaitlistInline } from "@/components/launch/Waitlist";
 
 const SOCIAL_ICONS: Record<string, LucideIcon> = {
   Facebook,
@@ -31,9 +30,18 @@ export function Footer() {
 
             <div className="mt-6 max-w-[34ch]">
               <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white">
-                Founding member list
+                Open now
               </p>
-              <WaitlistInline />
+              <p className="text-[13px] leading-relaxed text-ink-muted">
+                The dashboard is live. A funded account under our partner code unlocks the pro tools.
+              </p>
+              <Link
+                href="/dashboard?tab=chart-snap&ref=footer"
+                className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-blue transition-colors hover:text-white"
+              >
+                Join the Alliance
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
+              </Link>
             </div>
           </div>
 

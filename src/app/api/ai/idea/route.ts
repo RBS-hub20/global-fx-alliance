@@ -3,7 +3,7 @@ import { SYSTEM_PROMPT, callAI, hasOpenAIKey, journalToContext, type JournalAggr
 import { buildSources, instrumentContext, readInstrument, sessionContext } from "@/lib/aiContext";
 import { isTimeframe, type Timeframe } from "@/lib/timeframes";
 import { DISCLAIMER } from "@/lib/ai";
-import { PAIRS } from "@/lib/market";
+import { getPair, PAIRS } from "@/lib/market";
 
 export const runtime = "edge";
 
@@ -34,8 +34,11 @@ export async function POST(request: Request) {
 
   const { line: session } = sessionContext();
   const read = await readInstrument(pair, tf);
+  const spec = getPair(pair);
   const d = read.quote.decimals;
-  const price = read.quote.price;
+  // Quoted at the instrument's own precision, so entry, stop and targets are all
+  // stated on the same scale rather than mixing a raw feed price with rounded levels.
+  const price = Number(read.quote.price.toFixed(d));
 
   // Risk geometry from measured volatility, not from the model.
   const atr = read.atr && read.atr > 0 ? read.atr : price * 0.0012;
@@ -44,8 +47,10 @@ export async function POST(request: Request) {
   const risk = Math.max(price - stop, 10 ** -d);
   const target1 = Number((price + risk).toFixed(d));
   const target2 = Number((price + risk * 2).toFixed(d));
-  const pipSize = 10 ** -d * (d >= 4 ? 10 : 1);
-  const stopPips = Number((risk / pipSize).toFixed(1));
+  // The instrument's own pip definition — 0.0001 on the majors, 0.01 on JPY
+  // crosses, 0.1 on gold. Deriving one from the decimal count got this wrong by
+  // a factor of ten and reported sub-pip stops on EUR/USD.
+  const stopPips = Number((risk / spec.pipSize).toFixed(1));
 
   const geometry = [
     `RISK GEOMETRY (already computed — quote these exactly, do not recalculate):`,

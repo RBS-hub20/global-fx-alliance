@@ -41,10 +41,14 @@ export async function POST(request: Request) {
   const price = Number(read.quote.price.toFixed(d));
 
   // Risk geometry from measured volatility, not from the model.
-  const atr = read.atr && read.atr > 0 ? read.atr : price * 0.0012;
+  const rawAtr = read.atr && read.atr > 0 ? read.atr : price * 0.0012;
+  // A quiet session can put ATR below the spread — on EUR/USD at 15M that
+  // produced a two-pip invalidation, which costs more to cross than it risks.
+  // The floor keeps the worked example something a reader could actually study.
+  const atr = Math.max(rawAtr, spec.spread * spec.pipSize * 2);
   const nearestSupport = read.levels.support[0]?.price ?? null;
   const stop = Number((nearestSupport && price - nearestSupport < atr * 2 ? nearestSupport - atr * 0.25 : price - atr).toFixed(d));
-  const risk = Math.max(price - stop, 10 ** -d);
+  const risk = Math.max(price - stop, spec.spread * spec.pipSize * 2);
   const target1 = Number((price + risk).toFixed(d));
   const target2 = Number((price + risk * 2).toFixed(d));
   // The instrument's own pip definition — 0.0001 on the majors, 0.01 on JPY
@@ -55,7 +59,7 @@ export async function POST(request: Request) {
   const geometry = [
     `RISK GEOMETRY (already computed — quote these exactly, do not recalculate):`,
     `- reference price ${price.toFixed(d)}`,
-    `- invalidation ${stop.toFixed(d)} (${stopPips} pips away, from ATR ${atr.toFixed(d)}${nearestSupport ? ` and support ${nearestSupport.toFixed(d)}` : ""})`,
+    `- invalidation ${stop.toFixed(d)} (${stopPips} pips away, from ATR ${atr.toFixed(d)}${atr > rawAtr ? ` floored at twice the ${spec.spread}-pip spread` : ""}${nearestSupport ? ` and support ${nearestSupport.toFixed(d)}` : ""})`,
     `- first objective ${target1.toFixed(d)} (1:1), second ${target2.toFixed(d)} (1:2)`,
   ].join("\n");
 

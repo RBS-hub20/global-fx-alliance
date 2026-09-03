@@ -48,7 +48,19 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(20);
 
-  if (error) return NextResponse.json({ ok: false, messages: [], message: error.message }, { status: 502 });
+  /*
+   * A missing table is "not set up yet", not a fault: before
+   * supabase/retention.sql is run this is every dashboard load, and a 502 there
+   * fills the console with errors on a page that is otherwise fine. The read
+   * degrades to empty; POST still reports the real reason, so the operator sees
+   * it the moment anyone tries to post.
+   */
+  if (error) {
+    return NextResponse.json(
+      { ok: true, messages: [], configured: false, message: error.message },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
   // Newest last, so the client renders a transcript without re-sorting.
   return NextResponse.json(

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { TabIcon } from "./TabIcon";
+import { SocialRow } from "@/components/brand/SocialRow";
+import { hasSocials } from "@/lib/socials";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { TABS, TAB_GROUPS, tabHref } from "@/lib/tabs";
@@ -70,6 +72,12 @@ export function Sidebar({
       </nav>
 
       <div className="shrink-0 border-t border-white/[0.08] p-4">
+        {hasSocials ? (
+          <div className="mb-4">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-muted">Follow</p>
+            <SocialRow size="sm" />
+          </div>
+        ) : null}
         <div className="rounded-xl border border-brand-blue/25 bg-membership p-4 shadow-glow">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-brand-green" strokeWidth={2} />

@@ -76,10 +76,3 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   },
 ];
 
-export const SOCIAL_LINKS = [
-  { label: "Facebook", href: "https://www.facebook.com/globalfxalliance" },
-  { label: "Telegram", href: "https://t.me/globalfxalliance" },
-  { label: "YouTube", href: "https://www.youtube.com/@globalfxalliance" },
-  { label: "TikTok", href: "https://www.tiktok.com/@globalfxalliance" },
-  { label: "Instagram", href: "https://www.instagram.com/globalfxalliance" },
-] as const;

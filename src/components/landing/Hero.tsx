@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { SocialRow } from "@/components/brand/SocialRow";
+import { hasSocials } from "@/lib/socials";
 import { ArrowRight } from "lucide-react";
 import { WorldMap } from "@/components/ui/WorldMap";
 
@@ -101,6 +103,13 @@ export function Hero() {
             EXPLORE THE COMMUNITY
           </a>
         </div>
+
+        {hasSocials ? (
+          <div className="mt-7 flex flex-col items-center gap-2.5 animate-riseIn" style={{ animationDelay: "300ms" }}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">Follow the Alliance</span>
+            <SocialRow size="sm" />
+          </div>
+        ) : null}
 
         {/* floating stats bar */}
         <div

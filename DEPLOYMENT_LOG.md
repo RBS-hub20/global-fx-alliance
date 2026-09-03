@@ -1347,3 +1347,51 @@ the leaderboard is promoted competitively.
 | Shoutbox with `password` field, or a password in the text | 400 |
 | Shoutbox message containing an email address | 400 |
 | Bundle | `/dashboard` **191 → 194 kB** |
+
+---
+
+## Official social accounts (2026-09-03)
+
+`lib/socials.ts` is the single source; every URL comes from the environment and
+nothing is hard-coded. Rendered by `SocialRow` in the hero, the footer and the
+dashboard sidebar, and in full on a new `/links` page for profile bios.
+
+### The links that were already live were guesses
+
+The footer was shipping `facebook.com/globalfxalliance`, `t.me/globalfxalliance`
+and three more as **live links** — handles nobody had confirmed. If one of them
+belongs to somebody else, the site was sending members to a stranger under the
+Alliance's name, which is how an impersonation account acquires an audience.
+
+An account now appears only once its real URL is set. Unset means hidden, not
+broken: the footer says accounts are published once confirmed, the hero and
+sidebar rows disappear entirely rather than rendering an empty "Follow us", and
+`/links` says so plainly. A missing social row costs nothing; a wrong one costs
+trust. The old `SOCIAL_LINKS` constant is deleted so the guessed URLs cannot come
+back by accident.
+
+A placeholder guard rejects anything starting `set_`, `your_` or `placeholder`,
+and non-http(s) values, so a half-filled env var cannot ship a broken link.
+
+### Copy
+
+The brief's footer line was "Daily analysis on TikTok — Live signals on
+Telegram". "Live signals" is not shipped: this platform's stated position, from
+the first brief onward, is that it is not a signal service, and the assistant
+tells every reader it explains structure rather than handing out calls. The
+channels are described as what they are — analysis, session notes, breakdowns.
+
+### /links
+
+A Linktree-style page for the TikTok and Instagram bio: dashboard first, then the
+site, then each configured account with what it is for. `robots: noindex` — it is
+a redirect surface for bios, not a page that should compete with the landing page
+in search. It carries the line "if a link is not on this page, it is not us",
+which is the cheapest defence a community has against a fake account.
+
+| Check | Result |
+| --- | --- |
+| Three URLs set, one left as `SET_YOUR_URL` | three render, the placeholder is rejected |
+| Nothing set | zero social hrefs anywhere; empty-state copy on `/links` and in the footer |
+| `/links` | new static route, **94.2 kB** first load |
+| Bundle | `/dashboard` 194 → **196 kB**, landing 5.0 → **5.7 kB** |

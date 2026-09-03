@@ -1,16 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, ExternalLink, Facebook, Send, Youtube, Instagram, Music2, type LucideIcon } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { DISCLAIMER } from "@/lib/data";
-import { FOOTER_COLUMNS, SOCIAL_LINKS } from "@/lib/links";
-
-const SOCIAL_ICONS: Record<string, LucideIcon> = {
-  Facebook,
-  Telegram: Send,
-  YouTube: Youtube,
-  TikTok: Music2,
-  Instagram,
-};
+import { FOOTER_COLUMNS } from "@/lib/links";
+import { SOCIALS } from "@/lib/socials";
+import { SOCIAL_ICON } from "@/components/brand/SocialRow";
 
 const linkClass =
   "inline-flex items-center gap-1.5 text-[14px] text-ink-muted transition-colors duration-200 hover:text-white";
@@ -73,33 +67,42 @@ export function Footer() {
             <h4 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-white">
               Social
             </h4>
-            <ul className="mt-5 space-y-3">
-              {SOCIAL_LINKS.map(({ label, href }) => {
-                const Icon = SOCIAL_ICONS[label];
-                return (
-                  <li key={label}>
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`group ${linkClass}`}
-                    >
-                      <Icon
-                        className="h-4 w-4 text-ink-muted transition-colors duration-200 group-hover:text-brand-blue"
-                        strokeWidth={1.8}
-                      />
-                      {label}
-                      <ExternalLink
-                        className="h-3 w-3 text-ink-muted/50 transition-colors duration-200 group-hover:text-brand-blue"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                      <span className="sr-only">(opens in a new tab)</span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
+            {SOCIALS.length ? (
+              <ul className="mt-5 space-y-3">
+                {SOCIALS.map((s) => {
+                  const Icon = SOCIAL_ICON[s.id];
+                  return (
+                    <li key={s.id}>
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`group ${linkClass}`}
+                      >
+                        <Icon
+                          className="h-4 w-4 text-ink-muted transition-colors duration-200 group-hover:text-brand-blue"
+                          strokeWidth={1.8}
+                        />
+                        {s.label}
+                        <ExternalLink
+                          className="h-3 w-3 text-ink-muted/50 transition-colors duration-200 group-hover:text-brand-blue"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                        <span className="sr-only">(opens in a new tab)</span>
+                      </a>
+                    </li>
+                  );
+                })}
+                <li>
+                  <Link href="/links" className={linkClass}>All official links</Link>
+                </li>
+              </ul>
+            ) : (
+              <p className="mt-5 max-w-[28ch] text-[13px] leading-relaxed text-ink-muted">
+                Official accounts are published here once their real URLs are confirmed.
+              </p>
+            )}
           </div>
         </div>
 

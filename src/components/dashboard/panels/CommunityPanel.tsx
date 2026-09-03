@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, Heart, MessageCircle, Send, Share2 } from "lucide-react";
 import { Card, PanelHeader, Pills, Toast } from "@/components/ui/Primitives";
+import { Shoutbox } from "@/components/dashboard/Shoutbox";
+import { StreakBoard } from "@/components/dashboard/StreakBoard";
 import { KEYS, usePersistentState } from "@/lib/storage";
 import { PROFILE } from "@/lib/content";
 import { getSharedPosts } from "@/lib/communityPosts";
@@ -105,6 +107,11 @@ export function CommunityPanel() {
   return (
     <div className="space-y-6">
       <PanelHeader title="Global Community" live />
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Shoutbox />
+        <StreakBoard limit={10} />
+      </div>
 
       <Card className="p-5">
         <div className="flex gap-3">

@@ -18,6 +18,7 @@ import { getBestWorst, getPairStats } from "@/lib/journalStore";
 import { buildJournalAggregate } from "@/lib/journalAggregate";
 import { getCurrentSessionInfo, humanMinutes } from "@/lib/sessionTime";
 import { addSharedPost } from "@/lib/communityPosts";
+import { getMemberEmail } from "@/lib/memberIdentity";
 import { readStore, writeStore } from "@/lib/storage";
 import { EVENTS, trackEvent } from "@/lib/analytics";
 import { tabHref } from "@/lib/tabs";
@@ -724,13 +725,40 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
   const hourKey = String(session.dubaiHour).padStart(2, "0");
   const atWorstHour = journal.worstHourDubai?.key === hourKey;
 
-  const share = () => {
+  const share = async () => {
     if (!p) return;
     addSharedPost(
       `${a.symbol} ${a.timeframe} — ${top ? `${top.type} (${top.confidence})` : "structure review"}. Reference entry ${f(p.entry)}, invalidation ${f(p.stopLoss)}, objectives ${f(p.target1)} / ${f(p.target2)}. Educational example, not a signal.`,
       `Chart Snap · ${a.market.isReal ? `real ${a.market.symbolUsed}` : "modelled"}`
     );
-    onToast("Shared to your community feed");
+
+    /*
+     * The local copy alone only ever reached this browser, which made "share to
+     * community" a promise the feature could not keep. With the shoutbox behind
+     * it the post now actually reaches other members — when an email is on file,
+     * which is the only identity this app has.
+     */
+    const email = getMemberEmail();
+    if (!email) {
+      onToast("Saved to your feed — add your email in My Alliance to post it to the channel");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/shoutbox", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          // The channel caps at 200 characters, so this is the short form.
+          message: `${a.symbol} ${a.timeframe} — ${top ? top.type : "structure review"} near ${f(p.entry)}, invalidation ${f(p.stopLoss)}. Educational.`,
+        }),
+      });
+      const j = await res.json();
+      onToast(res.ok && j.ok ? "Shared to the community channel" : j.message ?? "Saved to your feed only");
+    } catch {
+      onToast("Saved to your feed — the channel was unreachable");
+    }
   };
 
   return (

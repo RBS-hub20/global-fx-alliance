@@ -1274,3 +1274,76 @@ top; the choice persists.
 | Dismiss | banner hidden, variable 0px, navbar back to `top: 0`, persisted |
 | CTAs | hero, nav, footer and banner all resolve to the dashboard gate |
 | Landing bundle | **7.33 kB → 4.84 kB** (106 kB first load) |
+
+---
+
+## Retention: check-in streaks, shoutbox, streak board (2026-09-03)
+
+`supabase/retention.sql` adds `user_streaks` and `shoutbox`. **Run it before
+using any of this** — the routes degrade quietly to empty until the tables exist.
+
+### Handles, not emails
+
+The shoutbox and the board are public surfaces, so they publish a handle derived
+from the address (`trader-7f3a2b`) and never the address itself. The brief asked
+for `renz***@gmail.com`; in a community this size the prefix plus domain
+identifies a person, and it hands anyone the exact string they would need to
+impersonate them. The handle is stable, reveals nothing, and is identical
+wherever it appears.
+
+### A security bug in the supplied SQL
+
+The brief's policy — `create policy "Allow service role all" ... for all using
+(true) with check (true)` — names no role, so it applies to **anon** as well. It
+would have granted the public key full read and write on both tables: every
+member's email, and the ability to post as anyone. The service-role key the API
+uses bypasses RLS and needs no policy, so the shipped SQL enables RLS with **no
+policies** and drops that one if it was already created.
+
+### Figures that are measured, and the ones that were declined
+
+Rep is what check-ins actually earned. Rank is the member's real position on the
+board. "Checked in today" is a count of rows with today's date. Book P&L comes
+from an imported statement and is labelled sample until one is.
+
+Not built: the brief's "random 5-15 for demo if count low" presence padding and
+the demo sentiment split. Presence on a community page is the one number nobody
+can sanity-check, so a quiet day says "Quiet so far today". This is the same line
+held against invented community sentiment three times earlier in the project.
+
+Rep for sharing was also declined: check-in rep is naturally capped at once a
+day, whereas share rep with no accounts is farmable in a loop.
+
+### Sharing now actually reaches people
+
+Chart Snap's "share to community" only ever wrote to `localStorage`, so nothing
+left the browser — the flywheel had no second half. It still keeps the local copy
+and now also posts a short form to the shoutbox when an email is on file, and the
+toast says which of the two happened.
+
+### Deliberate differences
+
+Polling is **15s**, not 5s: every open tab polls, and three times the traffic buys
+three seconds of freshness on a channel that is rarely busy. Streak dates are
+handled in **UTC** end to end, so "yesterday" means the same thing in Manila and
+London rather than breaking or double-counting a streak by timezone.
+
+The dashboard's sample "Global Trader Leaderboard" is replaced by the real streak
+board. Two boards side by side — one invented, one measured — would have made
+both untrustworthy.
+
+### Known limit
+
+There is still no authentication, so the email is taken on trust: someone can
+check in, or post, under an address that is not theirs. It exposes nothing (each
+response carries only that address's own numbers) but it does mean the board is a
+habit tracker rather than a contest with anything at stake. Worth closing before
+the leaderboard is promoted competitively.
+
+| Check | Result |
+| --- | --- |
+| Tables absent / Supabase unset | routes return empty, UI shows "no check-ins yet" |
+| `POST /api/streak` bad email | 400 |
+| Shoutbox with `password` field, or a password in the text | 400 |
+| Shoutbox message containing an email address | 400 |
+| Bundle | `/dashboard` **191 → 194 kB** |

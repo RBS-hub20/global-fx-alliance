@@ -7,13 +7,16 @@ import { MarketIntelligence } from "@/components/dashboard/MarketIntelligence";
 import { EconomicCalendar } from "@/components/dashboard/EconomicCalendar";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { CommunityFeed } from "@/components/dashboard/CommunityFeed";
-import { Leaderboard } from "@/components/dashboard/Leaderboard";
+import { MyAlliance } from "@/components/dashboard/MyAlliance";
+import { StreakBoard } from "@/components/dashboard/StreakBoard";
+import { Shoutbox } from "@/components/dashboard/Shoutbox";
 import { MembershipCard } from "@/components/dashboard/MembershipCard";
 
 export function OverviewPanel() {
   return (
     <div className="space-y-5">
       <TickerRow />
+      <MyAlliance />
 
       {/* L1 what's happening -> L3 why -> L4/L5 what traders and AI think */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
@@ -26,8 +29,9 @@ export function OverviewPanel() {
 
         <div className="space-y-5">
           <AiAssistant />
+          <Shoutbox />
           <CommunityFeed />
-          <Leaderboard />
+          <StreakBoard />
           <MembershipCard />
         </div>
       </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
-import { SOCIAL_ICON } from "@/components/brand/SocialRow";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 import { SOCIALS } from "@/lib/socials";
 import { DISCLAIMER } from "@/lib/data";
 
@@ -52,25 +52,25 @@ export default function LinksPage() {
           <ArrowRight className="h-4 w-4 shrink-0 text-ink-muted" strokeWidth={2.2} />
         </Link>
 
-        {SOCIALS.map((s) => {
-          const Icon = SOCIAL_ICON[s.id];
-          return (
-            <a
-              key={s.id}
-              href={s.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3.5 transition-all duration-200 hover:border-brand-blue/40"
-            >
-              <Icon className="h-4 w-4 shrink-0 text-ink-muted" strokeWidth={1.9} />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-semibold text-white">{s.label}</span>
-                <span className="block truncate text-[12px] text-ink-muted">{s.blurb}</span>
+        {SOCIALS.map((s) => (
+          <a
+            key={s.id}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ ["--brand" as string]: s.color }}
+            className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3.5 transition-all duration-200 hover:border-[var(--brand)]"
+          >
+            <BrandIcon id={s.id} className="h-[18px] w-[18px] shrink-0 text-[var(--brand)]" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-semibold text-white">{s.label}</span>
+              <span className="block truncate text-[12px] text-ink-muted">
+                {s.handle} · {s.blurb}
               </span>
-              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-ink-muted" strokeWidth={1.9} />
-            </a>
-          );
-        })}
+            </span>
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-ink-muted" strokeWidth={1.9} />
+          </a>
+        ))}
 
         {SOCIALS.length === 0 ? (
           <p className="rounded-xl border border-[#fbbf24]/25 bg-[#fbbf24]/[0.06] px-4 py-3.5 text-[12.5px] leading-relaxed text-ink">

@@ -1395,3 +1395,46 @@ which is the cheapest defence a community has against a fake account.
 | Nothing set | zero social hrefs anywhere; empty-state copy on `/links` and in the footer |
 | `/links` | new static route, **94.2 kB** first load |
 | Bundle | `/dashboard` 194 → **196 kB**, landing 5.0 → **5.7 kB** |
+
+---
+
+## Footer social buttons, and the Telegram link corrected (2026-09-05)
+
+The Telegram handle was wrong. The old guess pointed at `t.me/globalfxalliance`;
+the real channel is **`https://t.me/GFXAlliance`**, confirmed by the owner. Nothing
+in the source carries the old URL any more — the only remaining mention is the
+entry above describing the bug.
+
+### Confirmed defaults, and everything else still env-only
+
+Facebook and Telegram now carry owner-confirmed defaults, so they render without
+any environment variable. TikTok, YouTube, Instagram, X and the Telegram chat stay
+hidden until their real URLs are set — the reasoning from the previous entry is
+unchanged: a guessed handle may belong to somebody else, and a wrong link costs
+more than a missing one. An env var always wins over a default, so a handle can
+move in Vercel without a deploy.
+
+The placeholder guard also got stricter: it now rejects `set_your`, `your_url`,
+`placeholder` and `example.com` **anywhere** in the value, not only at the start,
+so `https://example.com/set_your_url` is refused rather than shipped.
+
+### Real brand marks
+
+lucide has no Telegram or TikTok logo — `Send` and `Music2` were standing in, and
+a paper plane does not read as Telegram to anyone scanning a footer. The buttons
+now use the official marks (Simple Icons, CC0) and take the platform's own colour
+on hover: Facebook `#1877F2`, Telegram `#26A5E4`, TikTok `#FE2C55`, YouTube
+`#FF0000`.
+
+The footer's SOCIAL column shows the circular buttons in place of the
+"published once confirmed" line, with **All official channels** linking to
+`/links`. When nothing is configured the old wording still stands.
+
+| Check | Result |
+| --- | --- |
+| Old `t.me/globalfxalliance` in source or build output | **0** |
+| `t.me/GFXAlliance` in build output | present on `/`, `/links`, `/dashboard` |
+| Defaults only (no env) | Facebook + Telegram render; TikTok/YouTube hidden |
+| All four set, plus `X=https://example.com/set_your_url` | four render with brand colours; the placeholder is rejected |
+| Buttons | real SVG paths, `target="_blank"`, `rel="noopener noreferrer"`, aria-labels |
+| Bundle | `/dashboard` 196 → **198 kB**, landing **5.7 kB**, `/links` **94.2 kB** |

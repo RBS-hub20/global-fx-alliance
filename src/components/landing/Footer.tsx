@@ -4,7 +4,7 @@ import { Logo } from "@/components/brand/Logo";
 import { DISCLAIMER } from "@/lib/data";
 import { FOOTER_COLUMNS } from "@/lib/links";
 import { SOCIALS } from "@/lib/socials";
-import { SOCIAL_ICON } from "@/components/brand/SocialRow";
+import { SocialRow } from "@/components/brand/SocialRow";
 
 const linkClass =
   "inline-flex items-center gap-1.5 text-[14px] text-ink-muted transition-colors duration-200 hover:text-white";
@@ -68,40 +68,26 @@ export function Footer() {
               Social
             </h4>
             {SOCIALS.length ? (
-              <ul className="mt-5 space-y-3">
-                {SOCIALS.map((s) => {
-                  const Icon = SOCIAL_ICON[s.id];
-                  return (
-                    <li key={s.id}>
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`group ${linkClass}`}
-                      >
-                        <Icon
-                          className="h-4 w-4 text-ink-muted transition-colors duration-200 group-hover:text-brand-blue"
-                          strokeWidth={1.8}
-                        />
-                        {s.label}
-                        <ExternalLink
-                          className="h-3 w-3 text-ink-muted/50 transition-colors duration-200 group-hover:text-brand-blue"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                        <span className="sr-only">(opens in a new tab)</span>
-                      </a>
-                    </li>
-                  );
-                })}
-                <li>
-                  <Link href="/links" className={linkClass}>All official links</Link>
-                </li>
-              </ul>
+              <>
+                <SocialRow className="mt-5" />
+                <p className="mt-4 max-w-[26ch] text-[12.5px] leading-relaxed text-ink-muted">
+                  Follow the Alliance for session notes and daily breakdowns.
+                </p>
+                <Link href="/links" className={`mt-3 ${linkClass}`}>
+                  All official channels
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
+                </Link>
+              </>
             ) : (
-              <p className="mt-5 max-w-[28ch] text-[13px] leading-relaxed text-ink-muted">
-                Official accounts are published here once their real URLs are confirmed.
-              </p>
+              <>
+                <p className="mt-5 max-w-[28ch] text-[13px] leading-relaxed text-ink-muted">
+                  Official accounts are published here once their real URLs are confirmed.
+                </p>
+                <Link href="/links" className={`mt-3 ${linkClass}`}>
+                  All official channels
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
+                </Link>
+              </>
             )}
           </div>
         </div>

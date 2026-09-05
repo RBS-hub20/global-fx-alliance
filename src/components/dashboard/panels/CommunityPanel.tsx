@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, Heart, MessageCircle, Send, Share2 } from "lucide-react";
 import { Card, PanelHeader, Pills, Toast } from "@/components/ui/Primitives";
-import { Shoutbox } from "@/components/dashboard/Shoutbox";
+import { GfxaChat } from "@/components/dashboard/GfxaChat";
 import { StreakBoard } from "@/components/dashboard/StreakBoard";
 import { KEYS, usePersistentState } from "@/lib/storage";
 import { PROFILE } from "@/lib/content";
@@ -109,7 +109,7 @@ export function CommunityPanel() {
       <PanelHeader title="Global Community" live />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Shoutbox />
+        <GfxaChat />
         <StreakBoard limit={10} />
       </div>
 

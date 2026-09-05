@@ -16,6 +16,13 @@ export const runtime = "nodejs";
  * can post under someone else's handle. That is the honest limit of this
  * feature until accounts exist, and it is why nothing here is treated as
  * attributable.
+ *
+ * The handle is **derived on read**, never selected from the table. Selecting it
+ * made the whole channel depend on a column that a table created from an earlier
+ * schema does not have — and on PostgREST having noticed it — which is exactly
+ * how "Could not find the 'handle' column of 'shoutbox' in the schema cache"
+ * took the feature down. It is still written when the column exists, because
+ * a stored copy is useful for querying in the dashboard, but nothing reads it.
  */
 
 const TABLE = "shoutbox";
@@ -25,18 +32,20 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 interface Row {
   id: string;
-  handle: string | null;
   email: string;
   message: string;
   created_at: string;
 }
 
+/** Derived every time, so the column is an optimisation rather than a dependency. */
 const publicShape = (r: Row) => ({
   id: r.id,
-  handle: r.handle || handleFor(r.email),
+  handle: handleFor(r.email),
   message: r.message,
   createdAt: r.created_at,
 });
+
+const COLUMNS = "id,email,message,created_at";
 
 export async function GET() {
   const db = supabaseAdmin();
@@ -44,7 +53,7 @@ export async function GET() {
 
   const { data, error } = await db
     .from(TABLE)
-    .select("id,handle,email,message,created_at")
+    .select(COLUMNS)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -120,16 +129,34 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data, error } = await db
-    .from(TABLE)
-    .insert({ email, handle: handleFor(email), message })
-    .select("id,handle,email,message,created_at")
-    .single();
+  /*
+   * `handle` is written when the table has it and dropped when it does not — a
+   * table built from the earlier schema has no such column, and losing the post
+   * over a denormalised copy of something we can always recompute would be the
+   * wrong trade.
+   */
+  let payload: Record<string, unknown> = { email, handle: handleFor(email), message };
+  let data: Row | null = null;
+  let error: { message: string } | null = null;
 
-  if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 502 });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await db.from(TABLE).insert(payload).select(COLUMNS).single();
+    if (!res.error) { data = res.data as Row; error = null; break; }
+    error = res.error;
+    if (/Could not find the 'handle' column/.test(res.error.message)) {
+      const { handle: _dropped, ...rest } = payload;
+      payload = rest;
+      continue;
+    }
+    break;
+  }
+
+  if (error || !data) {
+    return NextResponse.json({ ok: false, message: error?.message ?? "Could not post." }, { status: 502 });
+  }
 
   return NextResponse.json(
-    { ok: true, post: publicShape(data as Row) },
+    { ok: true, post: publicShape(data) },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

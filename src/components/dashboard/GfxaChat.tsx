@@ -6,7 +6,7 @@ import { Card, CardHead } from "@/components/ui/Primitives";
 import { getMemberEmail } from "@/lib/memberIdentity";
 
 /**
- * The community channel.
+ * GFXA Chat — the community channel.
  *
  * Posts appear under a derived handle, never an email — this is a public
  * surface. With no accounts, a handle is a convention rather than an identity,
@@ -32,7 +32,7 @@ function ago(iso: string): string {
   return `${Math.floor(s / 86400)}d`;
 }
 
-export function Shoutbox() {
+export function GfxaChat() {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,7 +94,7 @@ export function Shoutbox() {
   return (
     <Card>
       <CardHead
-        title="Shoutbox"
+        title="GFXA Chat"
         icon={MessageSquare}
         right={<span className="text-[10.5px] text-ink-muted">{posts?.length ?? 0} recent</span>}
       />
@@ -124,8 +124,8 @@ export function Shoutbox() {
             value={text}
             maxLength={MAX}
             onChange={(e) => setText(e.target.value)}
-            placeholder="What are you watching?"
-            aria-label="Post to the shoutbox"
+            placeholder="Share what you’re watching — a level, a session, a question"
+            aria-label="Post to GFXA Chat"
             className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[12.5px] text-ink outline-none placeholder:text-ink-muted/60"
           />
           <span className="num-mono shrink-0 text-[10.5px] text-ink-muted/60">{MAX - text.length}</span>

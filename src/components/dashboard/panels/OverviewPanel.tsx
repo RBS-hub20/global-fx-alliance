@@ -9,7 +9,7 @@ import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { CommunityFeed } from "@/components/dashboard/CommunityFeed";
 import { MyAlliance } from "@/components/dashboard/MyAlliance";
 import { StreakBoard } from "@/components/dashboard/StreakBoard";
-import { Shoutbox } from "@/components/dashboard/Shoutbox";
+import { GfxaChat } from "@/components/dashboard/GfxaChat";
 import { MembershipCard } from "@/components/dashboard/MembershipCard";
 
 export function OverviewPanel() {
@@ -29,7 +29,7 @@ export function OverviewPanel() {
 
         <div className="space-y-5">
           <AiAssistant />
-          <Shoutbox />
+          <GfxaChat />
           <CommunityFeed />
           <StreakBoard />
           <MembershipCard />

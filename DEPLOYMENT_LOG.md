@@ -1438,3 +1438,40 @@ The footer's SOCIAL column shows the circular buttons in place of the
 | All four set, plus `X=https://example.com/set_your_url` | four render with brand colours; the placeholder is rejected |
 | Buttons | real SVG paths, `target="_blank"`, `rel="noopener noreferrer"`, aria-labels |
 | Bundle | `/dashboard` 196 → **198 kB**, landing **5.7 kB**, `/links` **94.2 kB** |
+
+---
+
+## GFXA Chat — renamed, and the handle column stopped being a dependency (2026-09-05)
+
+The channel is now **GFXA Chat**. `/api/gfxa-chat` is the new path; `/api/shoutbox`
+stays live as an alias so a client that has not reloaded keeps working across the
+deploy.
+
+### The bug
+
+`Could not find the 'handle' column of 'shoutbox' in the schema cache`. The route
+selected `handle` explicitly, so the whole channel depended on a column that a
+table created from the earlier schema does not have — and on PostgREST having
+noticed it, which lags when a column is added after the cache was built. Reads
+returned nothing and posts failed.
+
+The handle is derived from the address by a pure function, so there was never a
+reason to read it back. It is now **derived on every read and never selected**,
+and the insert writes it only when the column exists — on `Could not find the
+'handle' column` it drops the field and retries once, because losing a post over
+a denormalised copy of something recomputable is the wrong trade.
+
+`supabase/community.sql` adds the column, backfills it, and issues
+`notify pgrst, 'reload schema'` so a freshly added column is visible immediately.
+Running it is now an improvement rather than a prerequisite — the chat works
+either way.
+
+### Already shipped in the previous deploy
+
+The footer social buttons and the corrected Telegram link went out yesterday and
+were verified live: the landing page and `/links` both serve
+`https://t.me/GFXAlliance` and `https://www.facebook.com/globalfxalliance`, and
+all three routes return **0** occurrences of the old `t.me/globalfxalliance`. The
+only remaining mention in the source is a comment in `lib/socials.ts` recording
+why the guess was wrong. TikTok and YouTube stay hidden until their env vars are
+set.

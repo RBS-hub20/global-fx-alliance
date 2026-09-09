@@ -31,6 +31,13 @@ export interface Countdown {
 export const IMMINENT_MINUTES = 60;
 const LIVE_WINDOW_MINUTES = 60;
 
+/** Minutes from `now` to an absolute instant. NaN when unparseable. */
+export function minutesUntilInstant(timestamp: string, now: Date): number {
+  const ms = Date.parse(timestamp);
+  if (!Number.isFinite(ms)) return Number.NaN;
+  return Math.round((ms - now.getTime()) / 60_000);
+}
+
 /** "9h 11m", "45m", "1d 2h". */
 function human(mins: number): string {
   const m = Math.max(0, Math.round(mins));
@@ -53,8 +60,18 @@ export function minutesUntil(time: string, now: Date): number {
   return hh * 60 + mm - nowMins;
 }
 
-export function countdownFor(time: string, actual: string, now: Date): Countdown {
-  const away = minutesUntil(time, now);
+/**
+ * `timestamp` is preferred when present — an absolute instant is the only way a
+ * countdown can cross midnight, which is what "in 2d 5h" needs. `time` remains
+ * the fallback for the curated rows, which carry a wall clock and no date.
+ */
+export function countdownFor(
+  time: string,
+  actual: string,
+  now: Date,
+  timestamp?: string | null
+): Countdown {
+  const away = timestamp ? minutesUntilInstant(timestamp, now) : minutesUntil(time, now);
 
   // A printed figure settles it regardless of the clock — a release can land
   // early or late, and the number is the fact, not the schedule.

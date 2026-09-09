@@ -8,6 +8,62 @@ import { countdownFor, type Countdown } from "@/lib/eventCountdown";
 
 const SCOPES = ["Today", "This Week", "High Impact"] as const;
 
+/**
+ * One row shape for both sources.
+ *
+ * The live feed is dated; the curated set in lib/data is a wall clock with no
+ * day, so it gets stamped onto today as it is normalised. Everything downstream
+ * then works off `timestamp` and never has to know which source it came from.
+ */
+interface Row {
+  id: string;
+  time: string;
+  date: string;
+  timestamp: string;
+  currency: string;
+  flag: string;
+  title: string;
+  impact: CalendarEvent["impact"];
+  actual: string;
+  forecast: string;
+  previous: string;
+  detail?: string;
+  affects?: string;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const utcDay = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+
+/** Monday-to-Sunday window containing `d`, in UTC. */
+function weekBounds(d: Date): { from: string; to: string } {
+  const dow = (d.getUTCDay() + 6) % 7; // 0 = Monday
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() - dow);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return { from: utcDay(monday), to: utcDay(sunday) };
+}
+
+/** The curated set, stamped onto today so it shares the live shape. */
+function fromCurated(now: Date): Row[] {
+  const day = utcDay(now);
+  return CALENDAR.map((e) => ({
+    id: e.id,
+    time: e.time,
+    date: day,
+    timestamp: `${day}T${e.time}:00.000Z`,
+    currency: e.currency,
+    flag: e.flag,
+    title: e.title,
+    impact: e.impact,
+    actual: e.actual,
+    forecast: e.forecast,
+    previous: e.previous,
+    detail: e.detail,
+    affects: e.affects,
+  }));
+}
+
 const IMPACT: Record<CalendarEvent["impact"], string> = {
   High: "bg-brand-danger/[0.14] text-brand-danger",
   Medium: "bg-[#FFB020]/[0.14] text-[#FFB020]",
@@ -39,20 +95,56 @@ export function CalendarPanel() {
 
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("Today");
   const [currency, setCurrency] = useState<(typeof CALENDAR_CURRENCIES)[number]>("All");
-  const [open, setOpen] = useState<CalendarEvent | null>(null);
+  const [open, setOpen] = useState<Row | null>(null);
+  const [feed, setFeed] = useState<{ events: Row[]; source: string; isLive: boolean } | null>(null);
+
+  /*
+   * Whole week fetched once and filtered in the browser: the currency and scope
+   * pills then respond instantly instead of paying a round trip each, and the
+   * endpoint is cached for five minutes anyway.
+   */
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const r = await fetch("/api/calendar/live");
+        if (!r.ok) return;
+        const j = await r.json();
+        if (alive && Array.isArray(j.events)) {
+          setFeed({ events: j.events as Row[], source: j.source, isLive: !!j.isLive });
+        }
+      } catch {
+        // The curated fallback below is already on screen.
+      }
+    };
+    void load();
+    const id = setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
 
   const rows = useMemo(() => {
-    let out = CALENDAR;
-    if (scope === "High Impact") out = out.filter((e) => e.impact === "High");
+    const base = feed?.events ?? (now ? fromCurated(now) : []);
+    const today = now ? utcDay(now) : null;
+    let out = base;
+
+    if (scope === "Today" && today) {
+      out = out.filter((e) => e.date === today);
+    } else if (scope === "This Week" && now) {
+      const { from, to } = weekBounds(now);
+      out = out.filter((e) => e.date >= from && e.date <= to);
+    } else if (scope === "High Impact") {
+      out = out.filter((e) => e.impact === "High");
+    }
+
     if (currency !== "All") out = out.filter((e) => e.currency === currency);
     return out;
-  }, [scope, currency]);
+  }, [scope, currency, feed, now]);
 
   /** One countdown per row, recomputed on each tick. */
   const timing = useMemo(() => {
     const map = new Map<string, Countdown>();
     if (!now) return map;
-    for (const e of rows) map.set(e.id, countdownFor(e.time, e.actual, now));
+    for (const e of rows) map.set(e.id, countdownFor(e.time, e.actual, now, e.timestamp));
     return map;
   }, [rows, now]);
 
@@ -78,7 +170,9 @@ export function CalendarPanel() {
         action={
           <span className="num-mono text-[11.5px] text-ink-muted">
             {now
-              ? `All times UTC · now ${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`
+              ? `All times UTC · now ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}${
+                  feed ? (feed.isLive ? " · live schedule" : " · curated schedule") : ""
+                }`
               : "All times UTC"}
           </span>
         }
@@ -132,7 +226,14 @@ export function CalendarPanel() {
                   >
                     <td className="num-mono whitespace-nowrap px-4 py-3.5 text-[13px] font-semibold text-ink">
                       <span className="flex flex-col gap-1">
-                        <span>{e.time}</span>
+                        <span>
+                          {e.time}
+                          {scope !== "Today" ? (
+                            <span className="ml-1.5 text-[10.5px] font-normal text-ink-muted/70">
+                              {new Date(e.timestamp).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
+                            </span>
+                          ) : null}
+                        </span>
                         {c ? (
                           <span
                             className={`inline-flex items-center gap-1 self-start rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${PHASE_STYLE[c.phase]}`}
@@ -177,7 +278,7 @@ export function CalendarPanel() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <span className="num-mono rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[13px] font-semibold text-white">
-                {open.time} UTC
+                {open.time} UTC{scope !== "Today" ? ` · ${open.date}` : ""}
               </span>
               <span className="text-[13px] text-ink-muted">
                 <span aria-hidden className="mr-1.5">{open.flag}</span>
@@ -188,11 +289,19 @@ export function CalendarPanel() {
               </span>
             </div>
 
-            <p className="mt-5 text-[13.5px] leading-relaxed text-ink-muted">{open.detail}</p>
+            {open.detail ? (
+              <p className="mt-5 text-[13.5px] leading-relaxed text-ink-muted">{open.detail}</p>
+            ) : null}
 
             <dl className="mt-6 grid grid-cols-3 gap-3">
               {[
-                { k: "Actual", v: open.actual || "Pending", tone: open.actual ? "text-white" : "text-ink-muted" },
+                {
+                  k: "Actual",
+                  // The live feed supplies no actuals, so "not published here" is
+                  // the truth rather than "Pending", which implies one is coming.
+                  v: open.actual || (feed?.isLive ? "Not in feed" : "Pending"),
+                  tone: open.actual ? "text-white" : "text-ink-muted",
+                },
                 { k: "Forecast", v: open.forecast, tone: "text-ink" },
                 { k: "Previous", v: open.previous, tone: "text-ink" },
               ].map((r) => (
@@ -205,7 +314,11 @@ export function CalendarPanel() {
 
             <p className="mt-5 flex items-center gap-2 border-t border-white/[0.08] pt-4 text-[12px] text-ink-muted">
               <CalendarDays className="h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
-              Most relevant to <span className="font-semibold text-brand-blue">{open.affects}</span>
+              {open.affects ? (
+                <>Most relevant to <span className="font-semibold text-brand-blue">{open.affects}</span></>
+              ) : (
+                <>Schedule from the live feed. Forecast and previous are published; the actual is not — check the release itself.</>
+              )}
             </p>
           </div>
         ) : null}

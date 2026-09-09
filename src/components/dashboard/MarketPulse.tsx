@@ -1,19 +1,92 @@
-import { WorldMap } from "@/components/ui/WorldMap";
-import { SENTIMENT, SESSIONS, SESSION_NOW, type Session } from "@/lib/data";
+"use client";
 
-const STATUS_STYLE: Record<Session["status"], { dot: string; text: string; ring: boolean }> = {
+import { useEffect, useState } from "react";
+import { WorldMap } from "@/components/ui/WorldMap";
+import { SENTIMENT } from "@/lib/data";
+import { SESSION_WINDOWS, getCurrentSessionInfo } from "@/lib/sessionTime";
+
+/**
+ * The session board reads the clock.
+ *
+ * It used to render `SESSIONS` and `SESSION_NOW` from `lib/data` — a frozen
+ * snapshot where London was permanently OPEN and the "now" marker sat at 15:40
+ * forever. The windows and the status rules already existed in `lib/sessionTime`
+ * and were driving the AI Tools pills correctly, so this reuses them rather than
+ * writing a second implementation that could drift.
+ */
+
+type Status = "ACTIVE" | "UPCOMING" | "CLOSED";
+
+const STATUS_STYLE: Record<Status, { dot: string; text: string; ring: boolean }> = {
   ACTIVE: { dot: "bg-brand-green", text: "text-brand-green", ring: true },
-  OPEN: { dot: "bg-brand-blue", text: "text-brand-blue", ring: true },
   UPCOMING: { dot: "bg-ink-muted/60", text: "text-ink-muted", ring: false },
   CLOSED: { dot: "bg-ink-muted/30", text: "text-ink-muted/60", ring: false },
 };
 
+const ZONE: Record<string, string> = {
+  Sydney: "APAC",
+  Tokyo: "APAC",
+  London: "EMEA",
+  "New York": "AMER",
+};
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+interface Row {
+  city: string;
+  zone: string;
+  status: Status;
+  start: number;
+  end: number;
+  hours: string;
+}
+
 /** Sessions wrap midnight, so render them as one or two bar segments. */
-function segments(s: Session): [number, number][] {
-  return s.start <= s.end ? [[s.start, s.end]] : [[s.start, 1], [0, s.end]];
+function segments(r: Row): [number, number][] {
+  return r.start <= r.end ? [[r.start, r.end]] : [[r.start, 1], [0, r.end]];
+}
+
+function readClock(): { rows: Row[]; nowFraction: number; nowLabel: string } {
+  const now = new Date();
+  const info = getCurrentSessionInfo(now);
+
+  const rows: Row[] = SESSION_WINDOWS.map((w) => {
+    const state = info.sessions.find((x) => x.name === w.name);
+    return {
+      city: w.name,
+      zone: ZONE[w.name] ?? "",
+      status: (state?.status ?? "CLOSED") as Status,
+      start: w.openUTC / 24,
+      end: w.closeUTC / 24,
+      hours: `${pad(w.openUTC)}:00 – ${pad(w.closeUTC)}:00 UTC`,
+    };
+  });
+
+  const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  return {
+    rows,
+    nowFraction: minutes / 1440,
+    nowLabel: `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`,
+  };
 }
 
 export function MarketPulse() {
+  /*
+   * Null on the server and on the first client render, so the two agree. Reading
+   * the clock during render would put a different minute in the server HTML than
+   * the browser produces and trip hydration — and at a window boundary it would
+   * disagree about whether a session is even open.
+   */
+  const [clock, setClock] = useState<ReturnType<typeof readClock> | null>(null);
+
+  useEffect(() => {
+    setClock(readClock());
+    const id = setInterval(() => setClock(readClock()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const rows = clock?.rows ?? [];
+
   return (
     <section className="relative overflow-hidden rounded-2xl glass">
       <div className="pointer-events-none absolute inset-0 opacity-[0.13]">
@@ -37,12 +110,17 @@ export function MarketPulse() {
         <div className="grid grid-cols-1 divide-y divide-white/[0.08] lg:grid-cols-[1.35fr_1fr] lg:divide-x lg:divide-y-0">
           {/* Sessions */}
           <div className="p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-              Trading Sessions
-            </p>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                Trading Sessions
+              </p>
+              <span className="num-mono text-[11px] text-ink-muted">
+                {clock ? `Now: ${clock.nowLabel}` : "Now: —"}
+              </span>
+            </div>
 
             <ul className="mt-5 space-y-3.5">
-              {SESSIONS.map((s) => {
+              {rows.map((s) => {
                 const st = STATUS_STYLE[s.status];
                 return (
                   <li key={s.city}>
@@ -89,7 +167,7 @@ export function MarketPulse() {
               <div className="h-px w-full bg-white/[0.08]" />
               <span
                 className="absolute -top-1 h-2 w-2 -translate-x-1/2 rounded-full bg-white shadow-glow"
-                style={{ left: `${SESSION_NOW * 100}%` }}
+                style={{ left: `${(clock?.nowFraction ?? 0) * 100}%`, opacity: clock ? 1 : 0 }}
               />
               <div className="mt-2 flex justify-between text-[10px] num-mono text-ink-muted/60">
                 <span>00:00</span>

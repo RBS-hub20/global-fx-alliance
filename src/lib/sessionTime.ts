@@ -16,7 +16,9 @@ export interface SessionWindow {
 
 /** Windows in UTC hours. Sydney wraps midnight. */
 export const SESSION_WINDOWS: SessionWindow[] = [
-  { name: "Sydney", openUTC: 22, closeUTC: 7 },
+  // 22:00–06:00. The dashboard has always *labelled* Sydney 22:00–06:00 while
+  // this window said 07:00, so the two disagreed for an hour every morning.
+  { name: "Sydney", openUTC: 22, closeUTC: 6 },
   { name: "Tokyo", openUTC: 0, closeUTC: 9 },
   { name: "London", openUTC: 8, closeUTC: 17 },
   { name: "New York", openUTC: 13, closeUTC: 22 },

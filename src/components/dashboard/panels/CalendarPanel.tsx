@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { Card, Modal, PanelHeader, Pills } from "@/components/ui/Primitives";
 import { CALENDAR, CALENDAR_CURRENCIES, type CalendarEvent } from "@/lib/data";
+import { countdownFor, type Countdown } from "@/lib/eventCountdown";
 
 const SCOPES = ["Today", "This Week", "High Impact"] as const;
 
@@ -13,7 +14,29 @@ const IMPACT: Record<CalendarEvent["impact"], string> = {
   Low: "bg-white/[0.06] text-ink-muted",
 };
 
+/** Badge tone per phase. */
+const PHASE_STYLE: Record<Countdown["phase"], string> = {
+  imminent: "bg-brand-danger/[0.16] text-brand-danger",
+  live: "bg-brand-danger/[0.2] text-brand-danger",
+  upcoming: "bg-white/[0.06] text-ink-muted",
+  released: "bg-brand-green/[0.13] text-brand-green",
+  missed: "bg-white/[0.04] text-ink-muted/60",
+};
+
 export function CalendarPanel() {
+  /*
+   * Null until mounted. Reading the clock during render puts a different minute
+   * in the server HTML than the browser produces, and every row here is derived
+   * from it — so the whole table would mismatch on hydration.
+   */
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("Today");
   const [currency, setCurrency] = useState<(typeof CALENDAR_CURRENCIES)[number]>("All");
   const [open, setOpen] = useState<CalendarEvent | null>(null);
@@ -25,11 +48,40 @@ export function CalendarPanel() {
     return out;
   }, [scope, currency]);
 
+  /** One countdown per row, recomputed on each tick. */
+  const timing = useMemo(() => {
+    const map = new Map<string, Countdown>();
+    if (!now) return map;
+    for (const e of rows) map.set(e.id, countdownFor(e.time, e.actual, now));
+    return map;
+  }, [rows, now]);
+
+  /**
+   * The next high-impact release still ahead — the one row worth drawing the
+   * eye to. Chronological order is preserved; only the emphasis moves.
+   */
+  const nextHighId = useMemo(() => {
+    let best: { id: string; away: number } | null = null;
+    for (const e of rows) {
+      if (e.impact !== "High") continue;
+      const c = timing.get(e.id);
+      if (!c || c.minutesAway <= 0 || c.phase === "released") continue;
+      if (!best || c.minutesAway < best.away) best = { id: e.id, away: c.minutesAway };
+    }
+    return best?.id ?? null;
+  }, [rows, timing]);
+
   return (
     <div className="space-y-6">
       <PanelHeader
         title="Economic Calendar"
-        action={<span className="text-[11.5px] text-ink-muted">All times UTC</span>}
+        action={
+          <span className="num-mono text-[11.5px] text-ink-muted">
+            {now
+              ? `All times UTC · now ${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`
+              : "All times UTC"}
+          </span>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-4">
@@ -64,14 +116,37 @@ export function CalendarPanel() {
                   </td>
                 </tr>
               ) : (
-                rows.map((e) => (
+                rows.map((e) => {
+                  const c = timing.get(e.id);
+                  const spent = c?.phase === "released" || c?.phase === "missed";
+                  const hot = e.impact === "High" && (c?.phase === "imminent" || c?.phase === "live");
+                  return (
                   <tr
                     key={e.id}
                     onClick={() => setOpen(e)}
-                    className="cursor-pointer transition-colors duration-200 hover:bg-white/[0.03]"
+                    className={`cursor-pointer transition-colors duration-200 hover:bg-white/[0.03] ${
+                      spent ? "opacity-55" : ""
+                    } ${hot ? "bg-brand-danger/[0.05] shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-danger" : ""} ${
+                      !hot && e.id === nextHighId ? "shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-blue/70" : ""
+                    }`}
                   >
                     <td className="num-mono whitespace-nowrap px-4 py-3.5 text-[13px] font-semibold text-ink">
-                      {e.time}
+                      <span className="flex flex-col gap-1">
+                        <span>{e.time}</span>
+                        {c ? (
+                          <span
+                            className={`inline-flex items-center gap-1 self-start rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${PHASE_STYLE[c.phase]}`}
+                          >
+                            {c.phase === "live" ? (
+                              <span className="relative flex h-1.5 w-1.5" aria-hidden>
+                                <span className="absolute inline-flex h-full w-full animate-pulseRing rounded-full bg-brand-danger opacity-70" />
+                                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-danger" />
+                              </span>
+                            ) : null}
+                            {c.label}
+                          </span>
+                        ) : null}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3.5 text-[12.5px] text-ink-muted">
                       <span aria-hidden className="mr-1.5">{e.flag}</span>
@@ -89,7 +164,8 @@ export function CalendarPanel() {
                     <td className="num-mono px-4 py-3.5 text-right text-[13px] text-ink-muted">{e.forecast}</td>
                     <td className="num-mono px-4 py-3.5 text-right text-[13px] text-ink-muted">{e.previous}</td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

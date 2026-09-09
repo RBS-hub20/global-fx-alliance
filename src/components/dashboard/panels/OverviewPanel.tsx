@@ -7,6 +7,7 @@ import { MarketIntelligence } from "@/components/dashboard/MarketIntelligence";
 import { EconomicCalendar } from "@/components/dashboard/EconomicCalendar";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { CommunityFeed } from "@/components/dashboard/CommunityFeed";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { MyAlliance } from "@/components/dashboard/MyAlliance";
 import { StreakBoard } from "@/components/dashboard/StreakBoard";
 import { GfxaChat } from "@/components/dashboard/GfxaChat";
@@ -16,6 +17,7 @@ export function OverviewPanel() {
   return (
     <div className="space-y-5">
       <TickerRow />
+      <InstallPrompt />
       <MyAlliance />
 
       {/* L1 what's happening -> L3 why -> L4/L5 what traders and AI think */}

@@ -185,7 +185,71 @@ export function CalendarPanel() {
       </div>
 
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Cards under md: a seven-column table on a 390px screen is a
+            horizontal-scroll puzzle, and the countdown is the reason to look. */}
+        <ul className="divide-y divide-white/[0.06] md:hidden">
+          {rows.length === 0 ? (
+            <li className="px-4 py-10 text-center text-[13px] text-ink-muted">
+              No events match these filters.
+            </li>
+          ) : (
+            rows.map((e) => {
+              const c = timing.get(e.id);
+              const spent = c?.phase === "released" || c?.phase === "missed";
+              const hot = e.impact === "High" && (c?.phase === "imminent" || c?.phase === "live");
+              return (
+                <li
+                  key={e.id}
+                  onClick={() => setOpen(e)}
+                  className={`cursor-pointer px-4 py-3.5 transition-colors duration-200 active:bg-white/[0.04] ${
+                    spent ? "opacity-55" : ""
+                  } ${hot ? "bg-brand-danger/[0.05] shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-danger" : ""} ${
+                    !hot && e.id === nextHighId ? "shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-blue/70" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="num-mono text-[13px] font-semibold text-ink">{e.time}</span>
+                    {scope !== "Today" ? (
+                      <span className="text-[10.5px] text-ink-muted/70">
+                        {new Date(e.timestamp).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
+                      </span>
+                    ) : null}
+                    <span className="text-[12px] text-ink-muted">
+                      <span aria-hidden className="mr-1">{e.flag}</span>
+                      {e.currency}
+                    </span>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] ${IMPACT[e.impact]}`}>
+                      {e.impact}
+                    </span>
+                    {c ? (
+                      <span
+                        className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${PHASE_STYLE[c.phase]}`}
+                      >
+                        {c.phase === "live" ? (
+                          <span className="relative flex h-1.5 w-1.5" aria-hidden>
+                            <span className="absolute inline-flex h-full w-full animate-pulseRing rounded-full bg-brand-danger opacity-70" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-danger" />
+                          </span>
+                        ) : null}
+                        {c.label}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <p className="mt-1.5 text-[13px] leading-snug text-ink">{e.title}</p>
+
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-ink-muted">
+                    <span>Actual <span className={`num-mono ${e.actual ? "text-white" : "text-ink-muted/50"}`}>{e.actual || "—"}</span></span>
+                    <span>Forecast <span className="num-mono text-ink">{e.forecast || "—"}</span></span>
+                    <span>Previous <span className="num-mono text-ink">{e.previous || "—"}</span></span>
+                  </div>
+                </li>
+              );
+            })
+          )}
+        </ul>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[820px] text-left">
             <thead>
               <tr className="border-b border-white/[0.08]">

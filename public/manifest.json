@@ -1,0 +1,24 @@
+{
+  "name": "Global FX Alliance",
+  "short_name": "GFXA",
+  "description": "The global community for forex traders — live market pulse, auto-drawn charts, pattern radar, economic calendar and journal analytics. Education only.",
+  "id": "/dashboard",
+  "start_url": "/dashboard?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070A12",
+  "theme_color": "#070A12",
+  "categories": ["finance", "education", "news"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Chart Snap", "url": "/dashboard?tab=chart-snap", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Economic Calendar", "url": "/dashboard?tab=calendar", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "GFXA Chat", "url": "/dashboard?tab=community", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

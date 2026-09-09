@@ -7,7 +7,14 @@ import type { Candle } from "./indicators";
  * chart shows). This describes candle size, which is what a screenshot is
  * actually on.
  */
-export const TIMEFRAMES = ["5M", "15M", "1H", "2H", "4H", "D1"] as const;
+/**
+ * Candle sizes. `M` is minutes throughout, so "1M" here is one minute.
+ *
+ * Note the collision with `Range` in `lib/market.ts`, where "1M" means one
+ * month — the two vocabularies must never be passed to each other's functions.
+ * They are separate types precisely so the compiler catches that.
+ */
+export const TIMEFRAMES = ["1M", "5M", "15M", "1H", "2H", "4H", "D1"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
 
 export interface TimeframeSpec {
@@ -25,6 +32,8 @@ export interface TimeframeSpec {
 }
 
 export const TIMEFRAME_SPEC: Record<Timeframe, TimeframeSpec> = {
+  // Yahoo caps 1m history at 7 days; Twelve Data has no such limit.
+  "1M":  { label: "1M",  twelve: "1min",  yahoo: { interval: "1m",  range: "5d"  }, aggregateFromHours: null, seconds: 60 },
   "5M":  { label: "5M",  twelve: "5min",  yahoo: { interval: "5m",  range: "5d"  }, aggregateFromHours: null, seconds: 300 },
   "15M": { label: "15M", twelve: "15min", yahoo: { interval: "15m", range: "1mo" }, aggregateFromHours: null, seconds: 900 },
   "1H":  { label: "1H",  twelve: "1h",    yahoo: { interval: "60m", range: "3mo" }, aggregateFromHours: null, seconds: 3600 },
@@ -73,6 +82,7 @@ export function aggregateCandles(candles: Candle[], bucketSeconds: number): Cand
  */
 export function touchesForHighConfidence(tf: Timeframe): number {
   switch (tf) {
+    case "1M":
     case "5M":
     case "15M":
       return 3;

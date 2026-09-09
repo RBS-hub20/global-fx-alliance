@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 const BULLETS = [
   {
     title: "How to read market structure",
-    body: "Support, break, retest — worked through on 15M and 1H charts with the levels price has actually respected. Educational examples, never a signal.",
+    body: "Support, break, retest — worked through on 1M, 5M, 15M and 1H charts with the levels price has actually respected. Educational examples, never a signal.",
   },
   {
     title: "How to track your own sessions",

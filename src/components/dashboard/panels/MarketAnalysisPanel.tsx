@@ -8,7 +8,8 @@ import { TickerTape } from "@/components/dashboard/TickerTape";
 import { generateDrawings, type Drawings } from "@/lib/autoDraw";
 import { EVENTS, trackEvent } from "@/lib/analytics";
 import type { Candle } from "@/lib/indicators";
-import { PAIRS, RANGES, candlesFor, getPair, type Range } from "@/lib/market";
+import { PAIRS, candlesFor, getPair, type Range } from "@/lib/market";
+import { TIMEFRAMES, type Timeframe } from "@/lib/timeframes";
 import {
   detectPair, getTerminalAnalysis, DISCLAIMER,
   type CalendarLike, type NewsLike, type TerminalReport,
@@ -33,10 +34,28 @@ const COMMANDS = [
   "usd strength",
 ];
 
+/** Candle size -> a history window the seeded generator understands. */
+function seedRangeFor(tf: Timeframe): Range {
+  if (tf === "D1") return "1Y";
+  if (tf === "4H" || tf === "2H") return "1M";
+  return "1D";
+}
+
 export function MarketAnalysisPanel({ pair }: { pair?: string }) {
   const initial = pair && getPair(pair).symbol === pair ? pair : "EUR/USD";
   const [symbol, setSymbol] = useState(initial);
-  const [range, setRange] = useState<Range>("1D");
+  /*
+   * Candle size, not history window.
+   *
+   * This control used to offer 1D/1W/1M/3M/1Y — how much history to draw. What
+   * a reader actually reaches for is the candle they analyse on, and the app
+   * already serves candles by size at /api/chart-snap/live, the same chain Chart
+   * Snap uses. D1 is still ~a year of bars, so nothing is lost by the swap.
+   *
+   * Careful: `Range` also has a "1M" and it means one month. The seeded fallback
+   * below is the only place the two meet, and it converts explicitly.
+   */
+  const [timeframe, setTimeframe] = useState<Timeframe>("15M");
   const [tool, setTool] = useState<string | null>(null);
 
   // Seeded candles render immediately; the live fetch replaces them if it lands.
@@ -69,27 +88,28 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
     setLive(null);
 
     (async () => {
-      // Instant seeded fallback so the chart never waits on the network.
-      const seeded = candlesFor(symbol, range);
+      // Instant seeded fallback so the chart never waits on the network. The
+      // seeded generator speaks Range, so the candle size is mapped across.
+      const seeded = candlesFor(symbol, seedRangeFor(timeframe));
       if (alive) setOhlc(seeded);
 
       try {
         const res = await fetch(
-          `/api/market/live?pair=${encodeURIComponent(symbol)}&range=${range}`
+          `/api/chart-snap/live?pair=${encodeURIComponent(symbol)}&tf=${timeframe}`
         );
         if (!res.ok) return;
         const j = await res.json();
-        if (!alive || !Array.isArray(j.ohlc) || !j.ohlc.length) return;
-        setOhlc(j.ohlc);
+        if (!alive || !Array.isArray(j.candles) || !j.candles.length) return;
+        setOhlc(j.candles);
         setLive({
           price: j.price,
           changePct: j.changePct,
           source: j.source,
           isReal: !!j.isReal,
           symbolUsed: j.symbolUsed ?? null,
-          hasVolume: j.hasVolume !== false,
-          bars: j.bars ?? j.ohlc.length,
-          reason: j.reason,
+          hasVolume: j.candles.some((c: Candle) => (c.volume ?? 0) > 0),
+          bars: j.bars ?? j.candles.length,
+          reason: undefined,
         });
       } catch {
         // Seeded data is already on screen; nothing to recover.
@@ -101,7 +121,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
     return () => {
       alive = false;
     };
-  }, [symbol, range]);
+  }, [symbol, timeframe]);
 
   useEffect(() => {
     outRef.current?.scrollTo({ top: outRef.current.scrollHeight });
@@ -138,7 +158,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
       try {
         // All three feeds in parallel; each already falls back server-side.
         const [mkt, cal, news] = await Promise.all([
-          fetch(`/api/market/live?pair=${encodeURIComponent(target)}&range=${range}`)
+          fetch(`/api/market/live?pair=${encodeURIComponent(target)}&range=${seedRangeFor(timeframe)}`)
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null),
           fetch("/api/calendar/live").then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -146,7 +166,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
         ]);
 
         const tp = getPair(target);
-        const bars: Candle[] = mkt?.ohlc?.length ? mkt.ohlc : candlesFor(target, range);
+        const bars: Candle[] = mkt?.ohlc?.length ? mkt.ohlc : candlesFor(target, seedRangeFor(timeframe));
         const draw = generateDrawings(bars);
 
         const board = await Promise.all(
@@ -174,7 +194,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
         setRunning(false);
       }
     },
-    [range, running, symbol]
+    [timeframe, running, symbol]
   );
 
   const price = live?.price ?? p.price;
@@ -220,23 +240,23 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
             ) : null}
           </div>
 
-          <div className="flex items-center gap-1" role="tablist" aria-label="Chart range">
-            {RANGES.map((r) => (
+          <div className="flex items-center gap-1" role="tablist" aria-label="Candle size">
+            {TIMEFRAMES.map((r) => (
               <button
                 key={r}
                 type="button"
                 role="tab"
-                aria-selected={r === range}
+                aria-selected={r === timeframe}
                 onClick={() => {
-                  setRange(r);
-                  trackEvent(EVENTS.timeframeChanged, { range: r, pair: symbol });
+                  setTimeframe(r);
+                  trackEvent(EVENTS.timeframeChanged, { timeframe: r, pair: symbol });
                 }}
                 className={`relative shrink-0 px-3 py-1.5 text-[12.5px] font-semibold transition-colors duration-200 ${
-                  r === range ? "text-white" : "text-ink-muted hover:text-ink"
+                  r === timeframe ? "text-white" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 {r}
-                {r === range ? (
+                {r === timeframe ? (
                   <span className="absolute inset-x-2 -bottom-[13px] h-[2px] rounded-full bg-brand-blue" />
                 ) : null}
               </button>

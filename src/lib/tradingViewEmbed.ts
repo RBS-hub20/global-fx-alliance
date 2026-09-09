@@ -29,11 +29,15 @@ export function getTradingViewSymbol(symbol: string): string {
   return TV_SYMBOL[symbol.toUpperCase()] ?? `FX:${symbol.replace("/", "").toUpperCase()}`;
 }
 
-/** TradingView's interval codes. */
+** TradingView's interval codes. */
 export function getTVInterval(tf: Timeframe): string {
-  return { "5M": "5", "15M": "15", "1H": "60", "2H": "120", "4H": "240", D1: "D" }[tf] ?? "60";
-}
-
-export function tradingViewUrl(symbol: string, tf: Timeframe): string {
-  return `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(symbol))}&interval=${getTVInterval(tf)}`;
+  return ({
+    "1M": "1",
+    "5M": "5",
+    "15M": "15",
+    "1H": "60",
+    "2H": "120",
+    "4H": "240",
+    D1: "D"
+  } as const)[tf]?? "60";
 }

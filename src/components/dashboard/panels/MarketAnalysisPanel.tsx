@@ -15,6 +15,10 @@ import {
   type NewsLike, type TerminalReport,
 } from "@/lib/ai";
 import { normalizeCalendar, type CalendarRow } from "@/lib/marketData";
+import { TerminalTape } from "@/components/dashboard/market/TerminalTape";
+import { RiskDesk } from "@/components/dashboard/market/RiskDesk";
+import { CommunityBias } from "@/components/dashboard/market/CommunityBias";
+import { StructureBoard, useAlertWatch } from "@/components/dashboard/market/StructureBoard";
 
 // lightweight-charts touches the DOM on construction, so it never renders on the server.
 const TradingViewChart = dynamic(
@@ -208,6 +212,9 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
   const price = live?.price ?? p.price;
   const changePct = live?.changePct ?? p.changePct;
 
+  // Fires any alert the reader armed once the polled price reaches it.
+  useAlertWatch(symbol, price, p.decimals);
+
   return (
     <div className="space-y-5">
       <PanelHeader title="Market Analysis" />
@@ -310,9 +317,28 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
       </Card>
 
       {/* Auto-drawn level inventory */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <LevelCard title="Auto Support" items={drawings.supports} decimals={p.decimals} tone="green" />
         <LevelCard title="Auto Resistance" items={drawings.resistances} decimals={p.decimals} tone="red" />
+      </div>
+
+      <StructureBoard
+        pair={symbol}
+        drawings={drawings}
+        price={price}
+        decimals={p.decimals}
+        pipSize={p.pipSize}
+      />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <RiskDesk
+          pair={symbol}
+          price={price}
+          atr={drawings.indicators?.atr ?? null}
+          atrPct={drawings.indicators?.atrPct ?? null}
+          decimals={p.decimals}
+          pipSize={p.pipSize}
+        />
         <Card>
           <CardHead title="Structure" />
           <div className="space-y-2.5 p-5 text-[13px]">
@@ -320,23 +346,27 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
             <Row k="Pivots" v={String(drawings.trendline?.touches ?? 0)} />
             <Row k="RSI(14)" v={drawings.indicators?.rsi?.toFixed(1) ?? "n/a"} />
             <Row k="MACD" v={drawings.indicators?.macd?.bias ?? "n/a"} />
-            <Row k="ATR(14)" v={drawings.indicators?.atr?.toFixed(p.decimals) ?? "n/a"} />
             <Row k="FVG zones" v={String(drawings.fvgs.length)} />
+            <Row k="Levels" v={String(drawings.supports.length + drawings.resistances.length)} />
           </div>
         </Card>
       </div>
+
+      <CommunityBias pair={symbol} decimals={p.decimals} />
 
       {/* Bloomberg terminal */}
       <section className="overflow-hidden rounded-2xl border border-[#00ff88]/20 bg-[#0a0a0a] shadow-glow">
         <header className="flex items-center justify-between gap-3 border-b border-[#00ff88]/15 px-5 py-3">
           <h3 className="flex items-center gap-2 font-mono text-[12px] font-bold uppercase tracking-[0.14em] text-[#00ff88]">
             <Terminal className="h-3.5 w-3.5" strokeWidth={2.2} />
-            GFXA Terminal v1.0
+            GFXA Terminal v2.0
           </h3>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#fbbf24]/70">
             multi-agent · type /help
           </span>
         </header>
+
+        <TerminalTape focus={symbol} />
 
         <div ref={outRef} className="max-h-[520px] overflow-y-auto px-5 py-4 font-mono text-[12px] leading-relaxed">
           {log.length === 0 && !report ? (
@@ -357,7 +387,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
           {report && !running ? (
             <div className="mt-3">
               <p className="text-[#00ff88]">
-                GFXA TERMINAL v1.0 — {report.pair}{" "}
+                GFXA TERMINAL v2.0 — {report.pair}{" "}
                 <span className="text-[#fbbf24]">{report.price.toFixed(report.decimals)}</span>{" "}
                 <span className={report.changePct >= 0 ? "text-[#00D094]" : "text-[#FF4D4D]"}>
                   {report.changePct >= 0 ? "+" : ""}

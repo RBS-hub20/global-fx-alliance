@@ -21,6 +21,18 @@ export const runtime = "edge";
 const DEFAULT = ["EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD"];
 const SPARK_POINTS = 40;
 
+/*
+ * Instruments the provider chain can serve that are not tradeable pairs in
+ * PAIRS. The dollar index has a Yahoo listing (DX-Y.NYB) and comes back real,
+ * so the terminal header can show it rather than a proxy computed from the
+ * legs — which would be a different number wearing the same name.
+ */
+const EXTRA: Record<string, { name: string; decimals: number }> = {
+  DXY: { name: "US Dollar Index", decimals: 3 },
+};
+
+const known = (s: string) => PAIRS.some((p) => p.symbol === s) || s in EXTRA;
+
 /** Evenly-spaced sample of the closes, oldest first. */
 function spark(closes: number[]): number[] {
   if (closes.length <= SPARK_POINTS) return closes;
@@ -32,14 +44,17 @@ export async function GET(request: Request) {
   const raw = new URL(request.url).searchParams.get("pairs");
   const requested = (raw ? raw.split(",") : DEFAULT)
     .map((s) => decodeURIComponent(s).trim().toUpperCase())
-    .filter((s) => PAIRS.some((p) => p.symbol === s))
+    .filter(known)
     .slice(0, 8);
 
   const symbols = requested.length ? requested : DEFAULT;
 
   const quotes = await Promise.all(
     symbols.map(async (symbol) => {
-      const pair = getPair(symbol);
+      const extra = EXTRA[symbol];
+      const pair = extra
+        ? { symbol, name: extra.name, decimals: extra.decimals }
+        : getPair(symbol);
       const feed = await getRealCandles(symbol, "1H");
       const closes = feed.candles.map((c) => c.close);
       const n = closes.length;

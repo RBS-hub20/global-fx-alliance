@@ -155,7 +155,21 @@ export function readBias(drawings: Drawings, price: number, decimals: number): B
   }
 
   const side: BiasSide = bull > bear ? "bullish" : "bearish";
-  const share = Math.round((Math.max(bull, bear) / evidence) * 100);
+  const raw = (Math.max(bull, bear) / evidence) * 100;
+
+  /*
+   * Shrunk toward 50 by how much structure is actually behind the read.
+   *
+   * The raw share is a ratio, so three agreeing factors and nothing against
+   * them prints 100% — which on screen reads as certainty when what it really
+   * says is "the two things I looked at agreed". Weighting by total evidence
+   * makes a wide, one-sided read score higher than a thin one, and no read can
+   * reach 100 at all. SHRINK is the evidence weight at which half the raw
+   * distance from 50 survives.
+   */
+  const SHRINK = 3;
+  const share = Math.min(95, Math.round(50 + (raw - 50) * (evidence / (evidence + SHRINK))));
+
   return { side, share, factors: f, evidence, thin: false };
 }
 

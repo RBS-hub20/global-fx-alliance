@@ -70,6 +70,11 @@ interface BotStatus {
   adx_h1: number | null; bb_width: string | null; ema_distance: string | null;
   vt_balance: number | null; daily_pnl_percent: number | null;
   pattern_radar_signal: string | null; risk_locked: boolean; updated_at: string;
+  // 20250516_bot_status_detail.sql — null until the engine writes them.
+  confidence: number | null; direction: string | null; regime: string | null;
+  guardian_passed: boolean | null; journal_ok: boolean | null; news_block: boolean | null;
+  pattern_price: number | null; pattern_detail: string | null;
+  entry_zone_low: number | null; entry_zone_high: number | null;
 }
 interface Execution {
   id: string; symbol: string; action: "BUY" | "SELL" | "CLOSE";
@@ -153,7 +158,7 @@ export function AiBotPanel() {
           <Bot className="h-4 w-4" strokeWidth={2.2} />
           <span className="text-[#00ff88]/50">_&gt;</span> GFXA AI EXECUTION BOT
         </h2>
-        <span className="rounded border border-[#D4AF37]/40 px-1.5 py-0.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#D4AF37]">
+        <span className="rounded border border-[#262626] px-1.5 py-0.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#a3a3a3]">
           beta
         </span>
         <span className={`ml-auto rounded border px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.1em] ${MODE_STYLE[mode]}`}>
@@ -181,7 +186,7 @@ export function AiBotPanel() {
 
       <JournalStrip />
 
-      <p className="font-mono text-[10.5px] leading-relaxed text-[#D4AF37]/80">
+      <p className="font-mono text-[10.5px] leading-relaxed text-[#a3a3a3]">
         Educational only — not financial advice. {DISCLAIMER.replace("Educational only — not financial advice. ", "")}{" "}
         Auto-execution places real orders on a live broker account; you remain responsible for every fill.
       </p>
@@ -343,7 +348,7 @@ function AccountRow({ a, onChange }: { a: VtAccount; onChange: () => void }) {
         <span>·</span>
         <span className="font-mono">•••• encrypted</span>
         {a.auto_execute_enabled ? (
-          <span className="rounded border border-[#D4AF37]/40 px-1 py-px font-mono text-[9px] uppercase text-[#D4AF37]">auto</span>
+          <span className="rounded border border-[#00ff88]/40 px-1 py-px font-mono text-[9px] uppercase text-[#00ff88]">auto</span>
         ) : null}
         {a.telegram_id ? <span className="text-[#00ff88]/70">· telegram on</span> : null}
       </div>
@@ -371,73 +376,147 @@ function Field({
 
 /* --------------------------------------------------- CENTRE: market brain */
 
+const mode = (m: string) => (m === "GREEN" ? GREEN : m === "RED" ? "#ef4444" : "#facc15");
+
 function MarketBrain({ status }: { status: BotStatus | null }) {
-  const adx = status?.adx_h1 ?? null;
+  if (!status) {
+    return (
+      <div className={CARD}>
+        <Head>LIVE MARKET BRAIN</Head>
+        <p className="p-4 font-mono text-[11.5px] leading-relaxed text-[#a3a3a3]">
+          The engine has not reported yet. Numbers appear here when the VPS writes its first status row —
+          nothing is simulated in the meantime.
+        </p>
+      </div>
+    );
+  }
+
+  const adx = status.adx_h1 === null ? null : Number(status.adx_h1);
   const trending = adx !== null && adx >= 25;
+  const accent = mode(status.current_mode);
 
   return (
     <div className="space-y-4">
       <div className={CARD}>
-        <Head right={<span className="num-mono text-[10.5px] text-[#525252]">{status?.current_symbol ?? "XAUUSD"}</span>}>
+        <Head right={<span className="num-mono text-[10.5px] text-[#525252]">{status.current_symbol}</span>}>
           LIVE MARKET BRAIN
         </Head>
 
-        {!status ? (
-          <p className="p-4 font-mono text-[11.5px] text-[#a3a3a3]">
-            The engine has not reported yet. Numbers appear here when the VPS writes its first status row —
-            nothing is simulated in the meantime.
-          </p>
-        ) : (
-          <div className="space-y-3 p-4">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              <Stat label="ADX H1" value={adx === null ? "—" : adx.toFixed(0)}
-                sub={`25 threshold · ${trending ? "trending" : "ranging"}`}
-                tone={adx === null ? "#525252" : trending ? GREEN : "#a3a3a3"} />
-              <Stat label="BB width" value={status.bb_width ?? "—"} sub="volatility" />
-              <Stat label="EMA distance" value={status.ema_distance ?? "—"} sub="price vs mean" />
+        <div className="space-y-3 p-4">
+          {/* ---------------------------------------------- top row: 3 gauges */}
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className={`${CARD} px-3 py-2.5`}>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#525252]">ADX H1</p>
+                <span className={`ml-auto rounded border px-1.5 py-px font-mono text-[9px] font-bold uppercase tracking-[0.08em] ${
+                  adx === null ? "border-[#262626] text-[#525252]"
+                    : trending ? "border-[#00ff88]/40 text-[#00ff88]" : "border-[#262626] text-[#a3a3a3]"
+                }`}>
+                  {adx === null ? "no data" : trending ? "trending" : "ranging"}
+                </span>
+              </div>
+              <p className="num-mono mt-1 flex items-baseline gap-1.5 leading-none">
+                <span className="text-[24px] font-bold" style={{ color: adx === null ? "#525252" : trending ? GREEN : "#e5e5e5" }}>
+                  {adx === null ? "—" : adx.toFixed(0)}
+                </span>
+                <span className="text-[11px] text-[#a3a3a3]">/ 25 thr</span>
+              </p>
+              <div className="mt-2 h-1 overflow-hidden rounded-full bg-[#262626]">
+                <div className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${adx === null ? 0 : Math.min(100, (adx / 50) * 100)}%`, background: trending ? GREEN : "#525252" }} />
+              </div>
             </div>
 
-            {adx !== null ? (
-              <div>
-                <div className="h-1 overflow-hidden rounded-full bg-[#262626]">
-                  <div className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, (adx / 50) * 100)}%`, background: trending ? GREEN : "#525252" }} />
-                </div>
-                <p className="mt-1 font-mono text-[10px] text-[#525252]">0 · 25 threshold · 50</p>
-              </div>
-            ) : null}
-
-            <div className={`border-l-2 ${CARD} px-3 py-2.5`} style={{ borderLeftColor: mode(status.current_mode) }}>
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[#525252]">_&gt; current mode</p>
-              <p className="num-mono mt-1 text-[16px] font-bold" style={{ color: mode(status.current_mode) }}>
-                {status.current_mode} MODE
+            <div className={`${CARD} px-3 py-2.5`}>
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#525252]">BB width</p>
+              <p className="num-mono mt-1 text-[18px] font-bold leading-none text-[#e5e5e5]">{status.bb_width ?? "—"}</p>
+              <p className="mt-1.5 text-[10.5px] text-[#a3a3a3]">
+                {status.bb_width === "Wide" ? "Volatility high"
+                  : status.bb_width === "Narrow" ? "Volatility low"
+                  : status.bb_width === "Normal" ? "Volatility average" : "Not reported"}
               </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-[#a3a3a3]">{MODE_MEANING[status.current_mode]}</p>
+            </div>
+
+            <div className={`${CARD} px-3 py-2.5`}>
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#525252]">EMA dist</p>
+              <p className="num-mono mt-1 text-[18px] font-bold leading-none text-[#e5e5e5]">{status.ema_distance ?? "—"}</p>
+              <p className="mt-1.5 text-[10.5px] text-[#a3a3a3]">
+                {status.ema_distance ? "Price against the 50 EMA" : "Not reported"}
+              </p>
+            </div>
+          </div>
+
+          {/* ------------------------------------------------- current mode */}
+          <div className="rounded-lg border border-[#262626] border-l-2 bg-[#141414] px-3 py-3" style={{ borderLeftColor: accent }}>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[#525252]">_&gt; current mode</p>
+              <span className="ml-auto rounded border border-[#262626] px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.08em] text-[#a3a3a3]">
+                {/* Reported by the engine, or absent. Never a placeholder number. */}
+                {status.confidence === null ? "confidence not reported" : `confidence ${Number(status.confidence).toFixed(0)}%`}
+              </span>
+            </div>
+
+            <p className="num-mono mt-1.5 text-[16px] font-bold leading-none" style={{ color: accent }}>
+              {status.regime ? `${status.regime.toUpperCase()} MODE` : `${status.current_mode} MODE`}
+              {status.direction && status.direction !== "NONE" ? (
+                <span className="text-[#e5e5e5]"> — {status.direction.replace("_", " ")}</span>
+              ) : null}
+            </p>
+
+            <p className="mt-1.5 text-[11px] leading-relaxed text-[#a3a3a3]">{MODE_MEANING[status.current_mode]}</p>
+
+            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] text-[#a3a3a3]">
+              <Gate label="Guardian" state={status.guardian_passed} okText="passed" badText="blocked" />
+              <Gate label="Journal" state={status.journal_ok} okText="green" badText="flagged" />
+              {/* Inverted on purpose: news_block true is the bad state. */}
+              <Gate label="News" state={status.news_block === null ? null : !status.news_block} okText="clear" badText="blocked" />
+            </p>
+          </div>
+
+          {/* ------------------------------------------------ pattern radar */}
+          <div className={`${CARD} px-3 py-3`}>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00ff88] opacity-70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88]" />
+              </span>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[#525252]">
+                _&gt; pattern radar · live scan
+              </p>
             </div>
 
             {status.pattern_radar_signal ? (
-              <div className={`${CARD} px-3 py-2.5`}>
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[#525252]">_&gt; pattern radar</p>
-                <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] text-[#e5e5e5]">
-                  {status.pattern_radar_signal.split("+").map((s) => (
-                    <span key={s} className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: /fvg/i.test(s) ? "#D4AF37" : "#3b82f6" }} />
-                      {s.trim()}
-                    </span>
-                  ))}
+              <>
+                <p className="num-mono mt-1.5 text-[12.5px] font-semibold text-[#e5e5e5]">
+                  {status.pattern_radar_signal}
+                  {status.pattern_price !== null ? (
+                    <span className="text-[#a3a3a3]"> at {Number(status.pattern_price).toFixed(2)}</span>
+                  ) : null}
                 </p>
-              </div>
-            ) : null}
-
-            <p className="font-mono text-[10px] text-[#525252]">
-              updated {new Date(status.updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </p>
+                {status.pattern_detail ? (
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-[#a3a3a3]">{status.pattern_detail}</p>
+                ) : null}
+              </>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-[#a3a3a3]">Scanning — nothing confirmed on this symbol.</p>
+            )}
           </div>
-        )}
+
+          {/* ---------------------------------------------------- entry zone */}
+          <EntryZoneChart
+            symbol={status.current_symbol}
+            low={status.entry_zone_low === null ? null : Number(status.entry_zone_low)}
+            high={status.entry_zone_high === null ? null : Number(status.entry_zone_high)}
+          />
+
+          <p className="font-mono text-[10px] text-[#525252]">
+            updated {new Date(status.updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </p>
+        </div>
       </div>
 
       <div className={CARD}>
-        <Head right={<Lock className="h-3 w-3 text-[#D4AF37]" />}>RISK — LOCKED</Head>
+        <Head right={<Lock className="h-3 w-3 text-[#525252]" />}>RISK — LOCKED</Head>
         <ul className="divide-y divide-[#262626] text-[11.5px]">
           {[
             ["Position size", "0.01 per $1,000"],
@@ -459,7 +538,86 @@ function MarketBrain({ status }: { status: BotStatus | null }) {
   );
 }
 
-const mode = (m: string) => (m === "GREEN" ? GREEN : m === "RED" ? "#ef4444" : "#facc15");
+/** One gate in the mode strip. Null is "not reported", which is not "passed". */
+function Gate({ label, state, okText, badText }: {
+  label: string; state: boolean | null; okText: string; badText: string;
+}) {
+  const colour = state === null ? "#525252" : state ? GREEN : "#ef4444";
+  return (
+    <span className="flex items-center gap-1" style={{ color: colour }}>
+      <span className="h-1 w-1 rounded-full" style={{ background: colour }} />
+      {label} {state === null ? "—" : state ? okText : badText}
+    </span>
+  );
+}
+
+/**
+ * Entry zone over the real price line.
+ *
+ * The candles come from /api/chart-snap/live — the same provider chain the
+ * Market Analysis chart uses — so the line here and the chart on the other tab
+ * describe one series. The band is whatever the engine wrote; with no zone set
+ * this is just the price line rather than an invented box.
+ */
+function EntryZoneChart({ symbol, low, high }: { symbol: string; low: number | null; high: number | null }) {
+  const [closes, setCloses] = useState<number[] | null>(null);
+
+  const pair = useMemo(() => {
+    const s = symbol.toUpperCase().replace("/", "");
+    return s.length === 6 ? `${s.slice(0, 3)}/${s.slice(3)}` : symbol;
+  }, [symbol]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/chart-snap/live?pair=${encodeURIComponent(pair)}&tf=15M`);
+        const j = await res.json();
+        if (!alive || !Array.isArray(j.candles)) return;
+        setCloses(j.candles.slice(-80).map((c: { close: number }) => c.close));
+      } catch { if (alive) setCloses([]); }
+    })();
+    return () => { alive = false; };
+  }, [pair]);
+
+  if (closes === null) return <div className="h-[110px] animate-pulse rounded-lg bg-[#0a0a0a]" />;
+  if (closes.length < 2) return null;
+
+  const W = 600, H = 110, PAD = 6;
+  const lo = Math.min(...closes, ...(low !== null ? [low] : []));
+  const hi = Math.max(...closes, ...(high !== null ? [high] : []));
+  const span = hi - lo || 1;
+  const y = (v: number) => PAD + (1 - (v - lo) / span) * (H - PAD * 2);
+  const x = (i: number) => (i / (closes.length - 1)) * W;
+  const points = closes.map((c, i) => `${x(i).toFixed(1)},${y(c).toFixed(1)}`).join(" ");
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-[#262626] bg-[#0a0a0a]">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[110px] w-full" preserveAspectRatio="none" role="img"
+        aria-label={low !== null ? `${pair} with entry zone ${low} to ${high}` : `${pair} price`}>
+        {low !== null && high !== null ? (
+          <>
+            <rect x="0" y={y(high)} width={W} height={Math.max(1, y(low) - y(high))} fill="#00ff88" opacity="0.09" />
+            <line x1="0" x2={W} y1={y(high)} y2={y(high)} stroke="#00ff88" strokeWidth="1" strokeDasharray="4 4" opacity="0.6" />
+            <line x1="0" x2={W} y1={y(low)} y2={y(low)} stroke="#00ff88" strokeWidth="1" strokeDasharray="4 4" opacity="0.6" />
+          </>
+        ) : null}
+        <polyline points={points} fill="none" stroke="#00ff88" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="flex items-center gap-2 border-t border-[#262626] px-3 py-1.5">
+        <span className={`rounded border px-1.5 py-px font-mono text-[9px] font-bold uppercase tracking-[0.1em] ${
+          low !== null ? "border-[#00ff88] text-[#00ff88]" : "border-[#262626] text-[#525252]"
+        }`}>
+          entry zone
+        </span>
+        <span className="num-mono text-[10.5px] text-[#a3a3a3]">
+          {low !== null && high !== null ? `${low.toFixed(2)} – ${high.toFixed(2)}` : "none set"}
+        </span>
+        <span className="num-mono ml-auto text-[10px] text-[#525252]">{pair} · 15M · {closes.length} bars</span>
+      </div>
+    </div>
+  );
+}
 
 /* --------------------------------------------------- RIGHT: execution log */
 
@@ -570,7 +728,10 @@ function useCountdown(iso: string, active: boolean): number {
 /* ------------------------------------------------------- BOTTOM: journal */
 
 function JournalStrip() {
-  const [stats, setStats] = useState<{ winRate: number; trades: number; wins: number; losses: number; hold: number; worst: string } | null>(null);
+  const [stats, setStats] = useState<{
+    winRate: number; trades: number; wins: number; losses: number;
+    hold: number; worst: string; worstSub: string;
+  } | null>(null);
 
   // Journal data lives in this browser only, so it is read after mount rather
   // than rendered on the server.
@@ -578,10 +739,24 @@ function JournalStrip() {
     const a = getJournalAnalytics();
     if (!a) return;
     const bw = getBestWorst();
+
+    /*
+     * worstHourDubai is a Bucket — { key, trades, wins, winRate, net } — not a
+     * number. Stringifying the object printed "[object Object]:00". The rest of
+     * the app reads `.key`, which is the hour as "14"; there is no start/end
+     * range on it, so the label is one hour and the win rate goes beside it.
+     */
+    const worst = bw.worstHourDubai;
     setStats({
-      winRate: a.summary.winRate, trades: a.summary.trades, wins: a.summary.wins, losses: a.summary.losses,
+      winRate: a.summary.winRate,
+      trades: a.summary.trades,
+      wins: a.summary.wins,
+      losses: a.summary.losses,
       hold: a.holdTime.avgWinnerMin ?? 0,
-      worst: bw.worstHourDubai === null || bw.worstHourDubai === undefined ? "—" : `${String(bw.worstHourDubai).padStart(2, "0")}:00`,
+      worst: worst ? `${String(worst.key).padStart(2, "0")}:00` : "—",
+      worstSub: worst
+        ? `${worst.winRate.toFixed(0)}% over ${worst.trades} trade${worst.trades === 1 ? "" : "s"}`
+        : "not enough trades",
     });
   }, []);
 
@@ -589,7 +764,7 @@ function JournalStrip() {
     <div className={CARD}>
       <Head right={
         <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#525252]">
-          {stats ? "from your import" : "no import"}
+          {stats ? `${stats.trades} trades · this device` : "nothing imported"}
         </span>
       }>
         JOURNAL ANALYTICS
@@ -603,9 +778,9 @@ function JournalStrip() {
         <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-4">
           <Stat label="Win rate" value={`${stats.winRate.toFixed(0)}%`} sub={`${stats.wins}W-${stats.losses}L`}
             tone={stats.winRate >= 50 ? GREEN : "#ef4444"} />
-          <Stat label="Trades" value={String(stats.trades)} sub="in the import" />
+          <Stat label="Trades" value={String(stats.trades)} sub="closed in your statement" />
           <Stat label="Avg hold (win)" value={`${Math.round(stats.hold)}m`} sub="minutes" />
-          <Stat label="Worst hour" value={stats.worst} sub="Dubai · consider blocking" tone="#D4AF37" />
+          <Stat label="Worst hour" value={stats.worst} sub={stats.worstSub} />
         </div>
       )}
     </div>

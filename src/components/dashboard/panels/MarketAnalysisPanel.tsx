@@ -17,7 +17,8 @@ import {
 import { normalizeCalendar, type CalendarRow } from "@/lib/marketData";
 import { TerminalTape } from "@/components/dashboard/market/TerminalTape";
 import { RiskDesk } from "@/components/dashboard/market/RiskDesk";
-import { CommunityBias } from "@/components/dashboard/market/CommunityBias";
+import { CommunityLevels } from "@/components/dashboard/market/CommunityLevels";
+import { BiasBoard } from "@/components/dashboard/market/BiasBoard";
 import { StructureBoard, useAlertWatch } from "@/components/dashboard/market/StructureBoard";
 
 // lightweight-charts touches the DOM on construction, so it never renders on the server.
@@ -352,7 +353,20 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
         </Card>
       </div>
 
-      <CommunityBias pair={symbol} decimals={p.decimals} />
+      {/*
+        * Model read, room read, and the gap between them. Above the levels board
+        * because the comparison is what a reader comes back for.
+        */}
+      <BiasBoard
+        pair={symbol}
+        drawings={drawings}
+        price={price}
+        decimals={p.decimals}
+        bars={live?.bars ?? null}
+        sourceLabel={live?.isReal && live.symbolUsed ? `Yahoo ${live.symbolUsed}` : "modelled candles"}
+      />
+
+      <CommunityLevels pair={symbol} decimals={p.decimals} />
 
       {/* Bloomberg terminal */}
       <section className="overflow-hidden rounded-2xl border border-[#00ff88]/20 bg-[#0a0a0a] shadow-glow">

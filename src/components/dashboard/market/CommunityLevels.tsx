@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 
 /**
- * Daily bias poll and member-proposed levels.
+ * Member-proposed levels for the pair on screen.
  *
  * Every number here is a row in Postgres. There is no seeded "47 traders voted,
  * 62% bullish" — an empty poll says it is empty. A member who votes and watches
@@ -20,18 +20,6 @@ import { supabaseBrowser } from "@/lib/supabaseClient";
  * from bias_tally() / level_board(), which return counts and never user ids.
  */
 
-/** The poll's day boundary, matching the table's `session_day` default. */
-const utcDay = () => new Date().toISOString().slice(0, 10);
-
-type Bias = "bullish" | "bearish" | "neutral";
-const CHOICES: Bias[] = ["bullish", "bearish", "neutral"];
-
-const TONE: Record<Bias, string> = {
-  bullish: "text-brand-green border-brand-green/40 bg-brand-green/[0.12]",
-  bearish: "text-brand-danger border-brand-danger/40 bg-brand-danger/[0.12]",
-  neutral: "text-ink border-white/20 bg-white/[0.06]",
-};
-
 interface BoardLevel {
   id: string;
   price: number;
@@ -42,12 +30,10 @@ interface BoardLevel {
   voted: boolean;
 }
 
-export function CommunityBias({ pair, decimals }: { pair: string; decimals: number }) {
+export function CommunityLevels({ pair, decimals }: { pair: string; decimals: number }) {
   const { session } = useAuth();
   const supabase = supabaseBrowser();
 
-  const [tally, setTally] = useState<Record<Bias, number> | null>(null);
-  const [mine, setMine] = useState<Bias | null>(null);
   const [levels, setLevels] = useState<BoardLevel[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -60,37 +46,12 @@ export function CommunityBias({ pair, decimals }: { pair: string; decimals: numb
     if (!supabase || !session) return;
     setErr(null);
 
-    const [t, v, b] = await Promise.all([
-      supabase.rpc("bias_tally", { p_pair: pair }),
-      // Scoped to today: the policy already limits this to the member's own
-      // rows, but they accumulate one per day, and maybeSingle() on a member
-      // who voted yesterday too would error rather than return today's.
-      supabase.from("analysis_votes").select("bias").eq("pair", pair).eq("session_day", utcDay()).maybeSingle(),
-      supabase.rpc("level_board", { p_pair: pair }),
-    ]);
-
-    if (t.error) { setErr(missing(t.error.message)); return; }
-
-    const counts: Record<Bias, number> = { bullish: 0, bearish: 0, neutral: 0 };
-    for (const row of (t.data ?? []) as { bias: Bias; votes: number }[]) counts[row.bias] = Number(row.votes);
-    setTally(counts);
-    setMine(((v.data as { bias: Bias } | null)?.bias) ?? null);
-    setLevels(b.error ? [] : ((b.data ?? []) as BoardLevel[]).map((l) => ({ ...l, price: Number(l.price) })));
+    const b = await supabase.rpc("level_board", { p_pair: pair });
+    if (b.error) { setErr(missing(b.error.message)); setLevels([]); return; }
+    setLevels(((b.data ?? []) as BoardLevel[]).map((l) => ({ ...l, price: Number(l.price) })));
   }, [supabase, session, pair]);
 
   useEffect(() => { void load(); }, [load]);
-
-  const vote = async (bias: Bias) => {
-    if (!supabase || !session) return;
-    setBusy(true);
-    // One row per member per pair per day; changing your mind updates it.
-    const { error } = await supabase
-      .from("analysis_votes")
-      .upsert({ user_id: session.user.id, pair, bias }, { onConflict: "user_id,pair,session_day" });
-    setBusy(false);
-    if (error) { setErr(missing(error.message)); return; }
-    await load();
-  };
 
   const propose = async () => {
     if (!supabase || !session) return;
@@ -122,67 +83,14 @@ export function CommunityBias({ pair, decimals }: { pair: string; decimals: numb
   if (!session) {
     return (
       <Card>
-        <CardHead title="Community bias" />
-        <p className="px-5 pb-5 text-[12.5px] text-ink-muted">Sign in to vote and to post a level.</p>
+        <CardHead title="Levels members are watching" />
+        <p className="px-5 pb-5 text-[12.5px] text-ink-muted">Sign in to post a level.</p>
       </Card>
     );
   }
 
-  const total = tally ? tally.bullish + tally.bearish + tally.neutral : 0;
-  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
-
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* ------------------------------------------------------------- poll */}
-      <Card>
-        <CardHead title={`Bias today — ${pair}`} />
-        <div className="space-y-3 p-5">
-          <div className="flex gap-2">
-            {CHOICES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                disabled={busy}
-                onClick={() => void vote(c)}
-                aria-pressed={mine === c}
-                className={`flex-1 rounded-lg border px-3 py-2 text-[12px] font-semibold capitalize transition-all disabled:opacity-50 ${
-                  mine === c ? TONE[c] : "border-white/[0.08] text-ink-muted hover:text-ink"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-
-          {tally === null ? (
-            <p className="text-[12px] text-ink-muted">
-              <Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" /> reading the board…
-            </p>
-          ) : total === 0 ? (
-            <p className="text-[12.5px] text-ink-muted">
-              No votes yet today. Yours will be the first — the poll resets each UTC day.
-            </p>
-          ) : (
-            <>
-              <div className="flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
-                <div className="bg-brand-green transition-all duration-500" style={{ width: `${pct(tally.bullish)}%` }} />
-                <div className="bg-brand-danger transition-all duration-500" style={{ width: `${pct(tally.bearish)}%` }} />
-                <div className="bg-white/25 transition-all duration-500" style={{ width: `${pct(tally.neutral)}%` }} />
-              </div>
-              <div className="flex justify-between text-[11.5px]">
-                <span className="text-brand-green">{pct(tally.bullish)}% bullish</span>
-                <span className="text-brand-danger">{pct(tally.bearish)}% bearish</span>
-                <span className="text-ink-muted">{pct(tally.neutral)}% neutral</span>
-              </div>
-              <p className="text-[11.5px] text-ink-muted">
-                {total} {total === 1 ? "member has" : "members have"} voted today.
-                {mine ? ` You voted ${mine}.` : " You have not voted."}
-              </p>
-            </>
-          )}
-        </div>
-      </Card>
-
+    <>
       {/* ----------------------------------------------------------- levels */}
       <Card>
         <CardHead title="Levels members are watching" />
@@ -254,7 +162,7 @@ export function CommunityBias({ pair, decimals }: { pair: string; decimals: numb
           {err ? <p className="text-[11.5px] text-brand-danger">{err}</p> : null}
         </div>
       </Card>
-    </div>
+    </>
   );
 }
 

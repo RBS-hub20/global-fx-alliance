@@ -8,6 +8,7 @@ import { TopHeader } from "./TopHeader";
 import { MobileNav } from "./MobileNav";
 import { PANELS } from "./panels";
 import { IBGate } from "./IBGate";
+import { Greeting } from "./Greeting";
 import { resolveTab } from "@/lib/tabs";
 import { EVENTS, trackEvent } from "@/lib/analytics";
 
@@ -74,7 +75,7 @@ export function DashboardApp() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopHeader
-          title={tab.slug === "dashboard" ? "Good evening, Trader." : tab.label}
+          title={tab.slug === "dashboard" ? <Greeting fallback="Welcome back." /> : tab.label}
           blurb={tab.blurb}
           onOpenNav={() => setDrawer(true)}
         />

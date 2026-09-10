@@ -55,8 +55,22 @@ export function IBGate({ children }: { children: React.ReactNode }) {
       <div aria-hidden className="pointer-events-none max-h-[70vh] select-none overflow-hidden blur-[6px]">
         {children}
       </div>
-      <div className="absolute inset-x-0 top-0 z-30 flex justify-center px-4 pt-10">
-        <div className="w-full max-w-[560px] rounded-2xl border border-white/[0.1] bg-[#0A0F1E]/95 p-6 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+      {/*
+        * On a 390x844 phone this panel measured 866px tall and the submit button
+        * sat at y=903 — past the fold, under a bottom nav that starts at 784. It
+        * is now a bounded flex column: the body scrolls and the footer holds its
+        * place, so the button is reachable at any height. dvh rather than vh so
+        * the browser chrome and the on-screen keyboard are accounted for.
+        */}
+      {/*
+        * Fixed to the viewport, not absolute inside <main>. Absolute inherited the
+        * sticky header's offset, so a height capped at 100dvh still ended 57px
+        * behind the bottom nav — with the submit button in exactly that band. The
+        * padding here reserves the header above and the nav (plus the home
+        * indicator) below, and max-h-full then bounds the panel to what is left.
+        */}
+      <div className="fixed inset-0 z-40 flex justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-24 lg:pb-10 lg:pt-28">
+        <div className="flex max-h-full w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0A0F1E]/95 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
           {session ? <StatusPanel status={status} /> : <SignUpPanel />}
         </div>
       </div>
@@ -90,7 +104,7 @@ function StatusPanel({ status }: { status: string | null }) {
   }, [status, refresh]);
 
   return (
-    <>
+    <div className="overflow-y-auto p-6">
       <Head>{status === "pending" ? "Waiting for approval" : "Access closed"}</Head>
       <p className="mt-4 text-[13px] leading-relaxed text-ink">
         {status === "pending" ? (
@@ -109,7 +123,7 @@ function StatusPanel({ status }: { status: string | null }) {
       <button type="button" onClick={() => void signOut()} className="mt-4 text-[12.5px] text-brand-blue hover:text-white">
         Sign out
       </button>
-    </>
+    </div>
   );
 }
 
@@ -171,10 +185,13 @@ function SignUpPanel() {
   };
 
   return (
-    <>
-      <Head>Unlock the Alliance dashboard</Head>
+    <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 border-b border-white/[0.07] px-6 pb-4 pt-6">
+        <Head>Unlock the Alliance dashboard</Head>
+      </div>
 
-      <p className="mt-4 text-[13px] leading-relaxed text-ink-muted">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <p className="text-[13px] leading-relaxed text-ink-muted">
         Open an account through the partner link, fund it, then register below. An admin confirms it in
         the broker&apos;s portal and your access opens.
       </p>
@@ -211,35 +228,61 @@ function SignUpPanel() {
         </div>
       ) : null}
 
-      <form onSubmit={submit} className="mt-5 space-y-3" noValidate>
+      <div className="mt-5 space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <In label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
           <In label="Account number" value={account} onChange={setAccount} placeholder="e.g. 512334" />
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <In label="Password" type="password" value={pw} onChange={setPw} autoComplete="new-password" hint={`At least ${MIN_PASSWORD} characters.`} />
+          <In label="Password" type="password" value={pw} onChange={setPw} autoComplete="new-password" />
           <In label="Confirm password" type="password" value={confirm} onChange={setConfirm} autoComplete="new-password" />
         </div>
-        <In label="Server (optional)" value={server} onChange={setServer} placeholder={broker ? BROKER_INFO[broker].serverHint : "e.g. VTMarkets-Live"} required={false} />
 
-        <p className="rounded-lg border border-brand-green/25 bg-brand-green/[0.05] px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-muted">
-          <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 text-brand-green" strokeWidth={2} />
-          This password is for the Alliance dashboard only. We never ask for your investor or master
-          trading password — anyone who does is not us.
+        {/*
+          * The warning used to be a full bordered box under the fields, which on
+          * a phone pushed the submit button off the screen entirely. It says the
+          * same thing in one line beside the rule it is about.
+          */}
+        <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-ink-muted">
+          <ShieldCheck className="mt-[2px] h-3.5 w-3.5 shrink-0 text-brand-green" strokeWidth={2} />
+          <span>
+            At least {MIN_PASSWORD} characters. This is your Alliance password — we never ask for your
+            investor or master trading password.
+          </span>
         </p>
 
+        {/* Optional, so it costs no height until someone wants it. */}
+        <details className="rounded-lg border border-white/[0.08] bg-white/[0.02]">
+          <summary className="cursor-pointer list-none px-3 py-2 text-[12px] text-ink-muted">
+            Add your server <span className="text-ink-muted/60">(optional)</span>
+          </summary>
+          <div className="px-3 pb-3">
+            <In
+              label="Server"
+              value={server}
+              onChange={setServer}
+              placeholder={broker ? BROKER_INFO[broker].serverHint : "e.g. VTMarkets-Live"}
+              required={false}
+            />
+          </div>
+        </details>
+
+        <Link href="/login" className="inline-flex items-center gap-1.5 text-[12.5px] text-brand-blue hover:text-white">
+          <LogIn className="h-3.5 w-3.5" strokeWidth={2} />
+          Already a member? Sign in
+        </Link>
+      </div>
+      </div>
+
+      {/* Outside the scroll area, so it is reachable at any viewport height. */}
+      <div className="shrink-0 border-t border-white/[0.07] bg-[#0A0F1E]/95 px-6 py-4">
         <button type="submit" disabled={busy} className="btn-primary w-full !py-2.5 text-[12.5px] disabled:opacity-50">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {busy ? "Submitting…" : "Create account"}
         </button>
-        {msg ? <p className="text-[12px] leading-relaxed text-ink">{msg}</p> : null}
-      </form>
-
-      <Link href="/login" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] text-brand-blue hover:text-white">
-        <LogIn className="h-3.5 w-3.5" strokeWidth={2} />
-        Already a member? Sign in
-      </Link>
-    </>
+        {msg ? <p className="mt-2 text-[12px] leading-relaxed text-ink">{msg}</p> : null}
+      </div>
+    </form>
   );
 }
 

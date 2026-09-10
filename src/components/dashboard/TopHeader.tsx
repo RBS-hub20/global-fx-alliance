@@ -7,7 +7,8 @@ export function TopHeader({
   blurb,
   onOpenNav,
 }: {
-  title: string;
+  /** ReactNode so the dashboard can pass a live greeting rather than a string. */
+  title: React.ReactNode;
   blurb: string;
   onOpenNav: () => void;
 }) {

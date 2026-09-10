@@ -267,10 +267,6 @@ function SignUpPanel() {
           </div>
         </details>
 
-        <Link href="/login" className="inline-flex items-center gap-1.5 text-[12.5px] text-brand-blue hover:text-white">
-          <LogIn className="h-3.5 w-3.5" strokeWidth={2} />
-          Already a member? Sign in
-        </Link>
       </div>
       </div>
 
@@ -280,6 +276,12 @@ function SignUpPanel() {
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {busy ? "Submitting…" : "Create account"}
         </button>
+        {/* In the pinned footer, not the scroll area: at the bottom of a
+            scrolling body this sat under the mobile nav and could not be tapped. */}
+        <Link href="/login" className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] text-brand-blue hover:text-white">
+          <LogIn className="h-3.5 w-3.5" strokeWidth={2} />
+          Already a member? Sign in
+        </Link>
         {msg ? <p className="mt-2 text-[12px] leading-relaxed text-ink">{msg}</p> : null}
       </div>
     </form>

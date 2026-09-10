@@ -6,6 +6,7 @@ import { Check, Copy, Loader2, Lock, LogIn, ShieldCheck } from "lucide-react";
 import { BROKERS, BROKER_INFO, saveIBClick, type Broker } from "@/lib/ibTracking";
 import { useAuth } from "@/lib/AuthContext";
 import { supabaseBrowser } from "@/lib/supabaseClient";
+import { splitName } from "@/lib/displayName";
 
 /**
  * Access gate for the dashboard.
@@ -105,7 +106,7 @@ function StatusPanel({ status }: { status: string | null }) {
 
   return (
     <div className="overflow-y-auto p-6">
-      <Head>{status === "pending" ? "Waiting for approval" : "Access closed"}</Head>
+      <Head>{status === "pending" ? "Waiting for approval" : status === "banned" ? "Account restricted" : "Access closed"}</Head>
       <p className="mt-4 text-[13px] leading-relaxed text-ink">
         {status === "pending" ? (
           <>
@@ -114,9 +115,9 @@ function StatusPanel({ status }: { status: string | null }) {
             in; nothing else to do.
           </>
         ) : status === "rejected" ? (
-          "This application was not approved."
+          "This application was not approved. If your access was removed, an admin can tell you why."
         ) : (
-          "This account is blocked."
+          "Account restricted. This address cannot be registered again — contact an admin if you think that is a mistake."
         )}
       </p>
       <p className="mt-3 text-[12px] text-ink-muted">Signed in as {user?.email}</p>
@@ -130,6 +131,7 @@ function StatusPanel({ status }: { status: string | null }) {
 function SignUpPanel() {
   const { refresh } = useAuth();
   const [broker, setBroker] = useState<Broker | null>(null);
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [account, setAccount] = useState("");
   const [server, setServer] = useState("");
@@ -144,6 +146,7 @@ function SignUpPanel() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broker) { setMsg("Pick the broker you deposited with."); return; }
+    if (fullName.trim().length < 2) { setMsg("Enter the name you want the Alliance to know you by."); return; }
     if (pw.length < MIN_PASSWORD) { setMsg(`Use a password of at least ${MIN_PASSWORD} characters.`); return; }
     if (pw !== confirm) { setMsg("Those two passwords do not match."); return; }
     if (account.trim().length < 4) { setMsg("Enter the trading account number from your terminal."); return; }
@@ -156,7 +159,22 @@ function SignUpPanel() {
     const addr = email.trim().toLowerCase();
 
     const { data, error } = await supabase.auth.signUp({ email: addr, password: pw });
-    if (error) { setBusy(false); setMsg(error.message); return; }
+    if (error) {
+      setBusy(false);
+      /*
+       * A removed member re-registering lands here: Supabase Auth keeps the
+       * address unique and `profiles.email` is unique too, so the same address
+       * cannot come back through this form. Said plainly rather than as
+       * "User already registered", which reads like a bug.
+       *
+       * Deliberately not a pre-flight "is this address banned?" endpoint: that
+       * would answer for any address anyone typed, which is a membership
+       * lookup for the whole site.
+       */
+      const taken = /already registered|already exists/i.test(error.message);
+      setMsg(taken ? "That address is already registered. Sign in below — or contact an admin if your access was removed." : error.message);
+      return;
+    }
 
     const uid = data.user?.id;
     if (!uid) {
@@ -170,13 +188,31 @@ function SignUpPanel() {
      * naming it here would be theatre — and leaving it out makes it obvious that
      * the client never chooses its own access level.
      */
-    const { error: perr } = await supabase.from("profiles").insert({
+    const row: Record<string, unknown> = {
       id: uid,
       email: addr,
       account_number: account.trim(),
       server: server.trim() || null,
       broker: BROKER_INFO[broker].label,
-    });
+      ...splitName(fullName),
+    };
+
+    /*
+     * The name columns are a later migration. If the project has not run
+     * supabase/profiles_add_name_columns.sql yet, PostgREST rejects the whole
+     * insert over the first column it does not recognise — which would turn a
+     * cosmetic feature into "nobody can register". The name is dropped instead,
+     * one column at a time, so registration keeps working on the old schema.
+     */
+    let perr: { message: string } | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await supabase.from("profiles").insert(row);
+      perr = res.error;
+      if (!perr) break;
+      const missing = perr.message.match(/Could not find the '([^']+)' column/)?.[1];
+      if (!missing || !(missing in row) || ["id", "email", "account_number", "broker"].includes(missing)) break;
+      delete row[missing];
+    }
 
     setBusy(false);
     if (perr) { setMsg(`Registered, but the application did not save: ${perr.message}`); return; }
@@ -229,6 +265,20 @@ function SignUpPanel() {
       ) : null}
 
       <div className="mt-5 space-y-3">
+        {/*
+          * Asked for rather than derived. A name cannot be read reliably off an
+          * address — "afhomesresort2027" has no word boundaries in it — and the
+          * fallback that guesses gets people's names wrong in public, next to
+          * their posts.
+          */}
+        <In
+          label="Your name"
+          value={fullName}
+          onChange={setFullName}
+          placeholder="e.g. Renmar Sombilon"
+          autoComplete="name"
+          hint="Shown on your profile and your posts."
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <In label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
           <In label="Account number" value={account} onChange={setAccount} placeholder="e.g. 512334" />

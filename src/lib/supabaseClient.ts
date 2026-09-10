@@ -37,4 +37,15 @@ export interface Profile {
   broker: string;
   status: MemberStatus;
   created_at: string;
+  /*
+   * Optional because a project that has not run
+   * supabase/profiles_add_name_columns.sql has no such columns, and rows
+   * created before it have them null. Read them through @/lib/displayName,
+   * which handles both cases.
+   */
+  display_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  note?: string | null;
+  reviewed_at?: string | null;
 }

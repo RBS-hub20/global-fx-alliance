@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { firstName } from "@/lib/displayName";
 
 /**
  * Time-of-day greeting, read from the reader's own clock.
@@ -31,23 +32,8 @@ function cityFrom(timeZone: string | undefined): string | null {
   return last ? last.replace(/_/g, " ") : null;
 }
 
-/**
- * A display name from the account.
- *
- * Only used when the local part of the address looks like a name — a single
- * word of letters. "afhomesresort2027" or "renzsom2022" is a handle, not a
- * first name, and "Good morning, Afhomesresort2027" is worse than "Trader".
- */
-function nameFrom(email: string | null | undefined): string | null {
-  if (!email) return null;
-  const local = email.split("@")[0] ?? "";
-  const first = local.split(/[._-]/)[0] ?? "";
-  if (!/^[a-z]{2,14}$/i.test(first)) return null;
-  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-}
-
 export function Greeting({ fallback }: { fallback: string }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [local, setLocal] = useState<{ part: string; clock: string; city: string | null } | null>(null);
 
   useEffect(() => {
@@ -71,7 +57,12 @@ export function Greeting({ fallback }: { fallback: string }) {
     return () => clearInterval(id);
   }, []);
 
-  const who = nameFrom(user?.email) ?? "Trader";
+  /*
+   * The member's own name, from their own profile row — not from a fixture and
+   * not from whoever is signed in elsewhere. Falls back through the address to
+   * "Trader", so an account registered before the name field still greets.
+   */
+  const who = firstName(profile ?? { email: user?.email });
 
   // Server render and first paint: the existing copy, so nothing shifts.
   if (!local) return <>{fallback}</>;

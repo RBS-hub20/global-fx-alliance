@@ -1,31 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Activity, BadgeCheck, Pencil } from "lucide-react";
 import { Card, CardHead, Field, Modal, PanelHeader, Select, Toast } from "@/components/ui/Primitives";
 import { PROFILE } from "@/lib/content";
+import { useAuth } from "@/lib/AuthContext";
+import { displayName, initials, splitName } from "@/lib/displayName";
+import { supabaseBrowser } from "@/lib/supabaseClient";
+
+/**
+ * The member's own profile.
+ *
+ * Identity — name, initials, handle, joined date — comes from the signed-in
+ * `profiles` row. It used to come from the PROFILE fixture, which is why every
+ * account in the app introduced itself as the same person.
+ *
+ * The rest (bio, country, style, the counters, the activity list) has no column
+ * behind it yet and is still fixture copy; only the name is written back.
+ */
 
 export function ProfilePanel() {
+  const { user, profile: row, refresh } = useAuth();
+  const who = row ?? (user?.email ? { email: user.email } : null);
+
   const [editing, setEditing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
-    name: PROFILE.name,
+    name: displayName(who),
     bio: PROFILE.bio,
     country: PROFILE.country,
     style: PROFILE.style,
   });
   const [draft, setDraft] = useState(profile);
 
-  const save = () => {
+  // The session resolves after the first paint, so the name arrives late.
+  useEffect(() => {
+    setProfile((p) => ({ ...p, name: displayName(who) }));
+  }, [row, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
+
+  const save = async () => {
     setProfile(draft);
     setEditing(false);
-    setToast("Profile updated");
-    setTimeout(() => setToast(null), 1800);
+
+    const supabase = supabaseBrowser();
+    const named = draft.name.trim();
+    if (!supabase || !row || !named || named === displayName(who)) { flash("Profile updated"); return; }
+
+    /*
+     * Only the name is persisted, and only through the column grant in
+     * supabase/profiles_add_name_columns.sql — `status` is not grantable to
+     * `authenticated`, so this cannot be used to promote an account. Until that
+     * migration runs the update is refused, and the panel says so rather than
+     * pretending it saved.
+     */
+    setSaving(true);
+    const { error } = await supabase.from("profiles").update(splitName(named)).eq("id", row.id);
+    setSaving(false);
+    if (error) { flash("Saved on this device only — the name column is not writable yet."); return; }
+    await refresh();
+    flash("Profile updated");
   };
+
+  const since = row?.created_at
+    ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    : PROFILE.since;
+
+  const handle = user?.email ? `@${(user.email.split("@")[0] ?? "").toLowerCase()}` : PROFILE.handle;
 
   const stats = [
     { label: "Reputation", value: PROFILE.reputation.toLocaleString("en-US"), accent: true },
-    { label: "Member since", value: PROFILE.since },
+    { label: "Member since", value: since },
     { label: "Trades logged", value: String(PROFILE.tradesLogged) },
     { label: "Analysis posted", value: String(PROFILE.analysisPosted) },
   ];
@@ -37,7 +84,7 @@ export function ProfilePanel() {
       <Card className="p-6">
         <div className="flex flex-wrap items-start gap-5">
           <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-brand-blue/30 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[24px] font-bold text-white shadow-glow">
-            {PROFILE.initials}
+            {initials(who)}
           </span>
 
           <div className="min-w-0 flex-1">
@@ -51,7 +98,7 @@ export function ProfilePanel() {
                 <span aria-hidden>{PROFILE.flag}</span> {profile.country}
               </span>
             </div>
-            <p className="mt-1 text-[12.5px] text-ink-muted">{PROFILE.handle}</p>
+            <p className="mt-1 text-[12.5px] text-ink-muted">{handle}</p>
             <p className="mt-3 max-w-[62ch] text-[13.5px] leading-relaxed text-ink-muted">
               {profile.bio}
             </p>
@@ -123,7 +170,7 @@ export function ProfilePanel() {
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={() => setEditing(false)} className="btn-ghost !px-4 !py-2 text-[12.5px]">Cancel</button>
-          <button type="button" onClick={save} className="btn-primary !px-4 !py-2 text-[12.5px]">Save changes</button>
+          <button type="button" onClick={() => void save()} disabled={saving} className="btn-primary !px-4 !py-2 text-[12.5px] disabled:opacity-50">{saving ? "Saving…" : "Save changes"}</button>
         </div>
       </Modal>
 

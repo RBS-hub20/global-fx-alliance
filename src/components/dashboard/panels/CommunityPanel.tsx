@@ -7,6 +7,8 @@ import { GfxaChat } from "@/components/dashboard/GfxaChat";
 import { StreakBoard } from "@/components/dashboard/StreakBoard";
 import { KEYS, usePersistentState } from "@/lib/storage";
 import { PROFILE } from "@/lib/content";
+import { useAuth } from "@/lib/AuthContext";
+import { displayName, initials } from "@/lib/displayName";
 import { getSharedPosts } from "@/lib/communityPosts";
 
 type Kind = "Analysis" | "Question" | "Update";
@@ -41,6 +43,15 @@ const SEED: FeedPost[] = [
 const FILTERS = ["All", "Following", "Analysis", "Questions"] as const;
 
 export function CommunityPanel() {
+  /*
+   * Posts you write are signed with your own name. They used to be signed
+   * PROFILE.name — one person's name on every member's post.
+   */
+  const { user, profile } = useAuth();
+  const me = profile ?? (user?.email ? { email: user.email } : null);
+  const myName = displayName(me);
+  const myInitials = initials(me);
+
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [draft, setDraft] = useState("");
   const [posts, setPosts] = useState<FeedPost[]>(SEED);
@@ -58,7 +69,7 @@ export function CommunityPanel() {
       if (!incoming.length) return prev;
       return [
       ...incoming.map((s) => ({
-        id: s.id, author: PROFILE.name, initials: PROFILE.initials, flag: PROFILE.flag,
+        id: s.id, author: myName, initials: myInitials, flag: PROFILE.flag,
         country: PROFILE.country, role: PROFILE.role, verified: true, following: true,
         time: new Date(s.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         body: s.meta ? `${s.body}\n\n${s.meta}` : s.body,
@@ -67,7 +78,9 @@ export function CommunityPanel() {
       ...prev,
       ];
     });
-  }, []);
+    // Re-runs when the session resolves, so a post imported before the profile
+    // arrived is not left signed "Trader". The id check above makes that safe.
+  }, [myName, myInitials]);
   const [toast, setToast] = useState<string | null>(null);
   const { value: liked, setValue: setLiked } = usePersistentState<string[]>(KEYS.likes, []);
 
@@ -94,7 +107,7 @@ export function CommunityPanel() {
     if (!body) return;
     setPosts((prev) => [
       {
-        id: `own-${Date.now()}`, author: PROFILE.name, initials: PROFILE.initials,
+        id: `own-${Date.now()}`, author: myName, initials: myInitials,
         flag: PROFILE.flag, country: PROFILE.country, role: PROFILE.role, verified: true,
         following: true, time: "now", body, likes: 0, comments: 0, kind: "Update",
       },
@@ -116,7 +129,7 @@ export function CommunityPanel() {
       <Card className="p-5">
         <div className="flex gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[11px] font-bold text-white">
-            {PROFILE.initials}
+            {myInitials}
           </span>
           <div className="min-w-0 flex-1">
             <textarea

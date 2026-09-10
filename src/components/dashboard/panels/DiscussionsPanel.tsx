@@ -5,8 +5,14 @@ import { ChevronDown, Eye, MessageSquare, Plus, Trophy } from "lucide-react";
 import { Card, CardHead, Modal, PanelHeader, Toast } from "@/components/ui/Primitives";
 import { THREADS, type Thread } from "@/lib/content";
 import { LEADERBOARD } from "@/lib/data";
+import { useAuth } from "@/lib/AuthContext";
+import { displayName, initials } from "@/lib/displayName";
 
 export function DiscussionsPanel() {
+  // Was the literal string "Renmar Sombilon" on every member's new thread.
+  const { user, profile } = useAuth();
+  const me = profile ?? (user?.email ? { email: user.email } : null);
+
   const [open, setOpen] = useState<string | null>(THREADS[0].id);
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
@@ -18,7 +24,7 @@ export function DiscussionsPanel() {
     if (!t) return;
     setThreads((prev) => [
       {
-        id: `own-${Date.now()}`, title: t, author: "Renmar Sombilon", initials: "RS",
+        id: `own-${Date.now()}`, title: t, author: displayName(me), initials: initials(me),
         flag: "\u{1F1F5}\u{1F1ED}", body: "You started this discussion. Replies will appear here.",
         replies: 0, views: "0", activity: "now", tags: ["New"], answers: [],
       },

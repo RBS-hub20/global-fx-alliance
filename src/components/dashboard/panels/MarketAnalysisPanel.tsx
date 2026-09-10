@@ -12,8 +12,9 @@ import { PAIRS, candlesFor, getPair, type Range } from "@/lib/market";
 import { TIMEFRAMES, type Timeframe } from "@/lib/timeframes";
 import {
   detectPair, getTerminalAnalysis, DISCLAIMER,
-  type CalendarLike, type NewsLike, type TerminalReport,
+  type NewsLike, type TerminalReport,
 } from "@/lib/ai";
+import { normalizeCalendar, type CalendarRow } from "@/lib/marketData";
 
 // lightweight-charts touches the DOM on construction, so it never renders on the server.
 const TradingViewChart = dynamic(
@@ -184,7 +185,14 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
           ohlc: bars,
           indicators: draw.indicators,
           drawings: draw,
-          calendar: (cal?.events ?? []) as CalendarLike[],
+          /*
+           * Normalised, not cast. The live feed sends `title` / `impact:"High"`
+           * and the agents read `event` / `importance:"high"`, so the cast that
+           * used to be here compiled fine and printed "undefined" for every
+           * scheduled release while reporting 0 high-impact events on a day
+           * with several.
+           */
+          calendar: normalizeCalendar((cal?.events ?? []) as CalendarRow[]),
           news: (news?.items ?? []) as NewsLike[],
           board,
           source: mkt?.source === "live" ? "live" : "fallback",

@@ -12,6 +12,7 @@ import type { Drawings } from "./autoDraw";
 import { CALENDAR } from "./data";
 import { NEWS } from "./content";
 import { PAIRS, getPair, levelsFor, seriesFor, technicalsFor } from "./market";
+import { scopedNews } from "./marketData";
 
 export const DISCLAIMER =
   "Educational only — not financial advice. Do your own research.";
@@ -35,6 +36,8 @@ export interface NewsLike {
   time: string;
   sentiment: "bullish" | "bearish" | "neutral";
   symbols: string[];
+  /** "Gold" | "Crypto" | "Forex" | "Economy" — used for the asset-class fallback. */
+  category?: string;
 }
 
 export interface TerminalContext {
@@ -171,7 +174,12 @@ export function fundamentalAgent(ctx: TerminalContext): string[] {
   const lines: string[] = [];
 
   const relevant = calendar.filter((e) => e.currency === base || e.currency === quote);
-  const pending = relevant.filter((e) => !e.released);
+  // Chronological. The feed is not ordered, so "still to come" was listing 16:00
+  // before 12:30 — the next release is the one that matters, and it was third.
+  const pending = relevant
+    .filter((e) => !e.released)
+    .slice()
+    .sort((a, b) => a.time.localeCompare(b.time));
   const high = relevant.filter((e) => e.importance === "high");
 
   lines.push(
@@ -190,24 +198,28 @@ export function fundamentalAgent(ctx: TerminalContext): string[] {
     lines.push(`             Nothing scheduled on either leg today.`);
   }
 
-  const wires = news.filter((n) => n.symbols.includes(pair));
-  // Falling back to the whole wire is fine, but it must be labelled — presenting
-  // unrelated headlines as pair-relevant is worse than saying there are none.
-  const pool = wires.length ? wires : news;
-  const onTopic = wires.length > 0;
+  /*
+   * Narrowest match first — pair, then asset class, then the whole tape.
+   *
+   * This used to fall straight from "no XAU/USD headlines" to the entire wire,
+   * so a gold analysis quoted a live story about oil trading at $100. The story
+   * was real and minutes old; it simply had nothing to do with gold. The scope
+   * comes back with the headlines now and is printed, so a reader is never left
+   * to assume a tape story was selected for the pair.
+   */
+  const scoped = scopedNews(news, pair);
+  const pool = scoped.items;
   const bull = pool.filter((n) => n.sentiment === "bullish").length;
   const bear = pool.filter((n) => n.sentiment === "bearish").length;
 
-  if (onTopic) {
+  if (scoped.scope === "pair") {
     lines.push(
       `Wire tone    ${bull} bullish / ${bear} bearish across ${pool.length} ${pair} headlines — ${
         bull > bear ? "net constructive" : bear > bull ? "net negative" : "mixed"
       }`
     );
   } else {
-    lines.push(
-      `Wire tone    no ${pair}-specific headlines on the wire — showing broad tape instead`
-    );
+    lines.push(`Wire tone    ${scoped.label}`);
   }
   pool.slice(0, 2).forEach((n) => {
     lines.push(`             "${n.title.slice(0, 88)}" — ${n.source}`);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Copy, Loader2, Lock, LogIn, ShieldCheck } from "lucide-react";
 import { BROKERS, BROKER_INFO, saveIBClick, type Broker } from "@/lib/ibTracking";
 import { useAuth } from "@/lib/AuthContext";
@@ -28,8 +28,27 @@ export function IBGate({ children }: { children: React.ReactNode }) {
 
   // Not wired up yet: never trap anyone behind a gate that cannot open.
   if (!configured) return <>{children}</>;
-  if (!ready) return <>{children}</>;
   if (session && status === "approved") return <>{children}</>;
+
+  /*
+   * Session still resolving. Rendering children here flashed the whole dashboard
+   * to someone who is not approved before the gate caught up; rendering the gate
+   * here flashes a sign-up form at a member who is. Neither, briefly, is right.
+   */
+  if (!ready) {
+    return (
+      <div className="relative">
+        <div aria-hidden className="pointer-events-none max-h-[70vh] select-none overflow-hidden blur-[6px]">
+          {children}
+        </div>
+        <div className="absolute inset-x-0 top-0 z-30 flex justify-center px-4 pt-10">
+          <div className="rounded-xl border border-white/[0.1] bg-[#0A0F1E]/95 px-5 py-4 text-[12.5px] text-ink-muted backdrop-blur-xl">
+            Checking your access…
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -57,7 +76,19 @@ function Head({ children }: { children: React.ReactNode }) {
 }
 
 function StatusPanel({ status }: { status: string | null }) {
-  const { signOut, user } = useAuth();
+  const { signOut, user, refresh } = useAuth();
+
+  /*
+   * An admin approving someone who is sitting on this screen should not require
+   * them to guess that a reload is needed. Only while pending, and only every
+   * 30s — this is one row by primary key.
+   */
+  useEffect(() => {
+    if (status !== "pending") return;
+    const id = setInterval(() => { void refresh(); }, 30_000);
+    return () => clearInterval(id);
+  }, [status, refresh]);
+
   return (
     <>
       <Head>{status === "pending" ? "Waiting for approval" : "Access closed"}</Head>

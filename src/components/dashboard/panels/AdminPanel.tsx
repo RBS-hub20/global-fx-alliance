@@ -2,57 +2,70 @@
 
 import { useCallback, useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { Card, CardHead, PanelHeader, Skeleton, Toast } from "@/components/ui/Primitives";
-import type { VerificationRequest } from "@/lib/ibStore";
+import { Card, CardHead, PanelHeader, Pills, Skeleton, Toast } from "@/components/ui/Primitives";
+import type { MemberStatus } from "@/lib/supabaseClient";
 
 /**
- * Deposit-verification queue.
+ * Membership review queue.
  *
- * The token is held in component state only — never localStorage — so it does
- * not sit in the browser for anything else on the origin to read. The server
- * compares it against `GFXA_ADMIN_TOKEN`; nothing here decides access on its own.
+ * Reads `profiles` through /api/admin/*, which hold the service-role key. The
+ * old queue read `verified_users`, the pre-auth table where approval was a flag
+ * with no account behind it; approving there no longer grants anyone anything,
+ * because the dashboard now asks for a Supabase session and a profile row.
+ *
+ * The token lives in component state and sessionStorage — never localStorage and
+ * never the URL, because this app runs Vercel Analytics and analytics records
+ * page URLs.
  */
 
-type Row = Omit<VerificationRequest, "proofPath"> & { proofUrl: string | null };
-
-interface Payload {
-  ok: boolean;
-  durable: boolean;
-  backend: string;
-  requests: Row[];
-  stats: {
-    pending: number; verified: number; rejected: number;
-    byBroker: Record<string, { pending: number; verified: number; rejected: number }>;
-    depositsUsd: number;
-  };
+interface Profile {
+  id: string;
+  email: string;
+  account_number: string;
+  server: string | null;
+  broker: string;
+  status: MemberStatus;
+  note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
 }
 
+const SCOPES = ["pending", "approved", "rejected", "all"] as const;
+
+const STATUS_STYLE: Record<string, string> = {
+  pending: "bg-[#fbbf24]/[0.13] text-[#fbbf24]",
+  approved: "bg-brand-green/[0.13] text-brand-green",
+  rejected: "bg-brand-danger/[0.13] text-brand-danger",
+  banned: "bg-brand-danger/[0.13] text-brand-danger",
+};
+
+const when = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString("en-GB", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" }) : "—";
+
 export function AdminPanel() {
-  // sessionStorage, not localStorage and never the URL: this app runs Vercel
-  // Analytics, which records page URLs, so a token in a query string would be
-  // copied into analytics, history and referrers. Session scope clears with the tab.
   const [token, setToken] = useState(() => {
     try { return window.sessionStorage.getItem("gfxa-admin-token") ?? ""; } catch { return ""; }
   });
-  const [data, setData] = useState<Payload | null>(null);
+  const [scope, setScope] = useState<(typeof SCOPES)[number]>("pending");
+  const [rows, setRows] = useState<Profile[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 1900); };
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2200); };
 
-  const load = useCallback(async (t: string) => {
+  const load = useCallback(async (t: string, s: string) => {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch("/api/ib/admin", { headers: { "x-admin-token": t } });
+      const res = await fetch(`/api/admin/pending?status=${s}`, { headers: { "x-admin-token": t } });
       const j = await res.json();
       if (!res.ok || !j.ok) {
         setErr(res.status === 401 ? "Invalid token." : j.message ?? "Could not open the queue.");
-        setData(null);
+        setRows(null);
         return;
       }
-      setData(j as Payload);
+      setRows(j.profiles as Profile[]);
       try { window.sessionStorage.setItem("gfxa-admin-token", t); } catch { /* private mode */ }
     } catch {
       setErr("Could not reach the queue.");
@@ -61,42 +74,29 @@ export function AdminPanel() {
     }
   }, []);
 
-  const act = async (id: string, action: "approve" | "reject", depositUsd?: number, reason?: string) => {
-    const res = await fetch(`/api/ib/admin/${action}`, {
+  const act = async (id: string, action: "approve" | "reject", email: string) => {
+    const res = await fetch(`/api/admin/${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-token": token },
-      body: JSON.stringify({ id, depositUsd, reason }),
+      body: JSON.stringify({ id }),
     });
-    if (res.ok) { flash(action === "approve" ? "Approved" : "Rejected"); void load(token); }
-    else flash("That didn't go through");
-  };
-
-  const brokerLine = (b: string, v: { pending: number; verified: number; rejected: number }) =>
-    `${b}: ${v.pending} pending · ${v.verified} verified${v.rejected ? ` · ${v.rejected} rejected` : ""}`;
-
-  const csv = () => {
-    if (!data) return;
-    const rows = [
-      ["email", "broker", "account", "server", "ibCode", "method", "status", "depositUsd", "createdAt"].join(","),
-      ...data.requests.map((r) =>
-        [r.email, r.broker, r.account, r.server ?? "", r.ibCode ?? "", r.method, r.status, r.depositUsd ?? "", new Date(r.createdAt).toISOString()]
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-      ),
-    ].join("\n");
-    const url = URL.createObjectURL(new Blob([rows], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url; a.download = "gfxa-ib-verifications.csv"; a.click();
-    URL.revokeObjectURL(url);
+    const j = await res.json().catch(() => null);
+    if (res.ok && j?.ok) {
+      flash(`${email} ${action === "approve" ? "approved" : "rejected"}`);
+      void load(token, scope);
+    } else {
+      flash(j?.message ?? "That didn't go through");
+    }
   };
 
   return (
     <div className="space-y-5">
-      <PanelHeader title="Deposit verification" />
+      <PanelHeader title="Membership review" />
 
       <Card>
         <CardHead title="Open the queue" />
         <form
-          onSubmit={(e) => { e.preventDefault(); void load(token); }}
+          onSubmit={(e) => { e.preventDefault(); void load(token, scope); }}
           className="flex flex-wrap items-end gap-3 p-5"
         >
           <label className="flex min-w-[240px] flex-1 flex-col gap-1.5">
@@ -112,112 +112,75 @@ export function AdminPanel() {
           <button type="submit" disabled={busy || !token} className="btn-primary !py-2.5 text-[12.5px] disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Load
           </button>
-          {data ? (
-            <button type="button" onClick={csv} className="rounded-lg border border-white/[0.1] px-3 py-2.5 text-[12px] text-ink-muted transition-colors hover:text-white">
-              Export CSV
-            </button>
-          ) : null}
         </form>
         {err ? <p className="px-5 pb-5 text-[12.5px] text-brand-danger">{err}</p> : null}
       </Card>
 
-      {data ? (
-        <div className="flex items-start gap-3 rounded-xl border border-brand-green/30 bg-brand-green/[0.06] px-4 py-3.5">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" strokeWidth={2} />
-          <p className="text-[12.5px] leading-relaxed text-ink">
-            <span className="font-semibold text-white">Supabase connected.</span> The queue reads and
-            writes the <code className="text-brand-blue">verified_users</code> table, so it survives a
-            cold start and a redeploy — not the warm-instance luck the in-memory store depended on.
-          </p>
-        </div>
-      ) : null}
-
-      {data ? (
+      {rows ? (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              ["Pending", data.stats.pending],
-              ["Verified", data.stats.verified],
-              ["Rejected", data.stats.rejected],
-              ["Confirmed deposits", `$${data.stats.depositsUsd.toFixed(0)}`],
-            ].map(([k, v]) => (
-              <Card key={String(k)} className="p-4">
-                <p className="text-[10.5px] uppercase tracking-[0.08em] text-ink-muted">{k}</p>
-                <p className="num-mono mt-1 text-[19px] font-semibold text-white">{v}</p>
-              </Card>
-            ))}
+          <div className="flex items-start gap-3 rounded-xl border border-brand-green/30 bg-brand-green/[0.06] px-4 py-3.5">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" strokeWidth={2} />
+            <p className="text-[12.5px] leading-relaxed text-ink">
+              <span className="font-semibold text-white">Reading the profiles table.</span> Approving here
+              flips <code className="text-brand-blue">profiles.status</code> with the service-role key, and
+              the member&apos;s dashboard opens on their next load — no re-entry of the account number, on
+              any device.
+            </p>
           </div>
 
-          {Object.keys(data.stats.byBroker).length ? (
-            <p className="text-[11.5px] text-ink-muted">
-              {Object.entries(data.stats.byBroker).map(([b, v]) => brokerLine(b, v)).join("  ·  ")}
-            </p>
-          ) : null}
+          <Pills
+            options={SCOPES.map((s) => s)}
+            value={scope}
+            onChange={(s) => { setScope(s); void load(token, s); }}
+          />
 
           <Card>
-            <CardHead title={`Requests (${data.requests.length})`} />
-            {data.requests.length ? (
+            <CardHead title={`${scope} (${rows.length})`} />
+            {rows.length === 0 ? (
+              <p className="px-5 pb-5 text-[12.5px] text-ink-muted">Nothing in this queue.</p>
+            ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-[12px]">
+                <table className="w-full min-w-[820px] text-left text-[12px]">
                   <thead className="text-[10.5px] uppercase tracking-[0.08em] text-ink-muted">
                     <tr className="border-b border-white/[0.06]">
-                      {["Email", "Broker", "Account", "IB code", "Method", "Status", "Actions"].map((h) => (
+                      {["Email", "Account", "Server", "Broker", "Status", "Applied", "Actions"].map((h) => (
                         <th key={h} className="px-4 py-2.5 font-medium">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {data.requests.map((r) => (
+                    {rows.map((r) => (
                       <tr key={r.id} className="border-b border-white/[0.04]">
                         <td className="px-4 py-2.5 text-ink">{r.email}</td>
+                        <td className="num-mono px-4 py-2.5 text-ink">{r.account_number}</td>
+                        <td className="px-4 py-2.5 text-ink-muted">{r.server || "—"}</td>
                         <td className="px-4 py-2.5 text-ink-muted">{r.broker}</td>
-                        <td className="num-mono px-4 py-2.5 text-ink">{r.account}</td>
-                        <td className="px-4 py-2.5 text-ink-muted">{r.ibCode ?? "—"}</td>
-                        <td className="px-4 py-2.5 text-ink-muted">
-                          {r.method}
-                          {r.proofUrl ? (
-                            <>
-                              {" · "}
-                              <a href={r.proofUrl} target="_blank" rel="noopener noreferrer" className="text-brand-blue underline-offset-2 hover:underline">
-                                proof
-                              </a>
-                            </>
-                          ) : r.hasProof ? " + proof" : ""}
-                        </td>
                         <td className="px-4 py-2.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${
-                            r.status === "verified" ? "bg-brand-green/[0.13] text-brand-green"
-                            : r.status === "rejected" ? "bg-brand-danger/[0.13] text-brand-danger"
-                            : "bg-[#fbbf24]/[0.13] text-[#fbbf24]"
-                          }`}>{r.status}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${STATUS_STYLE[r.status] ?? ""}`}>
+                            {r.status}
+                          </span>
                         </td>
+                        <td className="num-mono px-4 py-2.5 text-[11px] text-ink-muted">{when(r.created_at)}</td>
                         <td className="px-4 py-2.5">
                           {r.status === "pending" ? (
                             <span className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  const raw = window.prompt("Deposit confirmed in the IB portal (USD). Leave blank if you did not read a figure.");
-                                  const n = raw === null ? undefined : Number.parseFloat(raw);
-                                  void act(r.id, "approve", Number.isFinite(n as number) ? (n as number) : undefined);
-                                }}
+                                onClick={() => void act(r.id, "approve", r.email)}
                                 className="rounded border border-brand-green/40 px-2 py-1 text-[11px] text-brand-green transition-colors hover:bg-brand-green/10"
                               >
                                 Approve
                               </button>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  const reason = window.prompt("Reason for rejecting (shown to nobody but the queue):") ?? "";
-                                  void act(r.id, "reject", undefined, reason);
-                                }}
+                                onClick={() => void act(r.id, "reject", r.email)}
                                 className="rounded border border-brand-danger/40 px-2 py-1 text-[11px] text-brand-danger transition-colors hover:bg-brand-danger/10"
                               >
                                 Reject
                               </button>
                             </span>
                           ) : (
-                            <span className="text-ink-muted">{r.depositUsd !== null ? `$${r.depositUsd}` : "—"}</span>
+                            <span className="text-[11px] text-ink-muted">{when(r.reviewed_at)}</span>
                           )}
                         </td>
                       </tr>
@@ -225,8 +188,6 @@ export function AdminPanel() {
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <p className="px-5 pb-5 text-[12.5px] text-ink-muted">Nothing in the queue.</p>
             )}
           </Card>
         </>

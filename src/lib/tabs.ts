@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Globe2, LineChart, Newspaper, Star, Radar, ClipboardList, Users, MessagesSquare,
   GraduationCap, Trophy, MapPin, Calculator, CalendarDays, NotebookPen, Camera, Sparkles,
-  UserRound, BadgeCheck, Settings, ShieldCheck, type LucideIcon,
+  UserRound, BadgeCheck, Settings, ShieldCheck, Bot, type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -42,6 +42,7 @@ export const TABS: TabDef[] = [
   // TabIcon swaps this for the GFXA AI brand mark; Sparkles remains the fallback
   // for any consumer reading the registry directly.
   { slug: "ai", label: "AI Tools", icon: Sparkles, group: "Tools", blurb: "Ask the market a question. Education, not advice." },
+  { slug: "ai-bot", label: "AI Bot", icon: Bot, group: "Tools", blurb: "Connect VT Markets and approve trades the engine proposes.", badge: "BETA" },
 
   { slug: "profile", label: "My Profile", icon: UserRound, group: "Account", blurb: "Your identity across the Alliance." },
   { slug: "membership", label: "Membership", icon: BadgeCheck, group: "Account", blurb: "Your plan, benefits and billing." },

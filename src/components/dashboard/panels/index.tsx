@@ -17,6 +17,7 @@ import { CalculatorPanel } from "./CalculatorPanel";
 import { CalendarPanel } from "./CalendarPanel";
 import { JournalPanel } from "./JournalPanel";
 import { AiToolsPanel } from "./AiToolsPanel";
+import { AiBotPanel } from "./AiBotPanel";
 import { ProfilePanel } from "./ProfilePanel";
 import { MembershipPanel } from "./MembershipPanel";
 import { SettingsPanel } from "./SettingsPanel";
@@ -45,6 +46,7 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   journal: JournalPanel,
   "chart-snap": ChartSnapPanel,
   ai: AiToolsPanel,
+  "ai-bot": AiBotPanel,
   profile: ProfilePanel,
   membership: MembershipPanel,
   settings: SettingsPanel,

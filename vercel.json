@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/api/bot/expire-pending",
-      "schedule": "* * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

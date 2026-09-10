@@ -14,6 +14,11 @@ export const dynamic = "force-dynamic";
  * /api/bot/approve re-checks expiry too, so a late cron cannot let a stale trade
  * through; this only keeps the table honest.
  *
+ * Scheduled daily in vercel.json, not every minute: Vercel's Hobby plan rejects
+ * sub-daily cron expressions and the deployment fails to build. On Pro this can
+ * be changed to "* * * * *". Either way /api/bot/status sweeps the caller's own
+ * rows on read, so the panel is correct without waiting for this.
+ *
  * Guarded by CRON_SECRET. Vercel sends it as `Authorization: Bearer …`.
  */
 export async function GET(request: Request) {

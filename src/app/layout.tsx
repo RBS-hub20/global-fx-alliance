@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { LogoDefs } from "@/components/brand/LogoMark";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
+import { AuthProvider } from "@/lib/AuthContext";
 import { AiMarkDefs } from "@/components/brand/AiMark";
 import { COPY } from "@/lib/launch";
 import "./globals.css";
@@ -107,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ServiceWorker />
         <LogoDefs />
         <AiMarkDefs />
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <Analytics />
         <SpeedInsights />
       </body>

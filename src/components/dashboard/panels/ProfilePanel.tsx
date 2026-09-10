@@ -15,9 +15,16 @@ import { supabaseBrowser } from "@/lib/supabaseClient";
  * `profiles` row. It used to come from the PROFILE fixture, which is why every
  * account in the app introduced itself as the same person.
  *
- * The rest (bio, country, style, the counters, the activity list) has no column
- * behind it yet and is still fixture copy; only the name is written back.
+ * Edits are written back to that row and then re-read, so the header avatar,
+ * the greeting and the admin queue all pick the new name up from one source
+ * rather than each keeping their own copy.
+ *
+ * The counters and the activity list are still fixture copy — there is nothing
+ * behind them to write to yet.
  */
+
+/** What the edit form may write. Must stay inside the column grant in supabase/profiles_allow_own_update.sql. */
+const WRITABLE = ["display_name", "first_name", "last_name", "bio", "country", "trading_style"] as const;
 
 export function ProfilePanel() {
   const { user, profile: row, refresh } = useAuth();
@@ -26,42 +33,96 @@ export function ProfilePanel() {
   const [editing, setEditing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState({
+
+  const fromRow = () => ({
     name: displayName(who),
-    bio: PROFILE.bio,
-    country: PROFILE.country,
-    style: PROFILE.style,
+    bio: row?.bio ?? "",
+    country: row?.country ?? "",
+    style: row?.trading_style ?? "",
   });
+
+  const [profile, setProfile] = useState(fromRow);
   const [draft, setDraft] = useState(profile);
 
-  // The session resolves after the first paint, so the name arrives late.
+  // The session resolves after the first paint, so the row arrives late.
   useEffect(() => {
-    setProfile((p) => ({ ...p, name: displayName(who) }));
+    setProfile(fromRow());
   }, [row, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 4000); };
 
   const save = async () => {
-    setProfile(draft);
-    setEditing(false);
-
     const supabase = supabaseBrowser();
     const named = draft.name.trim();
-    if (!supabase || !row || !named || named === displayName(who)) { flash("Profile updated"); return; }
+    if (!named) { flash("Give the profile a name."); return; }
+
+    if (!supabase || !row) {
+      // Not signed in to anything that can store this.
+      setProfile(draft);
+      setEditing(false);
+      flash("Saved on this device only — not signed in.");
+      return;
+    }
 
     /*
-     * Only the name is persisted, and only through the column grant in
-     * supabase/profiles_add_name_columns.sql — `status` is not grantable to
-     * `authenticated`, so this cannot be used to promote an account. Until that
-     * migration runs the update is refused, and the panel says so rather than
-     * pretending it saved.
+     * Six columns, all of them the member's own. `status`, `email` and
+     * `account_number` are not in this object and are not grantable to
+     * `authenticated` either, so this call cannot promote an account — see the
+     * grant and the trigger in supabase/profiles_allow_own_update.sql.
      */
+    const patch: Record<string, unknown> = {
+      ...splitName(named),
+      bio: draft.bio.trim() || null,
+      country: draft.country.trim() || null,
+      trading_style: draft.style.trim() || null,
+    };
+
     setSaving(true);
-    const { error } = await supabase.from("profiles").update(splitName(named)).eq("id", row.id);
+
+    /*
+     * bio / country / trading_style arrived in a later migration than the name
+     * columns. PostgREST rejects the whole update over the first column it does
+     * not recognise, which would make "Save" fail outright on a half-migrated
+     * project — including for the name, which does exist. Unknown columns are
+     * dropped one at a time so the save lands as far as the schema allows.
+     */
+    let error: { message: string; code?: string } | null = null;
+    const dropped: string[] = [];
+    for (let attempt = 0; attempt < WRITABLE.length + 1; attempt++) {
+      const res = await supabase.from("profiles").update(patch).eq("id", row.id).select().single();
+      error = res.error;
+      if (!error) break;
+      const missing = error.message.match(/Could not find the '([^']+)' column/)?.[1];
+      if (!missing || !(missing in patch)) break;
+      delete patch[missing];
+      dropped.push(missing);
+      if (!Object.keys(patch).length) break;
+    }
+
     setSaving(false);
-    if (error) { flash("Saved on this device only — the name column is not writable yet."); return; }
+
+    if (error) {
+      setProfile(draft);
+      setEditing(false);
+      /*
+       * The actual database message, not a guess. "Not saving" has two very
+       * different causes — no UPDATE policy (42501) and a missing column
+       * (PGRST204) — and they need different fixes, so the panel says which.
+       */
+      const why =
+        error.code === "42501" || /row-level security/i.test(error.message)
+          ? "the update policy is missing"
+          : /Could not find the/.test(error.message)
+            ? "that column does not exist yet"
+            : error.message;
+      flash(`Not saved — ${why}. Run supabase/profiles_allow_own_update.sql.`);
+      return;
+    }
+
+    setEditing(false);
+    // Re-read, so the header avatar, the greeting and the queue all follow.
     await refresh();
-    flash("Profile updated");
+    flash(dropped.length ? `Saved. ${dropped.join(", ")} needs the latest migration.` : "Profile updated");
   };
 
   const since = row?.created_at
@@ -95,15 +156,15 @@ export function ProfilePanel() {
                 {PROFILE.role}
               </span>
               <span className="text-[13px] text-ink-muted">
-                <span aria-hidden>{PROFILE.flag}</span> {profile.country}
+                {profile.country ? <><span aria-hidden>{PROFILE.flag}</span> {profile.country}</> : "Add your country"}
               </span>
             </div>
             <p className="mt-1 text-[12.5px] text-ink-muted">{handle}</p>
             <p className="mt-3 max-w-[62ch] text-[13.5px] leading-relaxed text-ink-muted">
-              {profile.bio}
+              {profile.bio || "No bio yet — Edit Profile to add one."}
             </p>
             <p className="mt-3 text-[12.5px] text-ink-muted">
-              Trading style <span className="font-semibold text-ink">{profile.style}</span>
+              Trading style <span className="font-semibold text-ink">{profile.style || "—"}</span>
             </p>
           </div>
 
@@ -153,17 +214,20 @@ export function ProfilePanel() {
             <textarea
               rows={3}
               value={draft.bio}
+              placeholder="Swing trader focused on the majors and gold."
               onChange={(e) => setDraft((d) => ({ ...d, bio: e.target.value }))}
               className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 focus:border-brand-blue/40 focus:shadow-glow"
             />
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select label="Country" value={draft.country} onChange={(e) => setDraft((d) => ({ ...d, country: e.target.value }))}>
+              <option value="">Not set</option>
               {["Philippines", "UAE", "Singapore", "United Kingdom", "United States", "Japan", "Malaysia", "Indonesia"].map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </Select>
             <Select label="Trading Style" value={draft.style} onChange={(e) => setDraft((d) => ({ ...d, style: e.target.value }))}>
+              <option value="">Not set</option>
               {["Scalp", "Intraday", "Swing", "Position"].map((s) => <option key={s}>{s}</option>)}
             </Select>
           </div>

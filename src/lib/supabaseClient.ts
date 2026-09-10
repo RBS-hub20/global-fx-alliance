@@ -46,6 +46,10 @@ export interface Profile {
   display_name?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+  bio?: string | null;
+  country?: string | null;
+  trading_style?: string | null;
+  updated_at?: string | null;
   note?: string | null;
   reviewed_at?: string | null;
 }

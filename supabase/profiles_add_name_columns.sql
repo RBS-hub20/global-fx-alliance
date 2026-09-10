@@ -29,23 +29,8 @@ alter table public.profiles add column if not exists last_name    text;
  */
 
 /*
- * Letting a member edit their own name — and nothing else.
- *
- * An RLS policy cannot restrict which columns an UPDATE touches, so a plain
- * "update own profile" policy would also let a member set their own status to
- * 'approved' straight from the browser. Column-level GRANTs are the part of
- * Postgres that does restrict columns, and they are checked independently of
- * RLS: with UPDATE revoked on the table and granted on three named columns,
- * `update profiles set status = 'approved'` is refused no matter what the
- * policy says.
- *
- * Both layers are required. Remove either one and the gate opens.
+ * Making those columns writable from the browser moved to
+ * supabase/profiles_allow_own_update.sql, which grants the same three plus bio,
+ * country and trading_style and adds the escalation trigger. Run that file; the
+ * grant and policy that used to sit here would narrow it back to three columns.
  */
-revoke update on public.profiles from authenticated;
-grant  update (display_name, first_name, last_name) on public.profiles to authenticated;
-
-drop policy if exists "update own name" on public.profiles;
-create policy "update own name"
-  on public.profiles for update
-  using (auth.uid() = id)
-  with check (auth.uid() = id);

@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { getJournalAnalytics, getBestWorst } from "@/lib/journalStore";
 import { DISCLAIMER } from "@/lib/ai";
+import { formatHourBucket } from "@/lib/pnlCalendar";
+import { PnlCalendar } from "@/components/dashboard/journal/PnlCalendar";
 
 /**
  * GFXA AI Execution Bot.
@@ -183,6 +185,8 @@ export function AiBotPanel() {
         <div className="lg:col-span-5"><MarketBrain status={status} /></div>
         <div className="lg:col-span-4"><ExecutionLog logs={logs} onChange={load} /></div>
       </div>
+
+      <PnlCalendar accounts={accounts ?? []} />
 
       <JournalStrip />
 
@@ -746,17 +750,17 @@ function JournalStrip() {
      * the app reads `.key`, which is the hour as "14"; there is no start/end
      * range on it, so the label is one hour and the win rate goes beside it.
      */
-    const worst = bw.worstHourDubai;
+    // Same formatter the PNL Calendar's worst-hour block uses, so the two
+    // can never print the same bucket two different ways.
+    const worst = formatHourBucket(bw.worstHourDubai);
     setStats({
       winRate: a.summary.winRate,
       trades: a.summary.trades,
       wins: a.summary.wins,
       losses: a.summary.losses,
       hold: a.holdTime.avgWinnerMin ?? 0,
-      worst: worst ? `${String(worst.key).padStart(2, "0")}:00` : "—",
-      worstSub: worst
-        ? `${worst.winRate.toFixed(0)}% over ${worst.trades} trade${worst.trades === 1 ? "" : "s"}`
-        : "not enough trades",
+      worst: worst.label,
+      worstSub: worst.sub,
     });
   }, []);
 

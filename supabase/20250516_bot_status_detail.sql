@@ -31,6 +31,9 @@ alter table public.bot_status add column if not exists pattern_detail  text;
 -- as a line at zero.
 alter table public.bot_status add column if not exists entry_zone_low  numeric(18,5);
 alter table public.bot_status add column if not exists entry_zone_high numeric(18,5);
+-- Dropped first so this file really is re-runnable; `add constraint` alone
+-- errors on a second run with "constraint already exists".
+alter table public.bot_status drop constraint if exists entry_zone_pair_or_none;
 alter table public.bot_status add constraint entry_zone_pair_or_none
   check ((entry_zone_low is null) = (entry_zone_high is null)) not valid;
 

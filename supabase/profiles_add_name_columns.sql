@@ -1,6 +1,6 @@
 -- Names on the member profile.
 --
--- Every profile in the app rendered "Renmar Sombilon" because the name was a
+-- Every profile in the app rendered one fixed person's name because it was a
 -- demo constant in src/lib/content.ts, not a column — there was nowhere for a
 -- member's own name to live. These three columns are that place.
 --

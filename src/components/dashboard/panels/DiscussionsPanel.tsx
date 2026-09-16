@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { displayName, initials } from "@/lib/displayName";
 
 export function DiscussionsPanel() {
-  // Was the literal string "Renmar Sombilon" on every member's new thread.
+  // Was one fixed person's name on every member's new thread.
   const { user, profile } = useAuth();
   const me = profile ?? (user?.email ? { email: user.email } : null);
 

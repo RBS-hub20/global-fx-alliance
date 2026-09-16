@@ -95,7 +95,7 @@ export function Hero() {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row animate-riseIn"
           style={{ animationDelay: "240ms" }}
         >
-          <Link href="/dashboard?tab=chart-snap&ref=hero" className="btn-primary w-full sm:w-auto">
+          <Link href="/signup?next=%2Fdashboard%3Ftab%3Dchart-snap&ref=hero" className="btn-primary w-full sm:w-auto">
             JOIN THE ALLIANCE
             <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
           </Link>

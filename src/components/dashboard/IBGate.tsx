@@ -272,7 +272,7 @@ export function SignUpPanel() {
       <div className="mt-5 space-y-3">
         {/*
           * Asked for rather than derived. A name cannot be read reliably off an
-          * address — "afhomesresort2027" has no word boundaries in it — and the
+          * address — "shopname2027" has no word boundaries in it — and the
           * fallback that guesses gets people's names wrong in public, next to
           * their posts.
           */}
@@ -280,7 +280,7 @@ export function SignUpPanel() {
           label="Your name"
           value={fullName}
           onChange={setFullName}
-          placeholder="e.g. Renmar Sombilon"
+          placeholder="Your full name"
           autoComplete="name"
           hint="Shown on your profile and your posts."
         />
@@ -359,7 +359,7 @@ function In({
         placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue/50"
+        className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink placeholder:text-[#a3a3a3]/60 outline-none focus:border-brand-blue/50"
       />
       {hint ? <span className="text-[11px] text-ink-muted/70">{hint}</span> : null}
     </label>

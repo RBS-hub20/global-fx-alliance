@@ -1,14 +1,24 @@
 "use client";
 
+import { useAuth } from "@/lib/AuthContext";
 import { useState } from "react";
 import { Check, Copy, Receipt, ShieldCheck } from "lucide-react";
 import { Card, CardHead, PanelHeader, Toast, money } from "@/components/ui/Primitives";
 import { MEMBERSHIP_BENEFITS } from "@/lib/data";
 import { BILLING } from "@/lib/content";
 
-const REFERRAL = "https://globalfxalliance.io/join?ref=renmar";
+/*
+ * Per member, from the account id — not a name or an email, since this link is
+ * meant to be pasted into public chats. It was one person's personal link for
+ * every account. Nothing records ref= yet, so this identifies the sharer
+ * without yet crediting them.
+ */
+const referralFor = (userId: string | undefined) =>
+  userId ? `https://globalfxalliance.io/join?ref=${userId.slice(0, 8)}` : "https://globalfxalliance.io/join";
 
 export function MembershipPanel() {
+  const { user } = useAuth();
+  const REFERRAL = referralFor(user?.id);
   const [toast, setToast] = useState<string | null>(null);
 
   const flash = (m: string) => {

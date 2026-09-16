@@ -303,12 +303,12 @@ export interface Activity {
 }
 
 export const PROFILE = {
-  name: "Renmar Sombilon",
-  handle: "@renmar",
+  name: "Alliance Member",
+  handle: "@member",
   role: "Pro Trader",
   flag: "\u{1F1F5}\u{1F1ED}",
   country: "Philippines",
-  initials: "RS",
+  initials: "AM",
   bio: "Swing trader focused on the majors and gold. Mostly London session. Learning in public with the Alliance.",
   style: "Swing",
   since: "Jan 2026",

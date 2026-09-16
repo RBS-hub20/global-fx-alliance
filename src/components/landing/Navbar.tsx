@@ -116,7 +116,7 @@ export function Navbar() {
           >
             Login
           </Link>
-          <Link href="/dashboard?ref=nav" className="btn-primary !px-5 !py-2.5 text-[13px]">
+          <Link href="/signup?ref=nav" className="btn-primary !px-5 !py-2.5 text-[13px]">
             JOIN THE ALLIANCE
             <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
           </Link>
@@ -160,7 +160,7 @@ export function Navbar() {
                 Login
               </Link>
               <Link
-                href="/dashboard?ref=nav"
+                href="/signup?ref=nav"
                 className="btn-primary w-full"
                 onClick={() => setOpen(false)}
               >

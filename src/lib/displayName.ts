@@ -27,8 +27,8 @@ function titleCase(word: string): string {
 /**
  * A readable label from the local part of an address.
  *
- * Separators are the only word boundaries trusted here: "renmar.sombilon"
- * becomes "Renmar Sombilon", but "afhomesresort" stays "Afhomesresort" rather
+ * Separators are the only word boundaries trusted here: "jane.doe"
+ * becomes "Jane Doe", but "shopname" stays "Shopname" rather
  * than being split into "AF Homes Resort". Splitting a run of letters into
  * words needs a dictionary, and a wrong guess ("Ren Zsom", "Mark Etting") is
  * printed next to a real person's account. The fix for an ugly fallback is the
@@ -87,7 +87,7 @@ export function initials(p: NameSource | null | undefined, fallback = "GF"): str
   return local ? local.slice(0, 2).toUpperCase() : fallback;
 }
 
-/** Splits one typed field into the two columns, so "Renmar Sombilon" stores both. */
+/** Splits one typed field into the two columns, so "Jane Doe" stores both. */
 export function splitName(input: string): { display_name: string; first_name: string; last_name: string | null } {
   const clean = input.trim().replace(/\s+/g, " ");
   const parts = clean.split(" ");

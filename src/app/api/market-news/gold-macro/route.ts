@@ -40,7 +40,7 @@ async function cot(): Promise<CotRow[] | null> {
 export async function GET() {
   // Yahoo throttles bursts from one address, so the four daily series are
   // fetched in sequence rather than all at once.
-  const gold = await fetchYahooOHLC("GC=F", "5y", "1d").catch(() => null);
+  const gold = await fetchYahooOHLC("GC=F", "5y", "1d", 1400).catch(() => null);
   const dxy = await fetchYahooOHLC("DX-Y.NYB", "6mo", "1d").catch(() => null);
   const us10y = await fetchYahooOHLC("^TNX", "6mo", "1d").catch(() => null);
   const btc = await fetchYahooOHLC("BTC-USD", "6mo", "1d").catch(() => null);

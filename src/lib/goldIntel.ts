@@ -99,6 +99,13 @@ export function seasonalCurves(bars: Bar[], years: number[]): SeasonalCurve[] {
   return years.map((year) => {
     const inYear = sorted.filter((b) => new Date(b.time > 1e12 ? b.time : b.time * 1000).getUTCFullYear() === year);
     if (!inYear.length) return { year, points: [], ytd: 0 };
+    /*
+     * A year that does not start in the first days of January is a partial
+     * year, and rebasing it to its first available close gives a YTD figure
+     * measured from the wrong day — +47% "for 2025" when the data began in
+     * February. Left empty rather than drawn misleadingly.
+     */
+    if (doyOf(new Date(inYear[0].time > 1e12 ? inYear[0].time : inYear[0].time * 1000)) > 10) return { year, points: [], ytd: 0 };
     const base = inYear[0].close;
     const points = inYear.map((b) => ({
       doy: doyOf(new Date(b.time > 1e12 ? b.time : b.time * 1000)),

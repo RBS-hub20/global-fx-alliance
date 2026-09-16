@@ -34,7 +34,7 @@ const GOLD = /\b(gold|xau(?:\/?usd)?|bullion|precious metals?)\b/i;
 const FED = /\b(fed|fomc|powell|warsh|federal reserve|rate decision|dot plot|rate (?:hike|cut)s?|hik(?:e|es|ing) rates?|cut(?:s|ting)? rates?)\b/i;
 const DXY = /\b(dxy|us dollar index|dollar index|us dollar|u\.s\. dollar|greenback|usd)\b/i;
 const YIELDS = /\b(treasur(?:y|ies)|yields?|10-year|10y|us10y|bond market|real rates?)\b/i;
-const DATA = /\b(cpi|pce|core pce|payrolls|nfp|nonfarm|jobs report|jobless claims|unemployment rate|inflation|gdp|retail sales|ism|pmi)\b/i;
+const DATA = /\b(cpi|pce|core pce|payrolls|nfp|nonfarm|jobs report|jobless claims|unemployment rate|inflation|gdp|gdpnow|retail sales|ism|pmi)\b/i;
 const GEO = /\b(war|conflict|mideast|middle east|missiles?|strikes?|sanctions|geopolitic\w*|safe[- ]haven|invasion|ceasefire|risk[- ]off|tensions?)\b/i;
 
 /**
@@ -43,7 +43,7 @@ const GEO = /\b(war|conflict|mideast|middle east|missiles?|strikes?|sanctions|ge
  * term pull it in filled the gold wire with FX and equity round-ups. These are
  * only excluded when gold itself is not named.
  */
-const OTHER_SUBJECT = /\b(pound|sterling|gbp|euro(?!pe)|eur\/|yen|jpy|yuan|renminbi|aussie|aud|kiwi|nzd|new zealand dollar|australian dollar|canadian dollar|loonie|cad|franc|chf|dow|dow jones|s&p|nasdaq|stocks?|equit(?:y|ies)|shares|earnings|bitcoin|btc|ether(?:eum)?|crypto|oil|crude|brent|wti|natural gas|copper|silver|nikkei|dax|ftse|hang seng)\b/i;
+const OTHER_SUBJECT = /\b(?:aud|nzd|eur|gbp|usd|cad|chf|jpy|cnh)(?:usd|jpy|chf|cad|gbp|eur|nzd|aud|cnh)\b|\b(pound|sterling|gbp|euro(?!pe)|eur\/|yen|jpy|yuan|renminbi|aussie|aud|kiwi|nzd|new zealand dollar|australian dollar|canadian dollar|loonie|cad|franc|chf|dow|dow jones|s&p|nasdaq|stocks?|equit(?:y|ies)|shares|earnings|bitcoin|btc|ether(?:eum)?|crypto|oil|crude|brent|wti|natural gas|copper|silver|nikkei|dax|ftse|hang seng)\b/i;
 
 /* -------------------------------------------------------------- direction */
 
@@ -130,7 +130,18 @@ export function classifyGold(title: string, body = ""): GoldRead {
   }
   if (tags.includes("Data")) {
     const c = about(DATA);
-    pick("Data", has(HOT, c) && !has(SOFT, c) ? "bearish" : has(SOFT, c) && !has(HOT, c) ? "bullish" : "neutral");
+    /*
+     * A beat stated in numbers — "+1.2% vs +0.8% expected" — has no hot or soft
+     * word in it, and those are the most common data headlines on the wire.
+     * For unemployment and jobless claims a higher print is the weak one.
+     */
+    const m = c.match(/([+-]?\d+(?:\.\d+)?)\s*[%k]?\s*(?:vs\.?|versus)\s*([+-]?\d+(?:\.\d+)?)\s*[%k]?\s*(?:expected|exp\.?|est\.?|estimate|consensus|forecast)/i);
+    const labour = /\b(unemployment|jobless|claims)\b/i.test(c);
+    let d: GoldBias =
+      m && Number(m[1]) !== Number(m[2]) ? (Number(m[1]) > Number(m[2]) ? "bearish" : "bullish")
+      : has(HOT, c) && !has(SOFT, c) ? "bearish" : has(SOFT, c) && !has(HOT, c) ? "bullish" : "neutral";
+    if (labour && d !== "neutral") d = d === "bearish" ? "bullish" : "bearish";
+    pick("Data", d);
   }
   // Yields and the dollar move inversely to gold: up is bearish.
   if (tags.includes("Yields")) pick("Yields", dir(about(YIELDS), "bearish", "bullish"));

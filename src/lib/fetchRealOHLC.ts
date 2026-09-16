@@ -71,7 +71,7 @@ interface YahooResult {
 }
 
 /** Parses one Yahoo chart payload into clean candles. Exported for testing. */
-export function parseYahoo(json: unknown): Omit<RealOhlcResult, "source" | "symbolUsed"> & { ohlc: Candle[] } | null {
+export function parseYahoo(json: unknown, maxBars = MAX_BARS): Omit<RealOhlcResult, "source" | "symbolUsed"> & { ohlc: Candle[] } | null {
   const chart = (json as { chart?: { result?: YahooResult[]; error?: unknown } })?.chart;
   if (!chart || chart.error) return null;
 
@@ -116,7 +116,7 @@ export function parseYahoo(json: unknown): Omit<RealOhlcResult, "source" | "symb
     else deduped.push(bar);
   }
 
-  const trimmed = deduped.slice(-MAX_BARS);
+  const trimmed = deduped.slice(-maxBars);
 
   return {
     ohlc: trimmed,
@@ -164,10 +164,12 @@ async function fetchOne(symbol: string, range: string, interval: string): Promis
 export async function fetchYahooOHLC(
   pair: string,
   range = "1d",
-  interval = "5m"
+  interval = "5m",
+  /** Charts want ~400 bars; seasonality over five years needs ~1,300. */
+  maxBars = MAX_BARS
 ): Promise<RealOhlcResult | null> {
   lastStatus = 0;
-  const key = `${pair}:${range}:${interval}`;
+  const key = `${pair}:${range}:${interval}:${maxBars}`;
   const hit = ohlcCache.get(key);
   const now = Date.now();
 
@@ -178,7 +180,7 @@ export async function fetchYahooOHLC(
   for (const symbol of getCandidates(pair)) {
     const json = await fetchOne(symbol, range, interval);
     if (!json) continue;
-    const parsed = parseYahoo(json);
+    const parsed = parseYahoo(json, maxBars);
     if (parsed) {
       const data: RealOhlcResult = { ...parsed, source: "yahoo", symbolUsed: symbol };
       ohlcCache.set(key, { at: now, data });

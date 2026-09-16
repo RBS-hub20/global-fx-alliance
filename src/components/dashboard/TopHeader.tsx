@@ -1,8 +1,7 @@
 "use client";
 
 import { Bell, Menu, Search } from "lucide-react";
-import { useAuth } from "@/lib/AuthContext";
-import { displayName, initials } from "@/lib/displayName";
+import { UserMenu } from "./UserMenu";
 
 export function TopHeader({
   title,
@@ -14,14 +13,6 @@ export function TopHeader({
   blurb: string;
   onOpenNav: () => void;
 }) {
-  /*
-   * The avatar was the literal string "RS" — one person's initials, shown to
-   * every account. Read from the signed-in profile instead; "GF" only when
-   * there is no session at all.
-   */
-  const { user, profile } = useAuth();
-  const who = profile ?? (user?.email ? { email: user.email } : null);
-
   return (
     <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(7,10,18,0.78)] backdrop-blur-xl">
       <div className="flex items-center gap-4 px-5 py-4 lg:px-8 lg:py-5">
@@ -61,14 +52,7 @@ export function TopHeader({
             <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-brand-danger ring-2 ring-[#0A0F1C]" />
           </button>
 
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-brand-blue/30 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[12px] font-bold text-white transition-shadow duration-200 hover:shadow-glow"
-            aria-label={who ? `Account menu — ${displayName(who)}` : "Account menu"}
-            title={who ? displayName(who) : undefined}
-          >
-            {who ? initials(who) : "GF"}
-          </button>
+          <UserMenu />
         </div>
       </div>
     </header>

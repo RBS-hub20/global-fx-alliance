@@ -25,12 +25,13 @@ interface AuthState {
   status: MemberStatus | null;
   configured: boolean;
   refresh: () => Promise<void>;
-  signOut: () => Promise<void>;
+  /** Resolves with the error message, or null when the session is gone. */
+  signOut: () => Promise<{ error: string | null }>;
 }
 
 const Ctx = createContext<AuthState>({
   ready: false, session: null, user: null, profile: null, status: null,
-  configured: false, refresh: async () => {}, signOut: async () => {},
+  configured: false, refresh: async () => {}, signOut: async () => ({ error: null }),
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -80,7 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       status: profile?.status ?? null,
       configured: !!supabase,
       refresh: async () => { await loadProfile(session?.user?.id); },
-      signOut: async () => { await supabase?.auth.signOut(); setProfile(null); },
+      /*
+       * Default scope is "global": Supabase revokes every refresh token this
+       * member holds, so signing out on a phone also ends the session on a
+       * laptop left open. For an account that can hold broker credentials that
+       * is the right default. An access token already issued stays valid until
+       * it expires (about an hour) — that is how JWTs work, and why nothing
+       * sensitive is authorised on the token alone.
+       */
+      signOut: async () => {
+        if (!supabase) return { error: null };
+        const { error } = await supabase.auth.signOut();
+        if (error) return { error: error.message };
+        setProfile(null);
+        return { error: null };
+      },
     }),
     [ready, session, profile, supabase, loadProfile]
   );

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy, Loader2, Lock, LogIn, ShieldCheck } from "lucide-react";
 import { BROKERS, BROKER_INFO, saveIBClick, type Broker } from "@/lib/ibTracking";
 import { useAuth } from "@/lib/AuthContext";
+import { useLogout } from "@/lib/useLogout";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { splitName } from "@/lib/displayName";
 
@@ -91,7 +92,10 @@ function Head({ children }: { children: React.ReactNode }) {
 }
 
 function StatusPanel({ status }: { status: string | null }) {
-  const { signOut, user, refresh } = useAuth();
+  const { user, refresh } = useAuth();
+  // The gate overlay sits above the header, so this is the only logout a
+  // pending or rejected member can reach — same handler as the avatar menu.
+  const { logout, busy, error } = useLogout();
 
   /*
    * An admin approving someone who is sitting on this screen should not require
@@ -121,14 +125,15 @@ function StatusPanel({ status }: { status: string | null }) {
         )}
       </p>
       <p className="mt-3 text-[12px] text-ink-muted">Signed in as {user?.email}</p>
-      <button type="button" onClick={() => void signOut()} className="mt-4 text-[12.5px] text-brand-blue hover:text-white">
-        Sign out
+      <button type="button" onClick={() => void logout()} disabled={busy} className="mt-4 text-[12.5px] text-brand-blue hover:text-white disabled:opacity-50">
+        {busy ? "Signing out…" : "Sign out"}
       </button>
+      {error ? <p className="mt-2 text-[12px] text-brand-danger">{error}</p> : null}
     </div>
   );
 }
 
-function SignUpPanel() {
+export function SignUpPanel() {
   const { refresh } = useAuth();
   const [broker, setBroker] = useState<Broker | null>(null);
   const [fullName, setFullName] = useState("");

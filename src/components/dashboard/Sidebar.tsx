@@ -4,7 +4,9 @@ import Link from "next/link";
 import { TabIcon } from "./TabIcon";
 import { SocialRow } from "@/components/brand/SocialRow";
 import { hasSocials } from "@/lib/socials";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { useLogout } from "@/lib/useLogout";
 import { Logo } from "@/components/brand/Logo";
 import { TABS, TAB_GROUPS, tabHref } from "@/lib/tabs";
 
@@ -15,6 +17,9 @@ export function Sidebar({
   active: string;
   onNavigate?: () => void;
 }) {
+  const { session, user } = useAuth();
+  const { logout, busy, error } = useLogout();
+
   return (
     <div className="flex h-full w-[280px] shrink-0 flex-col border-r border-white/[0.08] bg-[#080C18]">
       <div className="flex h-[72px] shrink-0 items-center border-b border-white/[0.08] px-6">
@@ -96,6 +101,27 @@ export function Sidebar({
             <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
           </Link>
         </div>
+
+        {/*
+          * Same handler as the header menu. This one is here for the mobile
+          * drawer, where the avatar menu is a reach away and the sidebar is what
+          * is already open.
+          */}
+        {session ? (
+          <div className="mt-3 border-t border-[#262626] pt-3">
+            <p className="truncate px-1 font-mono text-[10.5px] text-[#525252]">{user?.email}</p>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              disabled={busy}
+              className="mt-1.5 flex w-full items-center gap-2 rounded px-1 py-1.5 font-mono text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#a3a3a3] transition-colors hover:text-[#ff4d4d] disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="opacity-60">_&gt;</span>}
+              {busy ? "Signing out…" : "Logout"}
+            </button>
+            {error ? <p className="px-1 font-mono text-[10.5px] text-[#ff4d4d]">{error}</p> : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

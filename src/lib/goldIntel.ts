@@ -161,7 +161,10 @@ export function isGoldCatalyst(e: CalendarEvent): boolean {
   const impact = impactOf(e.impact);
   if (impact === "LOW") return false;
   if (e.currency === "USD") return true;
-  return /\b(fomc|fed|powell|ecb|lagarde|monetary policy|rate decision|main refinancing)\b/i.test(e.title);
+  // ECB only outside the US. "Monetary Policy Summary" is also the Bank of
+  // England's release title, so the phrase alone is not enough.
+  if (/\b(ecb|lagarde|main refinancing)\b/i.test(e.title)) return true;
+  return e.currency === "EUR" && /\b(monetary policy|rate decision)\b/i.test(e.title);
 }
 
 /** Upcoming gold catalysts, soonest first. Keeps anything released in the last 5 minutes as "just out". */

@@ -47,8 +47,8 @@ const OTHER_SUBJECT = /\b(?:aud|nzd|eur|gbp|usd|cad|chf|jpy|cnh)(?:usd|jpy|chf|c
 
 /* -------------------------------------------------------------- direction */
 
-const UP = /\b(ris(?:e|es|ing)|rall(?:y|ies|ied)|gains?|climbs?|jumps?|surg(?:e|es|ing)|soars?|record|highs?|higher|advances?|rebounds?|bid|firm(?:s|er)?|extends? gains|defends?|holds? above|breaks? above)\b/i;
-const DOWN = /\b(fall(?:s|ing)?|drops?|slid(?:e|es)|slips?|tumbl(?:e|es)|sinks?|plung(?:e|es)|lower|declines?|retreats?|los(?:e|es)|weak(?:er|ens)?|under pressure|set to fall|breaks? below|cracks? below|thin ice|offered)\b/i;
+const UP = /\b(bullish|ris(?:e|es|ing)|rall(?:y|ies|ied)|gains?|climbs?|jumps?|surg(?:e|es|ing)|soars?|record|highs?|higher|advances?|rebounds?|bid|firm(?:s|er)?|extends? gains|defends?|holds? above|breaks? above)\b/i;
+const DOWN = /\b(bearish|fall(?:s|ing)?|drops?|slid(?:e|es)|slips?|tumbl(?:e|es)|sinks?|plung(?:e|es)|lower|declines?|retreats?|los(?:e|es)|weak(?:er|ens)?|under pressure|set to fall|breaks? below|cracks? below|thin ice|offered)\b/i;
 const HAWK = /\b(hawkish|hike|hikes|hiking|tighten\w*|higher for longer|rate-hike)\b/i;
 const DOVE = /\b(dovish|cut|cuts|cutting|eas(?:e|ing)|pause|pivot)\b/i;
 const HOT = /\b(hot|hotter|beats?|above (?:forecast|expectations|estimates)|accelerat\w*|jumps?|surges?|strong(?:er)?)\b/i;

@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import { OverviewPanel } from "./OverviewPanel";
 import { MarketOverviewPanel } from "./MarketOverviewPanel";
 import { MarketAnalysisPanel } from "./MarketAnalysisPanel";
-import { MarketNewsPanel } from "./MarketNewsPanel";
+import { GoldIntelPanel } from "@/components/dashboard/gold/GoldIntelPanel";
 import { JournalAnalyticsPanel } from "./JournalAnalyticsPanel";
 import { ChartSnapPanel } from "./ChartSnapPanel";
 import { PatternRadarPanel } from "@/components/dashboard/PatternRadar";
@@ -32,7 +32,7 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   dashboard: OverviewPanel,
   "market-overview": MarketOverviewPanel,
   "market-analysis": MarketAnalysisPanel,
-  "market-news": MarketNewsPanel,
+  "market-news": GoldIntelPanel,
   "pattern-radar": PatternRadarPanel,
   "journal-analytics": JournalAnalyticsPanel,
   watchlist: WatchlistPanel,

@@ -71,7 +71,7 @@ export function LiveBanner() {
           <span className="sm:hidden">The Alliance is open.</span>
         </span>
         <Link
-          href="/dashboard?tab=chart-snap&ref=live-banner"
+          href="/signup?next=%2Fdashboard%3Ftab%3Dchart-snap&ref=live-banner"
           className="inline-flex items-center gap-1 rounded-full border border-brand-green/40 bg-brand-green/[0.12] px-3 py-1 text-[12px] font-semibold text-brand-green transition-all duration-200 hover:bg-brand-green/20"
         >
           Join the Alliance

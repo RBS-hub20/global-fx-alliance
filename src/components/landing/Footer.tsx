@@ -30,7 +30,7 @@ export function Footer() {
                 The dashboard is live. A funded account under our partner code unlocks the pro tools.
               </p>
               <Link
-                href="/dashboard?tab=chart-snap&ref=footer"
+                href="/signup?next=%2Fdashboard%3Ftab%3Dchart-snap&ref=footer"
                 className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-blue transition-colors hover:text-white"
               >
                 Join the Alliance

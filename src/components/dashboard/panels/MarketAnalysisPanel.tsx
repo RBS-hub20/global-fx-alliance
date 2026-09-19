@@ -273,7 +273,7 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
               >
                 {r}
                 {r === timeframe ? (
-                  <span className="absolute inset-x-2 -bottom-[13px] h-[2px] rounded-full bg-brand-blue" />
+                  <span className="absolute inset-x-2 -bottom-[13px] h-[2px] rounded-full bg-brand-accent" />
                 ) : null}
               </button>
             ))}
@@ -290,8 +290,8 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
               onClick={() => setTool(tool === t.label ? null : t.label)}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-medium transition-all duration-200 ${
                 tool === t.label
-                  ? "border-brand-blue/50 bg-brand-blue/[0.14] text-brand-blue shadow-glow"
-                  : "border-white/[0.08] bg-white/[0.03] text-ink-muted hover:border-brand-blue/30 hover:text-ink"
+                  ? "border-brand-accent/50 bg-brand-accent/[0.14] text-brand-accent shadow-glow"
+                  : "border-white/[0.08] bg-white/[0.03] text-ink-muted hover:border-brand-accent/30 hover:text-ink"
               }`}
             >
               <t.icon className="h-3.5 w-3.5" strokeWidth={1.9} />
@@ -403,11 +403,11 @@ export function MarketAnalysisPanel({ pair }: { pair?: string }) {
               <p className="text-[#00ff88]">
                 GFXA TERMINAL v2.0 — {report.pair}{" "}
                 <span className="text-[#fbbf24]">{report.price.toFixed(report.decimals)}</span>{" "}
-                <span className={report.changePct >= 0 ? "text-[#00D094]" : "text-[#FF4D4D]"}>
+                <span className={report.changePct >= 0 ? "text-[#00FF88]" : "text-[#FF4D4D]"}>
                   {report.changePct >= 0 ? "+" : ""}
                   {report.changePct.toFixed(2)}%
                 </span>{" "}
-                <span className="text-[#8A93A8]">[{report.source}]</span>
+                <span className="text-[#A3A3A3]">[{report.source}]</span>
               </p>
               <p className="text-[#00ff88]/25">{"═".repeat(56)}</p>
 

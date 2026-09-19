@@ -223,7 +223,7 @@ export function JournalPanel() {
                       </td>
                       <td className="px-4 py-3.5">
                         <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
-                          t.exit === null ? "bg-brand-blue/[0.14] text-brand-blue" : "bg-white/[0.06] text-ink-muted"
+                          t.exit === null ? "bg-brand-accent/[0.14] text-brand-accent" : "bg-white/[0.06] text-ink-muted"
                         }`}>
                           {t.exit === null ? "Open" : "Closed"}
                         </span>
@@ -285,7 +285,7 @@ export function JournalPanel() {
             value={form.notes}
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             placeholder="One sentence. If you can't write it, you don't have a setup."
-            className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-blue/40 focus:shadow-glow"
+            className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-accent/40 focus:shadow-glow"
           />
         </label>
 

@@ -4,8 +4,8 @@ import { MEMBERSHIP_BENEFITS } from "@/lib/data";
 
 export function MembershipCard() {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-brand-blue/30 bg-membership shadow-glow">
-      <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-brand-blue/25 blur-3xl" />
+    <section className="relative overflow-hidden rounded-2xl border border-brand-accent/30 bg-membership shadow-glow">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-brand-accent/25 blur-3xl" />
 
       <div className="relative p-6">
         <div className="flex items-start justify-between gap-3">
@@ -35,8 +35,8 @@ export function MembershipCard() {
         <ul className="mt-6 space-y-2.5">
           {MEMBERSHIP_BENEFITS.map((b) => (
             <li key={b} className="flex items-center gap-2.5 text-[13px] text-ink">
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-blue/20">
-                <Check className="h-2.5 w-2.5 text-brand-blue" strokeWidth={3} />
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-accent/20">
+                <Check className="h-2.5 w-2.5 text-brand-accent" strokeWidth={3} />
               </span>
               {b}
             </li>

@@ -18,13 +18,13 @@ export function MobileNav({ active }: { active: string }) {
                 href={tabHref(t.slug)}
                 aria-current={on ? "page" : undefined}
                 className={`flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1.5 transition-colors duration-200 ${
-                  on ? "text-brand-blue" : "text-ink-muted"
+                  on ? "text-brand-accent" : "text-ink-muted"
                 }`}
               >
                 <TabIcon
                   tab={tab}
                   onFilled={!on && t.slug === "ai"}
-                  className={`h-[19px] w-[19px] ${on && t.slug === "ai" ? "drop-shadow-[0_0_6px_rgba(0,217,255,0.6)]" : ""}`}
+                  className={`h-[19px] w-[19px] ${on && t.slug === "ai" ? "drop-shadow-[0_0_6px_rgba(0,255,136,0.6)]" : ""}`}
                   strokeWidth={on ? 2.1 : 1.8}
                 />
                 <span className="text-[10px] font-medium leading-none">{t.label}</span>

@@ -18,7 +18,7 @@ export function CommunityFeed() {
         {POSTS.map((p) => (
           <li key={p.id} className="p-5 transition-colors duration-200 hover:bg-white/[0.02]">
             <div className="flex gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[11px] font-bold text-white">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1F3D2E] to-[#141414] text-[11px] font-bold text-white">
                 {p.initials}
               </span>
 
@@ -31,7 +31,7 @@ export function CommunityFeed() {
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                       p.verified
-                        ? "bg-brand-blue/[0.15] text-brand-blue"
+                        ? "bg-brand-accent/[0.15] text-brand-accent"
                         : "bg-white/[0.06] text-ink-muted"
                     }`}
                   >

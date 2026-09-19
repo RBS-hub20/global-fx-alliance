@@ -21,13 +21,13 @@ export function JourneySection() {
     <section id="pro-trader" className="relative overflow-hidden py-24 lg:py-32">
       <div
         className="orb left-1/2 top-6 h-[420px] w-[560px] -translate-x-1/2"
-        style={{ ["--orb" as string]: "rgba(42,127,255,0.14)" }}
+        style={{ ["--orb" as string]: "rgba(0,255,136,0.14)" }}
       />
       <div className="relative mx-auto max-w-[1280px] px-5 lg:px-8">
         <h2 className="headline mx-auto max-w-[18ch] text-center text-[clamp(30px,4.6vw,52px)] leading-[1.04]">
           NOT JUST A TRADING GROUP.
           <br />
-          <span className="bg-gradient-to-r from-[#6FB0FF] to-[#2A7FFF] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#66FFB8] to-[#00FF88] bg-clip-text text-transparent">
             A GLOBAL TRADER NETWORK.
           </span>
         </h2>
@@ -35,7 +35,7 @@ export function JourneySection() {
         <div className="relative mt-20">
           {/* connector rail */}
           <div className="absolute left-0 right-0 top-[22px] hidden h-px lg:block">
-            <div className="mx-[16.6%] h-px bg-gradient-to-r from-brand-blue/10 via-brand-blue/50 to-brand-green/50" />
+            <div className="mx-[16.6%] h-px bg-gradient-to-r from-brand-accent/10 via-brand-accent/50 to-brand-green/50" />
           </div>
 
           <ol className="grid grid-cols-1 gap-12 lg:grid-cols-3 lg:gap-8">
@@ -46,7 +46,7 @@ export function JourneySection() {
                     className={`relative flex h-11 w-11 items-center justify-center rounded-full border text-[13px] font-bold num-mono ${
                       i === 2
                         ? "border-brand-green/40 bg-brand-green/10 text-brand-green shadow-glow-green"
-                        : "border-brand-blue/40 bg-brand-blue/10 text-brand-blue shadow-glow"
+                        : "border-brand-accent/40 bg-brand-accent/10 text-brand-accent shadow-glow"
                     }`}
                   >
                     <span className="absolute inset-0 rounded-full bg-navy-950" />

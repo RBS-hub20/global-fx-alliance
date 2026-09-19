@@ -144,14 +144,14 @@ export function ProfilePanel() {
 
       <Card className="p-6">
         <div className="flex flex-wrap items-start gap-5">
-          <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-brand-blue/30 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[24px] font-bold text-white shadow-glow">
+          <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-brand-accent/30 bg-gradient-to-br from-[#1F3D2E] to-[#141414] text-[24px] font-bold text-white shadow-glow">
             {initials(who)}
           </span>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-[22px] font-bold tracking-tight text-white">{profile.name}</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-blue/[0.15] px-2.5 py-1 text-[10.5px] font-semibold text-brand-blue">
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-accent/[0.15] px-2.5 py-1 text-[10.5px] font-semibold text-brand-accent">
                 <BadgeCheck className="h-3 w-3" strokeWidth={2.4} />
                 {PROFILE.role}
               </span>
@@ -185,7 +185,7 @@ export function ProfilePanel() {
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
               {s.label}
             </p>
-            <p className={`num-mono mt-2.5 text-[22px] font-bold leading-none ${s.accent ? "text-brand-blue" : "text-white"}`}>
+            <p className={`num-mono mt-2.5 text-[22px] font-bold leading-none ${s.accent ? "text-brand-accent" : "text-white"}`}>
               {s.value}
             </p>
           </div>
@@ -216,7 +216,7 @@ export function ProfilePanel() {
               value={draft.bio}
               placeholder="Swing trader focused on the majors and gold."
               onChange={(e) => setDraft((d) => ({ ...d, bio: e.target.value }))}
-              className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 focus:border-brand-blue/40 focus:shadow-glow"
+              className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 focus:border-brand-accent/40 focus:shadow-glow"
             />
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

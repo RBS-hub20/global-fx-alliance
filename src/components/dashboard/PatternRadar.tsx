@@ -70,7 +70,7 @@ export function usePatternFeed() {
 export function PatternCard({ p, now }: { p: RadarPattern; now: number }) {
   const bull = p.direction === "bullish";
   return (
-    <article className="rounded-2xl glass p-5 transition-all duration-200 hover:border-brand-blue/25">
+    <article className="rounded-2xl glass p-5 transition-all duration-200 hover:border-brand-accent/25">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
@@ -107,7 +107,7 @@ export function PatternCard({ p, now }: { p: RadarPattern; now: number }) {
         <span className="text-[11.5px] text-ink-muted/70">{ago(p.time, now)}</span>
         <Link
           href={tabHref("market-analysis", p.symbol)}
-          className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-blue transition-colors duration-200 hover:text-white"
+          className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-accent transition-colors duration-200 hover:text-white"
         >
           View chart
           <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -131,7 +131,7 @@ export function PatternRadarWidget() {
         right={
           <Link
             href={tabHref("pattern-radar")}
-            className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-blue transition-colors hover:text-white"
+            className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-accent transition-colors hover:text-white"
           >
             All patterns
             <ArrowRight className="h-3 w-3" strokeWidth={2.4} />
@@ -154,7 +154,7 @@ export function PatternRadarWidget() {
               <li key={p.id}>
                 <Link
                   href={tabHref("market-analysis", p.symbol)}
-                  className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 transition-all duration-200 hover:border-brand-blue/30"
+                  className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 transition-all duration-200 hover:border-brand-accent/30"
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
@@ -222,7 +222,7 @@ export function PatternRadarPanel() {
         <button
           type="button"
           onClick={reload}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11.5px] text-ink-muted transition-all duration-200 hover:border-brand-blue/40 hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11.5px] text-ink-muted transition-all duration-200 hover:border-brand-accent/40 hover:text-white"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
           Rescan

@@ -165,10 +165,10 @@ function SnapCard({ snap }: { snap: SnapReply }) {
       </details>
 
       <div className="flex flex-wrap gap-2 border-t border-white/[0.08] pt-3">
-        <Link href={tabHref("market-analysis", snap.symbol)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">View chart</Link>
-        <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">Check journal</Link>
-        <Link href={tabHref("pattern-radar")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">Pattern radar</Link>
-        <Link href={tabHref("chart-snap")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">Chart Snap</Link>
+        <Link href={tabHref("market-analysis", snap.symbol)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-accent/40 hover:text-white">View chart</Link>
+        <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-accent/40 hover:text-white">Check journal</Link>
+        <Link href={tabHref("pattern-radar")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-accent/40 hover:text-white">Pattern radar</Link>
+        <Link href={tabHref("chart-snap")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1 text-[11px] text-ink transition-colors hover:border-brand-accent/40 hover:text-white">Chart Snap</Link>
       </div>
     </div>
   );
@@ -362,7 +362,7 @@ export function AiToolsPanel() {
                     s.status === "ACTIVE"
                       ? "border-brand-green/35 bg-brand-green/[0.1] text-brand-green"
                       : s.status === "UPCOMING"
-                        ? "border-brand-blue/30 bg-brand-blue/[0.08] text-brand-blue"
+                        ? "border-brand-accent/30 bg-brand-accent/[0.08] text-brand-accent"
                         : "border-white/[0.08] bg-white/[0.03] text-ink-muted"
                   }`}
                 >
@@ -398,7 +398,7 @@ export function AiToolsPanel() {
                   width={19}
                   height={19}
                   title="GFXA AI"
-                  className="drop-shadow-[0_0_6px_rgba(0,217,255,0.55)]"
+                  className="drop-shadow-[0_0_6px_rgba(0,255,136,0.55)]"
                 />
               </span>
               Market Assistant
@@ -440,7 +440,7 @@ export function AiToolsPanel() {
                       <div
                         className={`rounded-lg px-4 py-3 font-mono text-[12.5px] leading-relaxed ${
                           m.role === "user"
-                            ? "bg-[#2A7FFF] text-white"
+                            ? "bg-[#00FF88] text-[#0a0a0a]"
                             : "border border-[#00ff88]/15 bg-[#00ff88]/[0.04] text-[#c8d0dc]"
                         }`}
                       >
@@ -448,9 +448,9 @@ export function AiToolsPanel() {
                       </div>
                       {m.snap ? <SnapCard snap={m.snap} /> : null}
                       {m.role === "ai" && m.sources?.length ? (
-                        <p className="mt-1.5 px-1 font-mono text-[10px] leading-relaxed text-[#8A93A8]">
+                        <p className="mt-1.5 px-1 font-mono text-[10px] leading-relaxed text-[#A3A3A3]">
                           {m.provider ? (
-                            <span className={m.provider === "OpenAI" ? "text-brand-green/70" : "text-[#8A93A8]"}>
+                            <span className={m.provider === "OpenAI" ? "text-brand-green/70" : "text-[#A3A3A3]"}>
                               {m.provider === "OpenAI" ? "GPT-4o-mini" : "Local engine"} ·{" "}
                             </span>
                           ) : null}
@@ -551,7 +551,7 @@ export function AiToolsPanel() {
               scanner, your imported statement and the session clock. Education &amp; market
               intelligence. Not financial advice.
             </p>
-            <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-[#8A93A8]">
+            <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-[#A3A3A3]">
               {aiOn
                 ? "Privacy: your statement stays in this browser. Only aggregated statistics — trade count, win rate, best and worst hour, pair and session, and a one-line summary of your last loss — are sent to OpenAI to write the reply. Individual trades, prices, account and broker details are never sent."
                 : "Privacy: nothing leaves this browser. Replies are composed on-device from your imported statement and this platform's market endpoints."}
@@ -573,7 +573,7 @@ export function AiToolsPanel() {
                     onClick={() => send(`${c.cmd}${c.args ? " EUR/USD" : ""}`)}
                     className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors duration-200 hover:bg-white/[0.02]"
                   >
-                    <code className="shrink-0 font-mono text-[11.5px] text-brand-blue">{c.cmd}</code>
+                    <code className="shrink-0 font-mono text-[11.5px] text-brand-accent">{c.cmd}</code>
                     <span className="min-w-0 flex-1 truncate text-[12px] text-ink-muted">{c.what}</span>
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-muted/50" />
                   </button>
@@ -594,16 +594,16 @@ export function AiToolsPanel() {
 function ActionRow({ pair }: { pair?: string }) {
   return (
     <div className="mt-5 flex flex-wrap gap-2 border-t border-white/[0.08] pt-4">
-      <Link href={tabHref("market-analysis", pair)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+      <Link href={tabHref("market-analysis", pair)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
         View chart
       </Link>
-      <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+      <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
         Check journal
       </Link>
-      <Link href={tabHref("pattern-radar")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+      <Link href={tabHref("pattern-radar")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
         Pattern radar
       </Link>
-      <Link href={tabHref("discussions")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+      <Link href={tabHref("discussions")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
         Discuss
       </Link>
     </div>

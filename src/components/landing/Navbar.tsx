@@ -95,12 +95,12 @@ export function Navbar() {
                 onClick={() => onNavClick(l)}
                 aria-current={isActive ? "true" : undefined}
                 className={`relative text-[14px] font-medium transition-colors duration-200 ${
-                  isActive ? "text-brand-blue" : "text-ink-muted hover:text-white"
+                  isActive ? "text-brand-accent" : "text-[#a3a3a3] hover:text-[#00ff88]"
                 }`}
               >
                 {l.label}
                 <span
-                  className={`absolute -bottom-1.5 left-0 h-[2px] rounded-full bg-brand-blue transition-all duration-200 ${
+                  className={`absolute -bottom-1.5 left-0 h-[2px] rounded-full bg-brand-accent transition-all duration-200 ${
                     isActive ? "w-full opacity-100" : "w-0 opacity-0"
                   }`}
                 />
@@ -112,7 +112,7 @@ export function Navbar() {
         <div className="hidden items-center gap-3 lg:flex">
           <Link
             href="/dashboard?ref=login"
-            className="px-3 py-2 text-[14px] font-medium text-ink-muted transition-colors duration-200 hover:text-white"
+            className="px-3 py-2 text-[14px] font-medium text-[#a3a3a3] transition-colors duration-200 hover:text-[#00ff88]"
           >
             Login
           </Link>
@@ -144,7 +144,7 @@ export function Navbar() {
                 aria-current={active === l.spy ? "true" : undefined}
                 className={`rounded-lg px-3 py-3 text-[15px] font-medium transition-colors duration-200 ${
                   active === l.spy
-                    ? "bg-brand-blue/[0.12] text-brand-blue"
+                    ? "bg-brand-accent/[0.12] text-brand-accent"
                     : "text-ink-muted hover:bg-white/5 hover:text-white"
                 }`}
               >

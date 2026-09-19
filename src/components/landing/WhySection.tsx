@@ -21,7 +21,7 @@ export function WhySection() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {PILLARS.map(({ icon: Icon, title, body }) => (
           <div key={title} className="group rounded-2xl glass card-hover p-7">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-blue/25 bg-brand-blue/10 text-brand-blue transition-colors duration-200 group-hover:bg-brand-blue/15">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent transition-colors duration-200 group-hover:bg-brand-accent/15">
               <Icon className="h-[22px] w-[22px]" strokeWidth={1.8} />
             </div>
             <h3 className="mt-6 text-[15px] font-bold uppercase tracking-[0.12em] text-white">

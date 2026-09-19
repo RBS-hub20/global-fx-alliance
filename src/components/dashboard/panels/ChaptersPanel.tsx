@@ -97,7 +97,7 @@ export function ChaptersPanel() {
             className={`ml-auto flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-[13px] font-semibold transition-all duration-200 active:scale-[0.98] ${
               isIn
                 ? "border border-brand-green/40 bg-brand-green/[0.12] text-brand-green"
-                : "bg-brand-blue text-white hover:bg-[#4A93FF] hover:shadow-glow"
+                : "bg-brand-accent text-[#0a0a0a] hover:bg-[#33FFA0] hover:shadow-glow"
             }`}
           >
             {isIn ? (<><Check className="h-4 w-4" strokeWidth={2.6} />Joined</>) : "Join Chapter"}
@@ -145,7 +145,7 @@ export function ChaptersPanel() {
               <ul className="divide-y divide-white/[0.06]">
                 {chapter.events.map((e, i) => (
                   <li key={i} className="flex items-center gap-3 px-5 py-3.5">
-                    <span className="num-mono w-[48px] shrink-0 text-[12px] font-semibold text-brand-blue">
+                    <span className="num-mono w-[48px] shrink-0 text-[12px] font-semibold text-brand-accent">
                       {e.date}
                     </span>
                     <span className="min-w-0 flex-1 text-[12.5px] text-ink">{e.title}</span>
@@ -173,7 +173,7 @@ export function ChaptersPanel() {
       />
 
       <Card className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(42,127,255,0.10),transparent_70%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,255,136,0.10),transparent_70%)]" />
         <div className="relative px-4 py-6">
           <WorldMap density={140} dotOpacity={0.4} hubs className="h-auto w-full" />
         </div>
@@ -183,7 +183,7 @@ export function ChaptersPanel() {
         {CHAPTER_ROWS.map((c) => {
           const isIn = joined.includes(c.code);
           return (
-            <article key={c.code} className="flex flex-col rounded-2xl glass p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-blue/30 hover:shadow-glow">
+            <article key={c.code} className="flex flex-col rounded-2xl glass p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-accent/30 hover:shadow-glow">
               <button type="button" onClick={() => setOpen(c.code)} className="text-left">
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-[28px] leading-none" aria-hidden>{c.flag}</span>
@@ -210,7 +210,7 @@ export function ChaptersPanel() {
                 className={`mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-[12.5px] font-semibold transition-all duration-200 active:scale-[0.98] ${
                   isIn
                     ? "border border-brand-green/40 bg-brand-green/[0.12] text-brand-green"
-                    : "border border-white/[0.1] bg-white/[0.03] text-ink hover:border-brand-blue/40 hover:bg-brand-blue/[0.1] hover:text-white"
+                    : "border border-white/[0.1] bg-white/[0.03] text-ink hover:border-brand-accent/40 hover:bg-brand-accent/[0.1] hover:text-white"
                 }`}
               >
                 {isIn ? (<><Check className="h-3.5 w-3.5" strokeWidth={2.6} />Joined</>) : "Join Chapter"}

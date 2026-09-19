@@ -20,14 +20,14 @@ const CHOICES: BiasSide[] = ["bullish", "bearish", "neutral"];
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
 const SIDE_TEXT: Record<BiasSide, string> = {
-  bullish: "text-[#00D094]",
+  bullish: "text-[#00FF88]",
   bearish: "text-[#FF4D4D]",
-  neutral: "text-[#8A93A8]",
+  neutral: "text-[#A3A3A3]",
 };
 const SIDE_CHIP: Record<BiasSide, string> = {
-  bullish: "border-[#00D094]/40 bg-[#00D094]/[0.12] text-[#00D094]",
+  bullish: "border-[#00FF88]/40 bg-[#00FF88]/[0.12] text-[#00FF88]",
   bearish: "border-[#FF4D4D]/40 bg-[#FF4D4D]/[0.12] text-[#FF4D4D]",
-  neutral: "border-white/20 bg-white/[0.06] text-[#8A93A8]",
+  neutral: "border-white/20 bg-white/[0.06] text-[#A3A3A3]",
 };
 
 export function BiasBoard({
@@ -129,7 +129,7 @@ export function BiasBoard({
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#00ff88]">
               <span className="text-[#00ff88]/50">_&gt;</span> AI BIAS — {pair}
             </span>
-            <span className="text-[10px] uppercase tracking-[0.1em] text-[#8A93A8]">
+            <span className="text-[10px] uppercase tracking-[0.1em] text-[#A3A3A3]">
               model: GFXA-Structure v2.0
             </span>
             <span className={`ml-auto rounded border px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] ${SIDE_CHIP[model.side]}`}>
@@ -139,7 +139,7 @@ export function BiasBoard({
 
           <div className="px-5 py-4 font-mono text-[12px]">
             {model.factors.length === 0 ? (
-              <p className="text-[#8A93A8]">Not enough bars yet to read the structure.</p>
+              <p className="text-[#A3A3A3]">Not enough bars yet to read the structure.</p>
             ) : (
               <ul className="space-y-1.5">
                 {model.factors.map((x) => (
@@ -178,20 +178,20 @@ export function BiasBoard({
 
           <div className="space-y-3 px-5 py-4 font-mono text-[12px]">
             {!session ? (
-              <p className="text-[#8A93A8]">Sign in to vote.</p>
+              <p className="text-[#A3A3A3]">Sign in to vote.</p>
             ) : tally === null ? (
-              <p className="text-[#8A93A8]"><Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" />reading the board…</p>
+              <p className="text-[#A3A3A3]"><Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" />reading the board…</p>
             ) : (
               <>
                 <div className="flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
-                  <div className="bg-[#00D094] transition-all duration-500" style={{ width: `${pct(tally.bullish)}%` }} />
+                  <div className="bg-[#00FF88] transition-all duration-500" style={{ width: `${pct(tally.bullish)}%` }} />
                   <div className="bg-[#FF4D4D] transition-all duration-500" style={{ width: `${pct(tally.bearish)}%` }} />
                   <div className="bg-white/25 transition-all duration-500" style={{ width: `${pct(tally.neutral)}%` }} />
                 </div>
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-[#00D094]">{pct(tally.bullish)}% bullish</span>
+                  <span className="text-[#00FF88]">{pct(tally.bullish)}% bullish</span>
                   <span className="text-[#FF4D4D]">{pct(tally.bearish)}% bearish</span>
-                  <span className="text-[#8A93A8]">{pct(tally.neutral)}% neutral</span>
+                  <span className="text-[#A3A3A3]">{pct(tally.neutral)}% neutral</span>
                 </div>
 
                 <div className="flex gap-2">
@@ -203,7 +203,7 @@ export function BiasBoard({
                       onClick={() => void vote(c)}
                       aria-pressed={mine === c}
                       className={`flex-1 rounded border px-2 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.08em] transition-all disabled:opacity-40 ${
-                        mine === c ? SIDE_CHIP[c] : "border-white/[0.1] text-[#8A93A8] hover:text-white"
+                        mine === c ? SIDE_CHIP[c] : "border-white/[0.1] text-[#A3A3A3] hover:text-white"
                       }`}
                     >
                       {c}
@@ -211,7 +211,7 @@ export function BiasBoard({
                   ))}
                 </div>
 
-                <p className="text-[10.5px] leading-relaxed text-[#8A93A8]">
+                <p className="text-[10.5px] leading-relaxed text-[#A3A3A3]">
                   {votes === 0
                     ? "No votes yet today — yours would be the first."
                     : `${votes} member${votes === 1 ? "" : "s"} voted today.`}
@@ -239,7 +239,7 @@ export function BiasBoard({
         </span>
         <div className="min-w-0 flex-1">
           <p className={`text-[12px] font-bold uppercase tracking-[0.1em] ${
-            divergence.state === "diverging" ? "text-[#fbbf24]" : divergence.state === "aligned" ? "text-[#00ff88]" : "text-[#8A93A8]"
+            divergence.state === "diverging" ? "text-[#fbbf24]" : divergence.state === "aligned" ? "text-[#00ff88]" : "text-[#A3A3A3]"
           }`}>
             {divergence.headline}
           </p>
@@ -250,7 +250,7 @@ export function BiasBoard({
           type="button"
           onClick={() => void share()}
           disabled={sharing}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded border border-white/[0.15] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#8A93A8] transition-colors hover:text-white disabled:opacity-40"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded border border-white/[0.15] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#A3A3A3] transition-colors hover:text-white disabled:opacity-40"
         >
           {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
           Share
@@ -276,7 +276,7 @@ async function renderCard(d: {
   const g = c.getContext("2d");
   if (!g) return null;
 
-  const colour = (s: BiasSide | null) => (s === "bullish" ? "#00D094" : s === "bearish" ? "#FF4D4D" : "#8A93A8");
+  const colour = (s: BiasSide | null) => (s === "bullish" ? "#00FF88" : s === "bearish" ? "#FF4D4D" : "#A3A3A3");
   const mono = (px: number, weight = "700") => `${weight} ${px}px ui-monospace, SFMono-Regular, Menlo, monospace`;
 
   g.fillStyle = "#0a0a0a";
@@ -292,7 +292,7 @@ async function renderCard(d: {
   g.fillStyle = "#ffffff";
   g.font = mono(76);
   g.fillText(d.pair, 64, 190);
-  g.fillStyle = "#8A93A8";
+  g.fillStyle = "#A3A3A3";
   g.font = mono(40, "500");
   g.fillText(d.price, 64 + g.measureText(d.pair).width + 320, 190);
 
@@ -300,7 +300,7 @@ async function renderCard(d: {
   g.lineWidth = 2;
   g.beginPath(); g.moveTo(64, 232); g.lineTo(W - 64, 232); g.stroke();
 
-  g.fillStyle = "#8A93A8";
+  g.fillStyle = "#A3A3A3";
   g.font = mono(22, "500");
   g.fillText("MODEL — GFXA-STRUCTURE", 64, 300);
   g.fillText("COMMUNITY", 640, 300);

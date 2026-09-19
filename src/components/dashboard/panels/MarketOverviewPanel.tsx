@@ -20,14 +20,14 @@ export function MarketOverviewPanel() {
             <Link
               key={p.symbol}
               href={tabHref("market-analysis", p.symbol)}
-              className="group rounded-2xl glass p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-blue/30 hover:shadow-glow"
+              className="group rounded-2xl glass p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-accent/30 hover:shadow-glow"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="text-[14px] font-bold tracking-tight text-white">{p.symbol}</h3>
                   <p className="mt-0.5 truncate text-[11px] text-ink-muted">{p.name}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-ink-muted/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand-blue" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-ink-muted/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand-accent" />
               </div>
 
               <p className="mt-4 num-mono text-[28px] font-bold leading-none text-white">

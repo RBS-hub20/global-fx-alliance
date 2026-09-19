@@ -9,7 +9,7 @@ export function AuthShell({ title, blurb, children, footer }: {
   footer?: React.ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#070A12] px-5 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-5 py-12">
       <div className="w-full max-w-[400px]">
         <Link href="/" className="mb-8 flex justify-center"><Logo size={34} /></Link>
         <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-6">
@@ -39,7 +39,7 @@ export function Field({
         placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2.5 text-[13px] text-ink outline-none transition-colors focus:border-brand-blue/50"
+        className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2.5 text-[13px] text-ink outline-none transition-colors focus:border-brand-accent/50"
       />
       {hint ? <span className="text-[11px] text-ink-muted/70">{hint}</span> : null}
     </label>

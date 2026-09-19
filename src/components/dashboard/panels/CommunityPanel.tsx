@@ -128,7 +128,7 @@ export function CommunityPanel() {
 
       <Card className="p-5">
         <div className="flex gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[11px] font-bold text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1F3D2E] to-[#141414] text-[11px] font-bold text-white">
             {myInitials}
           </span>
           <div className="min-w-0 flex-1">
@@ -138,7 +138,7 @@ export function CommunityPanel() {
               rows={2}
               placeholder="Share an idea, a level, or a question…"
               aria-label="Create a post"
-              className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-blue/40 focus:shadow-glow"
+              className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-accent/40 focus:shadow-glow"
             />
             <div className="mt-2.5 flex items-center justify-between gap-3">
               <span className="text-[11px] text-ink-muted/70">
@@ -166,7 +166,7 @@ export function CommunityPanel() {
           return (
             <Card key={p.id} className="p-5">
               <div className="flex gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[11px] font-bold text-white">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1F3D2E] to-[#141414] text-[11px] font-bold text-white">
                   {p.initials}
                 </span>
 
@@ -178,7 +178,7 @@ export function CommunityPanel() {
                     </span>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        p.verified ? "bg-brand-blue/[0.15] text-brand-blue" : "bg-white/[0.06] text-ink-muted"
+                        p.verified ? "bg-brand-accent/[0.15] text-brand-accent" : "bg-white/[0.06] text-ink-muted"
                       }`}
                     >
                       {p.verified ? <BadgeCheck className="h-3 w-3" strokeWidth={2.4} /> : null}

@@ -27,7 +27,7 @@ export function JoinCta({
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => trackEvent("join_telegram_click", { where })}
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2A7FFF] px-8 py-4 text-[15px] font-bold text-white shadow-[0_12px_34px_-12px_rgba(42,127,255,0.95)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#4d94ff] hover:shadow-[0_18px_44px_-12px_rgba(42,127,255,1)] sm:w-auto ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#00FF88] px-8 py-4 font-mono text-[15px] font-bold text-[#0a0a0a] shadow-[0_12px_34px_-12px_rgba(0,255,136,0.95)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#33ffa0] hover:shadow-[0_18px_44px_-12px_rgba(0,255,136,1)] sm:w-auto ${className}`}
     >
       {label}
       <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2.4} />

@@ -94,7 +94,7 @@ function LoginInner() {
               ? "This application was not approved. Reply to your submission email if you think that is wrong."
               : "This account is blocked."}
         </Notice>
-        <Link href="/" className="mt-4 inline-block text-[12.5px] text-brand-blue hover:text-white">
+        <Link href="/" className="mt-4 inline-block text-[12.5px] text-brand-accent hover:text-white">
           Back to the site
         </Link>
       </AuthShell>
@@ -108,7 +108,7 @@ function LoginInner() {
       footer={
         <>
           Not a member yet?{" "}
-          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="text-brand-blue hover:text-white">
+          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="text-brand-accent hover:text-white">
             Apply for access
           </Link>
         </>
@@ -151,7 +151,7 @@ function LoginInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-[#070A12]" />}>
+    <Suspense fallback={<main className="min-h-screen bg-[#0A0A0A]" />}>
       <LoginInner />
     </Suspense>
   );

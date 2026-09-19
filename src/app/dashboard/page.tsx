@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/Primitives";
 function Booting() {
   return (
     <div className="flex min-h-screen">
-      <div className="hidden w-[280px] shrink-0 border-r border-white/[0.08] bg-[#080C18] lg:block" />
+      <div className="hidden w-[280px] shrink-0 border-r border-white/[0.08] bg-[#0A0A0A] lg:block" />
       <div className="flex-1 space-y-5 px-5 pt-24 lg:px-8">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-64 w-full" />

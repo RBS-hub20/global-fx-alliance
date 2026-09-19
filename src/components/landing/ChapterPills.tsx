@@ -32,9 +32,9 @@ export function ChapterPills() {
         <a
           key={h.code}
           href="#chapters-preview"
-          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/30 hover:bg-brand-blue/[0.07] ${
+          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/30 hover:bg-brand-accent/[0.07] ${
             lit
-              ? "border-brand-blue/60 bg-brand-blue/[0.12] shadow-glow"
+              ? "border-brand-accent/60 bg-brand-accent/[0.12] shadow-glow"
               : "border-white/[0.08] bg-white/[0.03]"
           }`}
         >
@@ -44,7 +44,7 @@ export function ChapterPills() {
       ))}
       <a
         href="#chapters-preview"
-        className="inline-flex items-center rounded-full border border-dashed border-white/10 px-3.5 py-1.5 text-[13px] text-ink-muted transition-colors duration-200 hover:border-brand-blue/30 hover:text-ink"
+        className="inline-flex items-center rounded-full border border-dashed border-white/10 px-3.5 py-1.5 text-[13px] text-ink-muted transition-colors duration-200 hover:border-brand-accent/30 hover:text-ink"
       >
         …and expanding
       </a>

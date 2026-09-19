@@ -91,8 +91,8 @@ export function Pills<T extends string>({
               size === "sm" ? "px-2.5 py-1 text-[11.5px]" : "px-3.5 py-1.5 text-[12.5px]"
             } font-semibold ${
               on
-                ? "border-brand-blue/50 bg-brand-blue/[0.15] text-brand-blue shadow-glow"
-                : "border-white/[0.08] bg-white/[0.03] text-ink-muted hover:border-brand-blue/30 hover:text-ink"
+                ? "border-brand-accent/50 bg-brand-accent/[0.15] text-brand-accent shadow-glow"
+                : "border-white/[0.08] bg-white/[0.03] text-ink-muted hover:border-brand-accent/30 hover:text-ink"
             }`}
           >
             {o.label}
@@ -128,7 +128,7 @@ export function Toggle({
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full border transition-all duration-200 ${
           checked
-            ? "border-brand-blue/50 bg-brand-blue/70 shadow-glow"
+            ? "border-brand-accent/50 bg-brand-accent/70 shadow-glow"
             : "border-white/[0.1] bg-white/[0.06]"
         }`}
       >
@@ -155,7 +155,7 @@ export function Field({
       <span className="relative block">
         <input
           {...props}
-          className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 pr-12 text-[14px] num-mono text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-blue/40 focus:bg-white/[0.05] focus:shadow-glow"
+          className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 pr-12 text-[14px] num-mono text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-accent/40 focus:bg-white/[0.05] focus:shadow-glow"
         />
         {suffix ? (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink-muted">
@@ -179,7 +179,7 @@ export function Select({
       </span>
       <select
         {...props}
-        className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#0E1526] px-3 text-[14px] text-ink outline-none transition-all duration-200 focus:border-brand-blue/40 focus:shadow-glow"
+        className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#0E1526] px-3 text-[14px] text-ink outline-none transition-all duration-200 focus:border-brand-accent/40 focus:shadow-glow"
       >
         {children}
       </select>
@@ -202,7 +202,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center rounded-2xl border border-dashed border-white/[0.1] bg-white/[0.02] px-6 py-16 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-brand-blue/25 bg-brand-blue/10 text-brand-blue">
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
         <Icon className="h-5 w-5" strokeWidth={1.8} />
       </span>
       <h3 className="mt-5 text-[15px] font-bold text-white">{title}</h3>

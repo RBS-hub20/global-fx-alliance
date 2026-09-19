@@ -78,7 +78,7 @@ function Result({ rows }: { rows: { label: string; value: string; accent?: boole
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between gap-4 py-3.5">
           <dt className="text-[13px] text-ink-muted">{r.label}</dt>
-          <dd className={`num-mono text-[17px] font-bold ${r.accent ? "text-brand-blue" : "text-white"}`}>
+          <dd className={`num-mono text-[17px] font-bold ${r.accent ? "text-brand-accent" : "text-white"}`}>
             {r.value}
           </dd>
         </div>

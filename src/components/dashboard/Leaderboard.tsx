@@ -49,7 +49,7 @@ export function Leaderboard() {
               <td className="py-3 text-[12px] text-ink-muted">
                 <span aria-hidden>{r.flag}</span> {r.country}
               </td>
-              <td className="py-3 pr-5 text-right num-mono text-[13px] font-semibold text-brand-blue">
+              <td className="py-3 pr-5 text-right num-mono text-[13px] font-semibold text-brand-accent">
                 {r.reputation.toLocaleString("en-US")}
               </td>
             </tr>

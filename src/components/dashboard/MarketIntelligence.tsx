@@ -50,7 +50,7 @@ export function MarketIntelligence() {
             >
               {r}
               {r === range ? (
-                <span className="absolute inset-x-2 -bottom-[13px] h-[2px] rounded-full bg-brand-blue" />
+                <span className="absolute inset-x-2 -bottom-[13px] h-[2px] rounded-full bg-brand-accent" />
               ) : null}
             </button>
           ))}
@@ -91,7 +91,7 @@ export function MarketIntelligence() {
           <ul className="mt-4 space-y-3">
             {FUNDAMENTALS.map((f) => (
               <li key={f} className="flex gap-2.5 text-[13px] leading-relaxed text-ink">
-                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-blue" aria-hidden />
+                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-accent" aria-hidden />
                 {f}
               </li>
             ))}

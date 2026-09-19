@@ -49,7 +49,7 @@ export function HeroMedia() {
         <Fallback />
       )}
       {/* Keeps the headline legible over any footage the clip happens to contain. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#070A12]/70 via-[#070A12]/60 to-[#070A12]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/70 via-[#0A0A0A]/60 to-[#0A0A0A]" />
     </div>
   );
 }
@@ -69,8 +69,8 @@ function Fallback() {
               animationDelay: `${i * 90}ms`,
               background:
                 i % 3 === 0
-                  ? "linear-gradient(180deg,#00D094,rgba(0,208,148,0.05))"
-                  : "linear-gradient(180deg,#2A7FFF,rgba(42,127,255,0.05))",
+                  ? "linear-gradient(180deg,#00FF88,rgba(0,255,136,0.05))"
+                  : "linear-gradient(180deg,#00B862,rgba(0,184,98,0.05))",
             }}
           />
         ))}

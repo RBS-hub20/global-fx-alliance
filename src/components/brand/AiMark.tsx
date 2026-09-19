@@ -37,21 +37,21 @@ export function AiMarkDefs() {
     <svg width="0" height="0" aria-hidden className="absolute" focusable="false">
       <defs>
         <linearGradient id="gfxa-ai-limb" x1="32" y1="7" x2="32" y2="55" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3FE4FF" />
-          <stop offset="34%" stopColor="#00D9FF" />
-          <stop offset="72%" stopColor="#2A7FFF" />
-          <stop offset="100%" stopColor="#0055F0" />
+          <stop offset="0%" stopColor="#66FFB8" />
+          <stop offset="34%" stopColor="#00FF88" />
+          <stop offset="72%" stopColor="#00FF88" />
+          <stop offset="100%" stopColor="#00B862" />
         </linearGradient>
         <linearGradient id="gfxa-ai-fold" x1="32" y1="40" x2="32" y2="56" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#0B2E7A" />
-          <stop offset="100%" stopColor="#123F9E" />
+          <stop offset="0%" stopColor="#12281D" />
+          <stop offset="100%" stopColor="#173326" />
         </linearGradient>
         <linearGradient id="gfxa-ai-star" x1="32" y1="28" x2="32" y2="50" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#9BF7FF" />
-          <stop offset="100%" stopColor="#00D5FF" />
+          <stop offset="100%" stopColor="#00FF88" />
         </linearGradient>
         <linearGradient id="gfxa-ai-plate" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#101B3A" />
+          <stop offset="0%" stopColor="#121A16" />
           <stop offset="100%" stopColor="#060B1A" />
         </linearGradient>
       </defs>
@@ -67,7 +67,7 @@ interface AiMarkProps extends Omit<SVGProps<SVGSVGElement>, "width" | "height"> 
   plate?: boolean;
   /**
    * Flat `currentColor` silhouette. The blue gradient has almost no contrast on
-   * a filled brand-blue row, so the sidebar's active state uses this instead.
+   * a filled brand-accent row, so the sidebar's active state uses this instead.
    * The star still reads because it floats clear of the limbs.
    */
   mono?: boolean;

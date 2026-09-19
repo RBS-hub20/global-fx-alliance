@@ -140,11 +140,11 @@ export function JournalAnalyticsPanel() {
           if (f) ingest(f);
         }}
         className={`rounded-2xl border border-dashed p-6 transition-all duration-200 ${
-          dragging ? "border-brand-blue/60 bg-brand-blue/[0.06]" : "border-white/[0.12] bg-white/[0.02]"
+          dragging ? "border-brand-accent/60 bg-brand-accent/[0.06]" : "border-white/[0.12] bg-white/[0.02]"
         }`}
       >
         <div className="flex flex-wrap items-center gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-blue/25 bg-brand-blue/10 text-brand-blue">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileUp className="h-5 w-5" strokeWidth={1.8} />}
           </span>
           <div className="min-w-0 flex-1">

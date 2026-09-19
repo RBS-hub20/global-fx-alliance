@@ -33,14 +33,14 @@ export function BlogPreview() {
                 </span>
               </div>
 
-              <h3 className="mt-5 text-[18px] font-bold leading-snug tracking-tight text-white transition-colors duration-200 group-hover:text-brand-blue">
+              <h3 className="mt-5 text-[18px] font-bold leading-snug tracking-tight text-white transition-colors duration-200 group-hover:text-brand-accent">
                 {a.title}
               </h3>
               <p className="mt-3 flex-1 text-[14px] leading-relaxed text-ink-muted">{a.excerpt}</p>
 
               <div className="mt-6 flex items-center justify-between border-t border-white/[0.08] pt-5">
                 <span className="text-[12px] text-ink-muted/70">{a.date}</span>
-                <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-blue">
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-accent">
                   Read
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.2} />
                 </span>

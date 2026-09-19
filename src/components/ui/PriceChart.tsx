@@ -24,7 +24,7 @@ export function PriceChart({
   labels,
   decimals = 4,
   height = 320,
-  color = "#2A7FFF",
+  color = "#00FF88",
 }: PriceChartProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(880);
@@ -154,7 +154,7 @@ export function PriceChart({
               strokeDasharray="3 3"
             />
             <circle cx={hx} cy={hy} r="9" fill={color} opacity="0.18" />
-            <circle cx={hx} cy={hy} r="3.5" fill={color} stroke="#070A12" strokeWidth="1.5" />
+            <circle cx={hx} cy={hy} r="3.5" fill={color} stroke="#0A0A0A" strokeWidth="1.5" />
           </g>
         ) : null}
 

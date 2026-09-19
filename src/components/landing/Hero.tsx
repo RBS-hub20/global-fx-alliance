@@ -27,13 +27,13 @@ function CandleField() {
     >
       {candles.map(([x, y, h], i) => (
         <g key={i} opacity={0.11}>
-          <rect x={x + 0.55} y={y - 6} width="0.16" height={h + 12} fill={i % 3 === 2 ? "#8A93A8" : "#2A7FFF"} />
+          <rect x={x + 0.55} y={y - 6} width="0.16" height={h + 12} fill={i % 3 === 2 ? "#A3A3A3" : "#00FF88"} />
           <rect
             x={x}
             y={y}
             width="1.3"
             height={h}
-            fill={i % 3 === 2 ? "#8A93A8" : i % 2 === 0 ? "#00D094" : "#2A7FFF"}
+            fill={i % 3 === 2 ? "#A3A3A3" : i % 2 === 0 ? "#00FF88" : "#00B862"}
           />
         </g>
       ))}
@@ -47,7 +47,7 @@ export function Hero() {
       {/* Atmospheric wash. Transparent rather than opaque: the body carries a
           viewport-fixed navy gradient, so an opaque section background would cut
           a visible seam where the section ends. */}
-      <div className="absolute inset-0 -z-30 bg-[radial-gradient(125%_90%_at_50%_-8%,rgba(30,80,164,0.5)_0%,rgba(12,32,64,0.28)_42%,transparent_72%)]" />
+      <div className="absolute inset-0 -z-30 bg-[radial-gradient(125%_90%_at_50%_-8%,rgba(0,120,64,0.5)_0%,rgba(10,40,26,0.28)_42%,transparent_72%)]" />
 
       {/* dotted world map with glowing connection lines */}
       <div className="absolute inset-x-0 top-[18%] -z-20 opacity-[0.15]">
@@ -59,11 +59,11 @@ export function Hero() {
       {/* glow orbs */}
       <div
         className="orb left-[1%] top-[4%] -z-10 h-[520px] w-[520px]"
-        style={{ ["--orb" as string]: "rgba(42,127,255,0.30)" }}
+        style={{ ["--orb" as string]: "rgba(0,255,136,0.30)" }}
       />
       <div
         className="orb bottom-[3%] right-[1%] -z-10 h-[520px] w-[520px]"
-        style={{ ["--orb" as string]: "rgba(0,208,148,0.16)" }}
+        style={{ ["--orb" as string]: "rgba(0,255,136,0.16)" }}
       />
 
       <div className="relative mx-auto max-w-[1280px] px-5 text-center lg:px-8">
@@ -99,7 +99,7 @@ export function Hero() {
             JOIN THE ALLIANCE
             <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
           </Link>
-          <a href="#global-community" className="btn-ghost w-full sm:w-auto">
+          <a href="#global-community" className="btn-outline w-full sm:w-auto">
             EXPLORE THE COMMUNITY
           </a>
         </div>

@@ -115,7 +115,7 @@ export function MyAlliance() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="you@example.com"
-            className="min-w-[200px] flex-1 rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue/50"
+            className="min-w-[200px] flex-1 rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-accent/50"
           />
           <button type="submit" className="btn-primary !py-2 text-[12.5px]">Save</button>
         </form>
@@ -130,7 +130,7 @@ export function MyAlliance() {
 
   return (
     <Card className="overflow-hidden">
-      <div className="bg-gradient-to-r from-brand-blue/[0.14] via-brand-blue/[0.06] to-transparent px-5 py-4">
+      <div className="bg-gradient-to-r from-brand-accent/[0.14] via-brand-accent/[0.06] to-transparent px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-white">My Alliance</span>
           {verified === null ? null : verified ? (
@@ -181,10 +181,10 @@ export function MyAlliance() {
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Flame className="h-3.5 w-3.5" strokeWidth={2.2} />}
           {state?.checkedInToday ? "Checked in today" : "Check in — +10 rep"}
         </button>
-        <Link href={tabHref("chart-snap")} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-[12px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">
+        <Link href={tabHref("chart-snap")} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-[12px] text-ink transition-colors hover:border-brand-accent/40 hover:text-white">
           <Camera className="h-3.5 w-3.5" strokeWidth={1.9} /> Snap a chart
         </Link>
-        <Link href={tabHref("journal")} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-[12px] text-ink transition-colors hover:border-brand-blue/40 hover:text-white">
+        <Link href={tabHref("journal")} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-[12px] text-ink transition-colors hover:border-brand-accent/40 hover:text-white">
           <NotebookPen className="h-3.5 w-3.5" strokeWidth={1.9} /> Journal
         </Link>
         {flash ? <span className="self-center text-[12px] text-brand-green">{flash}</span> : null}

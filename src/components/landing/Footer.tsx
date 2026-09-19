@@ -31,7 +31,7 @@ export function Footer() {
               </p>
               <Link
                 href="/signup?next=%2Fdashboard%3Ftab%3Dchart-snap&ref=footer"
-                className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-blue transition-colors hover:text-white"
+                className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-accent transition-colors hover:text-white"
               >
                 Join the Alliance
                 <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />

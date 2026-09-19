@@ -84,15 +84,15 @@ export function TerminalTape({ focus }: { focus?: string }) {
               key={q.symbol}
               className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors duration-500 ${
                 flash[q.symbol] === "up"
-                  ? "bg-[#00D094]/20"
+                  ? "bg-[#00FF88]/20"
                   : flash[q.symbol] === "down"
                     ? "bg-[#FF4D4D]/20"
                     : ""
               } ${q.symbol === focus ? "ring-1 ring-[#00ff88]/40" : ""}`}
             >
-              <span className="font-bold text-[#8A93A8]">{q.symbol}</span>
+              <span className="font-bold text-[#A3A3A3]">{q.symbol}</span>
               <span className="font-bold text-white">{q.price.toFixed(q.decimals)}</span>
-              <span className={up ? "text-[#00D094]" : "text-[#FF4D4D]"}>
+              <span className={up ? "text-[#00FF88]" : "text-[#FF4D4D]"}>
                 {up ? "▲" : "▼"} {up ? "+" : ""}{q.changePct.toFixed(2)}%
               </span>
               {q.isReal ? null : <span className="text-[#fbbf24]/70">modelled</span>}
@@ -113,7 +113,7 @@ export function TerminalTape({ focus }: { focus?: string }) {
             <span className="text-[#00ff88]/70">LIVE</span>
           </>
         )}
-        {at ? <span className="text-[#8A93A8]">{at}</span> : null}
+        {at ? <span className="text-[#A3A3A3]">{at}</span> : null}
       </span>
     </div>
   );

@@ -98,7 +98,7 @@ export function TickerRow() {
           return (
             <article
               key={q.symbol}
-              className="group rounded-xl glass p-4 transition-all duration-200 hover:border-brand-blue/25"
+              className="group rounded-xl glass p-4 transition-all duration-200 hover:border-brand-accent/25"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

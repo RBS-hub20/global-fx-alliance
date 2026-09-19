@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="GFXA AI">
   <defs>
     <linearGradient id="limb" x1="32" y1="7" x2="32" y2="55" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#3FE4FF"/><stop offset="34%" stop-color="#00D9FF"/><stop offset="72%" stop-color="#2A7FFF"/><stop offset="100%" stop-color="#0055F0"/>
+      <stop offset="0%" stop-color="#66FFB8"/><stop offset="34%" stop-color="#00FF88"/><stop offset="72%" stop-color="#00FF88"/><stop offset="100%" stop-color="#00B862"/>
     </linearGradient>
     <linearGradient id="fold" x1="32" y1="40" x2="32" y2="56" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0B2E7A"/><stop offset="100%" stop-color="#123F9E"/>
+      <stop offset="0%" stop-color="#12281D"/><stop offset="100%" stop-color="#173326"/>
     </linearGradient>
     <linearGradient id="star" x1="32" y1="28" x2="32" y2="50" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#9BF7FF"/><stop offset="100%" stop-color="#00D5FF"/>
+      <stop offset="0%" stop-color="#9BF7FF"/><stop offset="100%" stop-color="#00FF88"/>
     </linearGradient>
     <linearGradient id="plate" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#101B3A"/><stop offset="100%" stop-color="#060B1A"/>
+      <stop offset="0%" stop-color="#121A16"/><stop offset="100%" stop-color="#060B1A"/>
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="14.5" fill="url(#plate)"/>

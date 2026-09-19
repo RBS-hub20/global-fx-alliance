@@ -32,18 +32,18 @@ export default function LinksPage() {
       <div className="mt-9 space-y-2.5">
         <Link
           href="/dashboard?tab=chart-snap&ref=links"
-          className="flex items-center gap-3 rounded-xl border border-brand-blue/40 bg-brand-blue/[0.12] px-4 py-3.5 transition-all duration-200 hover:bg-brand-blue/20"
+          className="flex items-center gap-3 rounded-xl border border-brand-accent/40 bg-brand-accent/[0.12] px-4 py-3.5 transition-all duration-200 hover:bg-brand-accent/20"
         >
           <span className="min-w-0 flex-1">
             <span className="block text-[13.5px] font-semibold text-white">Open the dashboard</span>
             <span className="block text-[12px] text-ink-muted">Live charts, pattern radar, journal and AI tools</span>
           </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-brand-blue" strokeWidth={2.2} />
+          <ArrowRight className="h-4 w-4 shrink-0 text-brand-accent" strokeWidth={2.2} />
         </Link>
 
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3.5 transition-all duration-200 hover:border-brand-blue/40"
+          className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3.5 transition-all duration-200 hover:border-brand-accent/40"
         >
           <span className="min-w-0 flex-1">
             <span className="block text-[13.5px] font-semibold text-white">globalfxalliance.io</span>

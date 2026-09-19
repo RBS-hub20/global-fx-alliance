@@ -19,7 +19,7 @@ export function TopHeader({
         <button
           type="button"
           onClick={onOpenNav}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-ink transition-colors duration-200 hover:border-brand-blue/40 lg:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-ink transition-colors duration-200 hover:border-brand-accent/40 lg:hidden"
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
@@ -39,17 +39,17 @@ export function TopHeader({
               type="search"
               placeholder="Search markets, traders, lessons"
               aria-label="Search"
-              className="h-10 w-[240px] rounded-lg border border-white/[0.08] bg-white/[0.03] pl-9 pr-3 text-[13px] text-ink placeholder:text-ink-muted/70 outline-none backdrop-blur-xl transition-all duration-200 focus:border-brand-blue/40 focus:bg-white/[0.05] focus:shadow-glow lg:w-[280px]"
+              className="h-10 w-[240px] rounded-lg border border-white/[0.08] bg-white/[0.03] pl-9 pr-3 text-[13px] text-ink placeholder:text-ink-muted/70 outline-none backdrop-blur-xl transition-all duration-200 focus:border-brand-accent/40 focus:bg-white/[0.05] focus:shadow-glow lg:w-[280px]"
             />
           </label>
 
           <button
             type="button"
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-ink-muted transition-all duration-200 hover:border-brand-blue/40 hover:text-white hover:shadow-glow"
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-ink-muted transition-all duration-200 hover:border-brand-accent/40 hover:text-white hover:shadow-glow"
             aria-label="Notifications"
           >
             <Bell className="h-[18px] w-[18px]" strokeWidth={1.8} />
-            <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-brand-danger ring-2 ring-[#0A0F1C]" />
+            <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-brand-danger ring-2 ring-[#0A0A0A]" />
           </button>
 
           <UserMenu />

@@ -23,16 +23,16 @@ interface Props {
 }
 
 const C = {
-  up: "#00D094",
+  up: "#00FF88",
   down: "#FF4D4D",
   support: "#22c55e",
   resistance: "#ef4444",
-  trend: "#3b82f6",
-  ema20: "#2A7FFF",
+  trend: "#00ff88",
+  ema20: "#00FF88",
   ema50: "#f59e0b",
   ema200: "#eab308",
   grid: "rgba(255,255,255,0.05)",
-  text: "#8A93A8",
+  text: "#A3A3A3",
 };
 
 /**
@@ -81,7 +81,7 @@ export function TradingViewChart({
     volRef.current = chart.addHistogramSeries({
       priceFormat: { type: "volume" },
       priceScaleId: "vol",
-      color: "rgba(42,127,255,0.35)",
+      color: "rgba(0,255,136,0.35)",
     });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.86, bottom: 0 } });
 
@@ -136,7 +136,7 @@ export function TradingViewChart({
         ? ohlc.map((b) => ({
             time: b.time as UTCTimestamp,
             value: b.volume,
-            color: b.close >= b.open ? "rgba(0,208,148,0.30)" : "rgba(255,77,77,0.30)",
+            color: b.close >= b.open ? "rgba(0,255,136,0.30)" : "rgba(255,77,77,0.30)",
           }))
         : []
     );
@@ -225,8 +225,8 @@ export function TradingViewChart({
           className="pointer-events-none absolute rounded-[2px]"
           style={{
             left: b.left, top: b.top, width: b.width, height: b.height,
-            background: b.type === "bullish" ? "rgba(0,208,148,0.16)" : "rgba(255,77,77,0.16)",
-            border: `1px solid ${b.type === "bullish" ? "rgba(0,208,148,0.45)" : "rgba(255,77,77,0.45)"}`,
+            background: b.type === "bullish" ? "rgba(0,255,136,0.16)" : "rgba(255,77,77,0.16)",
+            border: `1px solid ${b.type === "bullish" ? "rgba(0,255,136,0.45)" : "rgba(255,77,77,0.45)"}`,
           }}
         />
       ))}
@@ -252,7 +252,7 @@ export function TradingViewChart({
         <Key color={C.support} label="Support" />
         <Key color={C.resistance} label="Resistance" />
         <Key color={C.trend} label="Trend" />
-        {hasVolume ? <Key color="rgba(42,127,255,0.6)" label="Volume" /> : null}
+        {hasVolume ? <Key color="rgba(0,255,136,0.6)" label="Volume" /> : null}
       </div>
     </div>
   );
@@ -286,8 +286,8 @@ function createChartSafe(el: HTMLDivElement, height: number, decimals: number): 
       timeScale: { borderColor: "rgba(255,255,255,0.08)", timeVisible: true, secondsVisible: false },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(255,255,255,0.2)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#1E4C9E" },
-        horzLine: { color: "rgba(255,255,255,0.2)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#1E4C9E" },
+        vertLine: { color: "rgba(255,255,255,0.2)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#1F3D2E" },
+        horzLine: { color: "rgba(255,255,255,0.2)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#1F3D2E" },
       },
       localization: { priceFormatter: (p: number) => p.toFixed(decimals) },
       handleScroll: true,

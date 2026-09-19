@@ -21,7 +21,7 @@ export function Sidebar({
   const { logout, busy, error } = useLogout();
 
   return (
-    <div className="flex h-full w-[280px] shrink-0 flex-col border-r border-white/[0.08] bg-[#080C18]">
+    <div className="flex h-full w-[280px] shrink-0 flex-col border-r border-white/[0.08] bg-[#0A0A0A]">
       <div className="flex h-[72px] shrink-0 items-center border-b border-white/[0.08] px-6">
         <Link href="/" aria-label="GLOBAL FX ALLIANCE home">
           <Logo size={34} tagline wordmarkClass="text-[13px]" />
@@ -45,15 +45,15 @@ export function Sidebar({
                       aria-current={on ? "page" : undefined}
                       className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200 ${
                         on
-                          ? "bg-brand-blue text-white shadow-[0_0_20px_rgba(42,127,255,0.3)]"
-                          : "text-ink-muted hover:bg-white/[0.05] hover:text-ink"
+                          ? "border border-[#00ff88]/60 bg-[#00ff88]/20 text-[#00ff88]"
+                          : "border border-transparent text-ink-muted hover:bg-white/[0.05] hover:text-[#00ff88]"
                       }`}
                     >
                       <TabIcon
                         tab={tab}
-                        onFilled={on}
+                        onFilled={false}
                         className={`h-[17px] w-[17px] shrink-0 ${
-                          on ? "text-white" : "text-ink-muted group-hover:text-ink"
+                          on ? "text-[#00ff88]" : "text-ink-muted group-hover:text-[#00ff88]"
                         }`}
                         strokeWidth={1.8}
                       />
@@ -61,7 +61,7 @@ export function Sidebar({
                       {tab.badge ? (
                         <span
                           className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold num-mono ${
-                            on ? "bg-white/20 text-white" : "bg-brand-blue/15 text-brand-blue"
+                            on ? "bg-[#00ff88] text-[#0a0a0a]" : "bg-brand-accent/15 text-brand-accent"
                           }`}
                         >
                           {tab.badge}
@@ -83,7 +83,7 @@ export function Sidebar({
             <SocialRow size="sm" />
           </div>
         ) : null}
-        <div className="rounded-xl border border-brand-blue/25 bg-membership p-4 shadow-glow">
+        <div className="rounded-xl border border-[#00ff88]/20 bg-membership p-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-brand-green" strokeWidth={2} />
             <span className="text-[12px] font-bold tracking-[0.1em] text-white">GFXA PRO</span>
@@ -95,7 +95,7 @@ export function Sidebar({
           <Link
             href={tabHref("membership")}
             onClick={onNavigate}
-            className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-blue transition-colors duration-200 hover:text-white"
+            className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-accent transition-colors duration-200 hover:text-white"
           >
             View Membership
             <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -114,7 +114,7 @@ export function Sidebar({
               type="button"
               onClick={() => void logout()}
               disabled={busy}
-              className="mt-1.5 flex w-full items-center gap-2 rounded px-1 py-1.5 font-mono text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#a3a3a3] transition-colors hover:text-[#ff4d4d] disabled:opacity-50"
+              className="mt-1.5 flex w-full items-center gap-2 rounded px-1 py-1.5 font-mono text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#ff4d4d] transition-colors hover:bg-[#262626] disabled:opacity-50"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="opacity-60">_&gt;</span>}
               {busy ? "Signing out…" : "Logout"}

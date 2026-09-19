@@ -60,7 +60,7 @@ export function DiscussionsPanel() {
                   aria-expanded={expanded}
                   className="flex w-full items-start gap-4 p-5 text-left transition-colors duration-200 hover:bg-white/[0.02]"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[11px] font-bold text-white">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1F3D2E] to-[#141414] text-[11px] font-bold text-white">
                     {t.initials}
                   </span>
 
@@ -96,7 +96,7 @@ export function DiscussionsPanel() {
 
                   <ChevronDown
                     className={`h-4 w-4 shrink-0 text-ink-muted transition-transform duration-200 ${
-                      expanded ? "rotate-180 text-brand-blue" : ""
+                      expanded ? "rotate-180 text-brand-accent" : ""
                     }`}
                   />
                 </button>
@@ -148,7 +148,7 @@ export function DiscussionsPanel() {
                     <span aria-hidden>{r.flag}</span> {r.country}
                   </span>
                 </span>
-                <span className="num-mono shrink-0 text-[13px] font-semibold text-brand-blue">
+                <span className="num-mono shrink-0 text-[13px] font-semibold text-brand-accent">
                   {r.reputation.toLocaleString("en-US")}
                 </span>
               </li>
@@ -170,7 +170,7 @@ export function DiscussionsPanel() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What do you want to ask the Alliance?"
-            className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-[14px] text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-blue/40 focus:shadow-glow"
+            className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-[14px] text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-accent/40 focus:shadow-glow"
           />
         </label>
         <div className="mt-5 flex justify-end gap-2">

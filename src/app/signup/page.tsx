@@ -34,9 +34,9 @@ function SignupInner() {
   }, [ready, session, status, next, router]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[#070A12] px-4 py-8">
+    <main className="flex min-h-screen flex-col items-center bg-[#0A0A0A] px-4 py-8">
       <Link href="/" className="mb-6 flex justify-center"><Logo size={34} /></Link>
-      <div className="flex max-h-[calc(100dvh-7rem)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0A0F1E]/95 shadow-[0_24px_60px_rgba(0,0,0,0.6)]">
+      <div className="flex max-h-[calc(100dvh-7rem)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141414]/95 shadow-[0_24px_60px_rgba(0,0,0,0.6)]">
         <SignUpPanel />
       </div>
     </main>
@@ -45,7 +45,7 @@ function SignupInner() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-[#070A12]" />}>
+    <Suspense fallback={<main className="min-h-screen bg-[#0A0A0A]" />}>
       <SignupInner />
     </Suspense>
   );

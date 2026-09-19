@@ -116,7 +116,7 @@ export function WatchlistPanel() {
                       </span>
                     </span>
 
-                    <ArrowRight className="hidden h-4 w-4 shrink-0 text-ink-muted/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand-blue sm:block" />
+                    <ArrowRight className="hidden h-4 w-4 shrink-0 text-ink-muted/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand-accent sm:block" />
                   </Link>
 
                   <button
@@ -149,7 +149,7 @@ export function WatchlistPanel() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search pairs"
             aria-label="Search pairs"
-            className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pl-9 pr-3 text-[14px] text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-blue/40 focus:shadow-glow"
+            className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pl-9 pr-3 text-[14px] text-ink outline-none transition-all duration-200 placeholder:text-ink-muted/60 focus:border-brand-accent/40 focus:shadow-glow"
           />
         </label>
 
@@ -164,7 +164,7 @@ export function WatchlistPanel() {
                 <button
                   type="button"
                   onClick={() => add(p.symbol)}
-                  className="flex w-full items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3.5 py-3 text-left transition-all duration-200 hover:border-brand-blue/30 hover:bg-brand-blue/[0.06]"
+                  className="flex w-full items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3.5 py-3 text-left transition-all duration-200 hover:border-brand-accent/30 hover:bg-brand-accent/[0.06]"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold text-white">{p.symbol}</span>
@@ -173,7 +173,7 @@ export function WatchlistPanel() {
                   <span className="num-mono shrink-0 text-[13px] text-ink-muted">
                     {p.price.toFixed(p.decimals)}
                   </span>
-                  <Plus className="h-4 w-4 shrink-0 text-brand-blue" strokeWidth={2.4} />
+                  <Plus className="h-4 w-4 shrink-0 text-brand-accent" strokeWidth={2.4} />
                 </button>
               </li>
             ))

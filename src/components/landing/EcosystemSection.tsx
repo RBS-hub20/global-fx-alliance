@@ -27,13 +27,13 @@ export function EcosystemSection() {
               wide ? "lg:col-span-2" : ""
             }`}
           >
-            <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-brand-blue/0 blur-3xl transition-all duration-200 group-hover:bg-brand-blue/20" />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-brand-accent/0 blur-3xl transition-all duration-200 group-hover:bg-brand-accent/20" />
             <div className="relative flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-[15px] font-bold tracking-[0.06em] text-white">{name}</h3>
                 <p className="mt-2 text-[14px] text-ink-muted">{role}</p>
               </div>
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-ink-muted transition-colors duration-200 group-hover:border-brand-blue/30 group-hover:text-brand-blue">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-ink-muted transition-colors duration-200 group-hover:border-brand-accent/30 group-hover:text-brand-accent">
                 <Icon className="h-[19px] w-[19px]" strokeWidth={1.8} />
               </span>
             </div>

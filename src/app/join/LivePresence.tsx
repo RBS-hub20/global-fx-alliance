@@ -25,10 +25,10 @@ export function LivePresence() {
   }, []);
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[#00D094]/30 bg-[#00D094]/[0.08] px-3.5 py-1.5 text-[12px] font-semibold text-[#00D094]">
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#00FF88]/30 bg-[#00FF88]/[0.08] px-3.5 py-1.5 text-[12px] font-semibold text-[#00FF88]">
       <span className="relative flex h-2 w-2" aria-hidden>
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00D094] opacity-70" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00D094]" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00FF88] opacity-70" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00FF88]" />
       </span>
       {online && online > 0
         ? `${online} ${online === 1 ? "member" : "members"} checked in today`

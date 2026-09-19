@@ -81,7 +81,7 @@ const STEPS = [
 
 export default function JoinPage() {
   return (
-    <main className="min-h-screen bg-[#070A12] text-[#E6EAF2]">
+    <main className="min-h-screen bg-[#0A0A0A] text-[#E6EAF2]">
       {/* ------------------------------------------------------------- hero */}
       <section className="relative isolate flex min-h-[62vh] flex-col justify-end overflow-hidden px-5 pb-10 pt-8 sm:min-h-[58vh] sm:px-8 lg:min-h-[64vh]">
         <HeroMedia />
@@ -89,7 +89,7 @@ export default function JoinPage() {
         <div className="relative mx-auto w-full max-w-[760px]">
           <div className="mb-7 flex items-center justify-between gap-4">
             <Logo size={30} />
-            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A93A8]">
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#A3A3A3]">
               47+ countries
             </span>
           </div>
@@ -102,7 +102,7 @@ export default function JoinPage() {
             for forex traders
           </h1>
 
-          <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-[#8A93A8] sm:text-[16px]">
+          <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-[#A3A3A3] sm:text-[16px]">
             See how traders around the world break down XAU/USD, EUR/USD and the majors — every
             session. Charts, a pattern scanner and a chat channel that explains structure rather than
             handing out calls.
@@ -117,12 +117,12 @@ export default function JoinPage() {
             <ul className="space-y-5">
               {BULLETS.map((b) => (
                 <li key={b.title} className="flex gap-3.5">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#2A7FFF]/15 text-[#2A7FFF]">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00FF88]/15 text-[#00FF88]">
                     <Check className="h-3.5 w-3.5" strokeWidth={3} />
                   </span>
                   <span>
                     <span className="block text-[14.5px] font-semibold text-white">{b.title}</span>
-                    <span className="mt-1 block text-[13.5px] leading-relaxed text-[#8A93A8]">{b.body}</span>
+                    <span className="mt-1 block text-[13.5px] leading-relaxed text-[#A3A3A3]">{b.body}</span>
                   </span>
                 </li>
               ))}
@@ -131,17 +131,17 @@ export default function JoinPage() {
 
           <div className="mt-8 flex flex-col items-center gap-3.5 text-center">
             <JoinCta href={TELEGRAM} where="hero" />
-            <p className="text-[12.5px] text-[#8A93A8]">
+            <p className="text-[12.5px] text-[#A3A3A3]">
               Free · Telegram channel · daily breakdowns · leave any time
             </p>
-            <a href="#whats-inside" className="text-[13px] font-medium text-[#2A7FFF] transition-colors hover:text-white">
+            <a href="#whats-inside" className="text-[13px] font-medium text-[#00FF88] transition-colors hover:text-white">
               Or see what is inside first
             </a>
           </div>
 
           {SOCIALS.length ? (
             <div className="mt-9 flex flex-col items-center gap-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A93A8]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#A3A3A3]">
                 Also here
               </span>
               <ul className="flex flex-wrap items-center justify-center gap-2.5">
@@ -154,7 +154,7 @@ export default function JoinPage() {
                       aria-label={`${s.label} (opens in a new tab)`}
                       title={`${s.label} — ${s.handle}`}
                       style={{ ["--brand" as string]: s.color }}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-[#8A93A8] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-[#A3A3A3] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
                     >
                       <BrandIcon id={s.id} className="h-4 w-4" />
                     </a>
@@ -170,7 +170,7 @@ export default function JoinPage() {
       <section id="whats-inside" className="scroll-mt-8 px-5 py-16 sm:px-8">
         <div className="mx-auto w-full max-w-[760px]">
           <h2 className="text-[12px] font-bold uppercase tracking-[0.16em] text-white">What is inside</h2>
-          <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-[#8A93A8]">
+          <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-[#A3A3A3]">
             Three of the tools the community uses daily. All of them read live market data and say
             where that data came from.
           </p>
@@ -178,12 +178,12 @@ export default function JoinPage() {
           <div className="mt-6 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             {INSIDE.map((c) => (
               <div key={c.label} className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#2A7FFF]/25 bg-[#2A7FFF]/10 text-[#2A7FFF]">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#00FF88]/25 bg-[#00FF88]/10 text-[#00FF88]">
                   <c.icon className="h-4 w-4" strokeWidth={1.9} />
                 </span>
                 <p className="mt-3.5 text-[14px] font-semibold text-white">{c.label}</p>
-                <p className="num-mono mt-0.5 text-[11.5px] text-[#8A93A8]">{c.line}</p>
-                <p className="mt-2.5 text-[13px] leading-relaxed text-[#8A93A8]">{c.body}</p>
+                <p className="num-mono mt-0.5 text-[11.5px] text-[#A3A3A3]">{c.line}</p>
+                <p className="mt-2.5 text-[13px] leading-relaxed text-[#A3A3A3]">{c.body}</p>
                 <p className="mt-3 text-[11px] font-medium text-[#fbbf24]/80">{c.note}</p>
               </div>
             ))}
@@ -195,8 +195,8 @@ export default function JoinPage() {
       <section id="who-for" className="scroll-mt-8 border-y border-white/[0.06] bg-white/[0.015] px-5 py-16 sm:px-8">
         <div className="mx-auto grid w-full max-w-[760px] gap-8 sm:grid-cols-2">
           <div>
-            <h2 className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#00D094]">Who it is for</h2>
-            <ul className="mt-4 space-y-2.5 text-[13.5px] leading-relaxed text-[#8A93A8]">
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#00FF88]">Who it is for</h2>
+            <ul className="mt-4 space-y-2.5 text-[13.5px] leading-relaxed text-[#A3A3A3]">
               <li>Traders who want to understand why a level matters, not just be told about it.</li>
               <li>People who will keep a journal and look at their own numbers honestly.</li>
               <li>Anyone who learns faster with other traders in the room.</li>
@@ -204,7 +204,7 @@ export default function JoinPage() {
           </div>
           <div>
             <h2 className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#FF4D4D]">Who it is not for</h2>
-            <ul className="mt-4 space-y-2.5 text-[13.5px] leading-relaxed text-[#8A93A8]">
+            <ul className="mt-4 space-y-2.5 text-[13.5px] leading-relaxed text-[#A3A3A3]">
               <li>Anyone looking for guaranteed signals or a shortcut to profit.</li>
               <li>Anyone expecting someone else to make the decision for them.</li>
               <li>We explain structure. What you do with it is yours.</li>
@@ -222,12 +222,12 @@ export default function JoinPage() {
           <ol className="mt-6 space-y-5">
             {STEPS.map((s) => (
               <li key={s.n} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#2A7FFF]/35 text-[13px] font-bold text-[#2A7FFF]">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#00FF88]/35 text-[13px] font-bold text-[#00FF88]">
                   {s.n}
                 </span>
                 <span>
                   <span className="block text-[14.5px] font-semibold text-white">{s.title}</span>
-                  <span className="mt-1 block text-[13.5px] leading-relaxed text-[#8A93A8]">{s.body}</span>
+                  <span className="mt-1 block text-[13.5px] leading-relaxed text-[#A3A3A3]">{s.body}</span>
                 </span>
               </li>
             ))}
@@ -235,7 +235,7 @@ export default function JoinPage() {
 
           <div className="mt-11 flex flex-col items-center gap-3.5 text-center">
             <JoinCta href={TELEGRAM} where="footer" />
-            <p className="text-[12.5px] text-[#8A93A8]">Free · no spam · leave any time</p>
+            <p className="text-[12.5px] text-[#A3A3A3]">Free · no spam · leave any time</p>
           </div>
         </div>
       </section>
@@ -253,7 +253,7 @@ export default function JoinPage() {
                     rel="noopener noreferrer"
                     aria-label={`${s.label} (opens in a new tab)`}
                     style={{ ["--brand" as string]: s.color }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-[#8A93A8] transition-all duration-200 hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-[#A3A3A3] transition-all duration-200 hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
                   >
                     <BrandIcon id={s.id} className="h-[15px] w-[15px]" />
                   </a>
@@ -262,14 +262,14 @@ export default function JoinPage() {
             </ul>
           ) : null}
 
-          <p className="text-[11px] leading-relaxed text-[#8A93A8]/80">{DISCLAIMER}</p>
+          <p className="text-[11px] leading-relaxed text-[#A3A3A3]/80">{DISCLAIMER}</p>
 
-          <p className="text-[11px] leading-relaxed text-[#8A93A8]/70">
+          <p className="text-[11px] leading-relaxed text-[#A3A3A3]/70">
             This site is not affiliated with, endorsed by, or sponsored by Facebook, Meta Platforms,
             TikTok or YouTube. All trademarks belong to their respective owners.
           </p>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11.5px] text-[#8A93A8]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11.5px] text-[#A3A3A3]">
             <span>© 2026 Global FX Alliance</span>
             <Link href="/" className="transition-colors hover:text-white">Main site</Link>
             <Link href="/links" className="transition-colors hover:text-white">All official channels</Link>

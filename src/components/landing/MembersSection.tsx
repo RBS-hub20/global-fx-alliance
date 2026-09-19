@@ -45,9 +45,9 @@ export function MembersSection() {
         {ITEMS.map((it) => (
           <div
             key={it.n}
-            className="group relative bg-[rgba(16,22,38,0.8)] p-8 transition-colors duration-200 hover:bg-[rgba(23,32,54,0.9)]"
+            className="group relative bg-[rgba(20,20,20,0.8)] p-8 transition-colors duration-200 hover:bg-[rgba(28,28,28,0.9)]"
           >
-            <span className="num-mono block text-[40px] font-bold leading-none text-white/[0.07] transition-colors duration-200 group-hover:text-brand-blue/25">
+            <span className="num-mono block text-[40px] font-bold leading-none text-white/[0.07] transition-colors duration-200 group-hover:text-brand-accent/25">
               {it.n}
             </span>
             <h3 className="mt-5 text-[17px] font-bold tracking-tight text-white">{it.title}</h3>

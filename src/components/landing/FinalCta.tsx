@@ -5,13 +5,13 @@ import { WorldMap } from "@/components/ui/WorldMap";
 export function FinalCta() {
   return (
     <section className="relative isolate overflow-hidden py-28 lg:py-40">
-      <div className="absolute inset-0 -z-30 bg-[radial-gradient(85%_75%_at_50%_50%,rgba(26,68,140,0.42)_0%,rgba(10,25,49,0.18)_45%,transparent_72%)]" />
+      <div className="absolute inset-0 -z-30 bg-[radial-gradient(85%_75%_at_50%_50%,rgba(0,110,60,0.42)_0%,rgba(20,20,20,0.18)_45%,transparent_72%)]" />
       <div className="absolute inset-x-0 top-1/2 -z-20 -translate-y-1/2 opacity-[0.10]">
         <WorldMap density={120} dotOpacity={0.9} className="h-auto w-full" />
       </div>
       <div
         className="orb left-1/2 top-1/2 -z-10 h-[440px] w-[720px] -translate-x-1/2 -translate-y-1/2"
-        style={{ ["--orb" as string]: "rgba(42,127,255,0.22)" }}
+        style={{ ["--orb" as string]: "rgba(0,255,136,0.22)" }}
       />
 
       <div className="relative mx-auto max-w-[1280px] px-5 text-center lg:px-8">

@@ -79,8 +79,8 @@ export function InstallPrompt() {
   if (gone || (!deferred && !iosHint)) return null;
 
   return (
-    <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-brand-blue/25 bg-brand-blue/[0.06] px-4 py-3 pr-10">
-      <Smartphone className="h-4 w-4 shrink-0 text-brand-blue" strokeWidth={2} />
+    <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-brand-accent/25 bg-brand-accent/[0.06] px-4 py-3 pr-10">
+      <Smartphone className="h-4 w-4 shrink-0 text-brand-accent" strokeWidth={2} />
       <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink">
         <span className="font-semibold text-white">Add GFXA to your home screen.</span>{" "}
         {iosHint ? (

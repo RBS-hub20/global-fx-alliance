@@ -33,8 +33,8 @@ const TONE = {
     pill: "bg-white/[0.08] text-white",
     pillNeg: "bg-brand-danger/[0.12] text-brand-danger",
     strong: "text-white",
-    code: "bg-brand-blue/10 text-brand-blue",
-    bullet: "bg-brand-blue",
+    code: "bg-brand-accent/10 text-brand-accent",
+    bullet: "bg-brand-accent",
     rule: "bg-white/10",
   },
   terminal: {

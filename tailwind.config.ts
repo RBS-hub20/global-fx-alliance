@@ -5,23 +5,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Kept under the old name so existing classes keep working, but the
+        // values are the terminal neutrals now — the navy blues are gone.
         navy: {
-          950: "#070A12",
-          900: "#0A1931",
-          880: "#0B1426",
-          860: "#101626",
-          850: "#080C18",
-          800: "#143D7A",
+          950: "#0A0A0A",
+          900: "#141414",
+          880: "#111111",
+          860: "#141414",
+          850: "#0D0D0D",
+          800: "#262626",
         },
         brand: {
+          /** GFXA COMMUNITY green — the one accent. */
+          accent: "#00FF88",
+          /** Only the member avatar still uses this; it is identity, not brand. */
           blue: "#2A7FFF",
-          green: "#00D094",
+          green: "#00FF88",
           danger: "#FF4D4D",
           silver: "#C0C5CE",
         },
         ink: {
-          DEFAULT: "#E6EAF2",
-          muted: "#8A93A8",
+          DEFAULT: "#E5E5E5",
+          muted: "#A3A3A3",
         },
         hair: "rgba(255,255,255,0.08)",
       },
@@ -33,13 +38,13 @@ const config: Config = {
         kicker: "0.2em",
       },
       boxShadow: {
-        glow: "0 0 40px rgba(42,127,255,0.15)",
-        "glow-lg": "0 0 80px rgba(42,127,255,0.22)",
-        "glow-green": "0 0 40px rgba(0,208,148,0.18)",
+        glow: "0 0 40px rgba(0,255,136,0.12)",
+        "glow-lg": "0 0 80px rgba(0,255,136,0.18)",
+        "glow-green": "0 0 40px rgba(0,255,136,0.18)",
       },
       backgroundImage: {
-        "navy-fade": "linear-gradient(180deg,#070A12 0%,#0A1931 100%)",
-        "membership": "linear-gradient(135deg,#0A1931 0%,#143D7A 100%)",
+        "navy-fade": "linear-gradient(180deg,#0A0A0A 0%,#0A0A0A 100%)",
+        "membership": "linear-gradient(135deg,#141414 0%,#0F1F17 100%)",
       },
       keyframes: {
         pulseRing: {

@@ -90,12 +90,12 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   /*
-   * The page background, not an accent. The brief asked for #00d4ff, but this is
+   * The page background, not an accent. The brief asked for #00ff88, but this is
    * the colour iOS and Android paint the status bar and task switcher with — an
    * accent there frames a dark app in bright cyan. The locked accent is
-   * #2A7FFF and it stays on the interface where it belongs.
+   * #00FF88 and it stays on the interface where it belongs.
    */
-  themeColor: "#070A12",
+  themeColor: "#0A0A0A",
   colorScheme: "dark",
   // Respects the notch so `black-translucent` does not hide content behind it.
   viewportFit: "cover",

@@ -19,10 +19,10 @@ export function Logo({ size = 34, tagline = false, wordmarkClass = "text-[15px]"
       <LogoMark width={size} height={size} className="shrink-0" title="GLOBAL FX ALLIANCE" />
       <span className="flex flex-col justify-center leading-none">
         <span className={`font-bold tracking-[-0.015em] ${wordmarkClass}`}>
-          <span className="bg-gradient-to-b from-white via-[#C7CDD8] to-[#848D9F] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-b from-white via-[#C7CDD8] to-[#8A8A8A] bg-clip-text text-transparent">
             GLOBAL FX
           </span>{" "}
-          <span className="bg-gradient-to-b from-[#6FB0FF] via-[#2A7FFF] to-[#1B5FD0] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-b from-[#66FFB8] via-[#00FF88] to-[#00CC6E] bg-clip-text text-transparent">
             ALLIANCE
           </span>
         </span>

@@ -114,7 +114,7 @@ export function CommunityLevels({ pair, decimals }: { pair: string; decimals: nu
                     type="button"
                     onClick={() => void toggleLevelVote(l)}
                     className={`inline-flex shrink-0 items-center gap-1 rounded border px-2 py-1 text-[11px] transition-colors ${
-                      l.voted ? "border-brand-blue/50 bg-brand-blue/[0.14] text-brand-blue" : "border-white/[0.1] text-ink-muted hover:text-ink"
+                      l.voted ? "border-brand-accent/50 bg-brand-accent/[0.14] text-brand-accent" : "border-white/[0.1] text-ink-muted hover:text-ink"
                     }`}
                   >
                     <ThumbsUp className="h-3 w-3" strokeWidth={2} />
@@ -139,20 +139,20 @@ export function CommunityLevels({ pair, decimals }: { pair: string; decimals: nu
               onChange={(e) => setNewPrice(e.target.value)}
               inputMode="decimal"
               placeholder="price"
-              className="num-mono w-[110px] rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue/50"
+              className="num-mono w-[110px] rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-accent/50"
             />
             <input
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               maxLength={140}
               placeholder="why does it matter?"
-              className="min-w-[140px] flex-1 rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue/50"
+              className="min-w-[140px] flex-1 rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-accent/50"
             />
             <button
               type="button"
               disabled={busy || !newPrice}
               onClick={() => void propose()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-blue/40 px-3 py-2 text-[12px] font-semibold text-brand-blue transition-colors hover:bg-brand-blue/10 disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-accent/40 px-3 py-2 text-[12px] font-semibold text-brand-accent transition-colors hover:bg-brand-accent/10 disabled:opacity-40"
             >
               <Plus className="h-3.5 w-3.5" strokeWidth={2.2} />
               Post

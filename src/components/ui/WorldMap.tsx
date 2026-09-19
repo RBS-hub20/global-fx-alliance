@@ -34,13 +34,13 @@ export function WorldMap({ density = 150, dotOpacity = 0.5, hubs = false, fit = 
           <stop offset="100%" stopColor="#4ADFC0" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="wm-arc" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#2A7FFF" stopOpacity="0.05" />
-          <stop offset="50%" stopColor="#5AA6FF" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#2A7FFF" stopOpacity="0.05" />
+          <stop offset="0%" stopColor="#00FF88" stopOpacity="0.05" />
+          <stop offset="50%" stopColor="#4DFFA6" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#00FF88" stopOpacity="0.05" />
         </linearGradient>
       </defs>
 
-      <path d={d} fill="#2A7FFF" opacity={dotOpacity} />
+      <path d={d} fill="#00FF88" opacity={dotOpacity} />
 
       {hubs ? (
         <>

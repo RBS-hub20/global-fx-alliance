@@ -71,9 +71,9 @@ export function TickerTape() {
   const strip = [...ticks, ...ticks];
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#070A12]">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#070A12] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[#070A12] to-transparent" />
+    <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0A]">
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#0A0A0A] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[#0A0A0A] to-transparent" />
 
       <div className="flex w-max animate-ticker items-center gap-6 py-2.5 will-change-transform hover:[animation-play-state:paused]">
         {strip.map((t, i) => {
@@ -98,7 +98,7 @@ export function TickerTape() {
       </div>
 
       <div className="absolute right-2 top-1/2 z-20 -translate-y-1/2">
-        <span className="rounded-full border border-white/[0.08] bg-[#070A12] px-2 py-0.5 text-[9.5px] uppercase tracking-[0.12em] text-ink-muted">
+        <span className="rounded-full border border-white/[0.08] bg-[#0A0A0A] px-2 py-0.5 text-[9.5px] uppercase tracking-[0.12em] text-ink-muted">
           {ticks.some((t) => t.live) ? "Live" : "Modeled"}
           {updated ? ` ${updated}` : ""}
         </span>

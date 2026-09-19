@@ -204,7 +204,7 @@ export function CalendarPanel() {
                   className={`cursor-pointer px-4 py-3.5 transition-colors duration-200 active:bg-white/[0.04] ${
                     spent ? "opacity-55" : ""
                   } ${hot ? "bg-brand-danger/[0.05] shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-danger" : ""} ${
-                    !hot && e.id === nextHighId ? "shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-blue/70" : ""
+                    !hot && e.id === nextHighId ? "shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-accent/70" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export function CalendarPanel() {
                     className={`cursor-pointer transition-colors duration-200 hover:bg-white/[0.03] ${
                       spent ? "opacity-55" : ""
                     } ${hot ? "bg-brand-danger/[0.05] shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-danger" : ""} ${
-                      !hot && e.id === nextHighId ? "shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-blue/70" : ""
+                      !hot && e.id === nextHighId ? "shadow-[inset_2px_0_0_0_var(--tw-shadow-color)] shadow-brand-accent/70" : ""
                     }`}
                   >
                     <td className="num-mono whitespace-nowrap px-4 py-3.5 text-[13px] font-semibold text-ink">
@@ -379,7 +379,7 @@ export function CalendarPanel() {
             <p className="mt-5 flex items-center gap-2 border-t border-white/[0.08] pt-4 text-[12px] text-ink-muted">
               <CalendarDays className="h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
               {open.affects ? (
-                <>Most relevant to <span className="font-semibold text-brand-blue">{open.affects}</span></>
+                <>Most relevant to <span className="font-semibold text-brand-accent">{open.affects}</span></>
               ) : (
                 <>Schedule from the live feed. Forecast and previous are published; the actual is not — check the release itself.</>
               )}

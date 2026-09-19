@@ -149,8 +149,8 @@ export const SESSIONS: Session[] = [
 ];
 
 export const SENTIMENT = [
-  { label: "Bullish", value: 62, color: "#00D094" },
-  { label: "Neutral", value: 23, color: "#8A93A8" },
+  { label: "Bullish", value: 62, color: "#00FF88" },
+  { label: "Neutral", value: 23, color: "#A3A3A3" },
   { label: "Bearish", value: 15, color: "#FF4D4D" },
 ];
 

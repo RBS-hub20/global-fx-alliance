@@ -3,7 +3,7 @@ import { ArrowRight, BookOpen, Clock, GraduationCap } from "lucide-react";
 import { COURSES, type Course } from "@/lib/data";
 
 const LEVEL_STYLE: Record<Course["level"], string> = {
-  Foundation: "bg-brand-blue/[0.13] text-brand-blue",
+  Foundation: "bg-brand-accent/[0.13] text-brand-accent",
   Intermediate: "bg-[#FFB020]/[0.13] text-[#FFB020]",
   Advanced: "bg-brand-green/[0.13] text-brand-green",
 };
@@ -27,7 +27,7 @@ export function AcademyPreview() {
           {COURSES.map((c, i) => (
             <article key={c.title} className="group flex flex-col rounded-2xl glass card-hover p-7">
               <div className="flex items-center justify-between gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-blue/25 bg-brand-blue/10 text-brand-blue">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
                   <GraduationCap className="h-[22px] w-[22px]" strokeWidth={1.8} />
                 </span>
                 <span

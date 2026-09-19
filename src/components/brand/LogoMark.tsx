@@ -37,29 +37,29 @@ export function LogoDefs() {
     <svg width="0" height="0" aria-hidden className="absolute" focusable="false">
       <defs>
         <radialGradient id="gfxa-globe" cx="34%" cy="26%" r="82%">
-          <stop offset="0%" stopColor="#3B8FFF" />
-          <stop offset="30%" stopColor="#1655BE" />
-          <stop offset="66%" stopColor="#0A2A5F" />
+          <stop offset="0%" stopColor="#00FF88" />
+          <stop offset="30%" stopColor="#00B862" />
+          <stop offset="66%" stopColor="#0F2419" />
           <stop offset="100%" stopColor="#050D1E" />
         </radialGradient>
         <radialGradient id="gfxa-sheen" cx="30%" cy="20%" r="55%">
-          <stop offset="0%" stopColor="#BFDCFF" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#BFDCFF" stopOpacity="0" />
+          <stop offset="0%" stopColor="#C4FFE3" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#C4FFE3" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="gfxa-ring-back" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#0B2B5E" />
-          <stop offset="45%" stopColor="#1E5FCC" />
-          <stop offset="100%" stopColor="#2A7FFF" />
+          <stop offset="0%" stopColor="#0F2419" />
+          <stop offset="45%" stopColor="#00CC6E" />
+          <stop offset="100%" stopColor="#00FF88" />
         </linearGradient>
         <linearGradient id="gfxa-ring-front" x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2A7FFF" />
+          <stop offset="0%" stopColor="#00FF88" />
           <stop offset="26%" stopColor="#DCE4EF" />
           <stop offset="55%" stopColor="#F6F9FD" />
-          <stop offset="100%" stopColor="#7E8CA3" />
+          <stop offset="100%" stopColor="#8A8A8A" />
         </linearGradient>
         <linearGradient id="gfxa-green" x1="0" y1="1" x2="0" y2="0">
           <stop offset="0%" stopColor="#009C70" />
-          <stop offset="50%" stopColor="#00D094" />
+          <stop offset="50%" stopColor="#00FF88" />
           <stop offset="100%" stopColor="#8CF3C0" />
         </linearGradient>
         <linearGradient id="gfxa-silver" x1="0" y1="1" x2="0" y2="0">
@@ -68,7 +68,7 @@ export function LogoDefs() {
         </linearGradient>
         <linearGradient id="gfxa-star" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#9AA5B6" />
+          <stop offset="100%" stopColor="#A8A8A8" />
         </linearGradient>
         <clipPath id="gfxa-globe-clip">
           <circle cx="29" cy="32" r="17.5" />
@@ -108,7 +108,7 @@ export function LogoMark({
       <circle cx="29" cy="32" r="17.5" fill={U.globe} />
       <g clipPath={U.clip}>
         {/* graticule */}
-        <g stroke="#8FC2FF" fill="none" opacity="0.22">
+        <g stroke="#8CFFC8" fill="none" opacity="0.22">
           <ellipse cx="29" cy="32" rx="17.5" ry="6" strokeWidth="0.45" />
           <ellipse cx="29" cy="32" rx="17.5" ry="12.6" strokeWidth="0.4" />
           <ellipse cx="29" cy="32" rx="6" ry="17.5" strokeWidth="0.45" />
@@ -141,7 +141,7 @@ export function LogoMark({
               width="0.8"
               height={wb - wt}
               rx="0.4"
-              fill={green ? "#00D094" : "#AEB7C6"}
+              fill={green ? "#00FF88" : "#AEB7C6"}
             />
             <rect
               x={x}
@@ -179,7 +179,7 @@ export function LogoMark({
       />
       <path
         d="M50 9.4 50.7 11.5 52.9 11.6 51.1 13 51.8 15.1 50 13.8 48.2 15.1 48.9 13 47.1 11.6 49.3 11.5Z"
-        fill="#9BA5B5"
+        fill="#A8A8A8"
       />
     </svg>
   );

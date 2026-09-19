@@ -255,7 +255,7 @@ export function ChartSnapPanel() {
         title="Chart Snap Analyzer"
         action={
           result ? (
-            <button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11.5px] text-ink-muted transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+            <button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11.5px] text-ink-muted transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
               <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.9} />
               New analysis
             </button>
@@ -275,8 +275,8 @@ export function ChartSnapPanel() {
             aria-pressed={mode === m}
             className={`flex flex-col items-start rounded-xl border px-4 py-2.5 text-left transition-all duration-200 ${
               mode === m
-                ? "border-brand-blue/50 bg-brand-blue/[0.12] text-white"
-                : "border-white/[0.08] bg-white/[0.02] text-ink-muted hover:border-brand-blue/30 hover:text-ink"
+                ? "border-brand-accent/50 bg-brand-accent/[0.12] text-white"
+                : "border-white/[0.08] bg-white/[0.02] text-ink-muted hover:border-brand-accent/30 hover:text-ink"
             }`}
           >
             <span className="text-[12.5px] font-semibold">{label}</span>
@@ -285,8 +285,8 @@ export function ChartSnapPanel() {
         ))}
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-brand-blue/25 bg-brand-blue/[0.05] px-4 py-3.5">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-blue" strokeWidth={2} />
+      <div className="flex items-start gap-3 rounded-xl border border-brand-accent/25 bg-brand-accent/[0.05] px-4 py-3.5">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" strokeWidth={2} />
         <p className="text-[12.5px] leading-relaxed text-ink">
           {mode === "live" ? (
             <>
@@ -322,7 +322,7 @@ export function ChartSnapPanel() {
             onDragLeave={() => setDragging(false)}
             onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) takeFile(f); }}
             className={`relative overflow-hidden rounded-2xl border border-dashed transition-all duration-200 ${
-              dragging ? "border-brand-blue/60 bg-brand-blue/[0.06]" : "border-white/[0.12] bg-white/[0.02]"
+              dragging ? "border-brand-accent/60 bg-brand-accent/[0.06]" : "border-white/[0.12] bg-white/[0.02]"
             }`}
           >
             {preview ? (
@@ -345,7 +345,7 @@ export function ChartSnapPanel() {
               </div>
             ) : (
               <div className="p-8 text-center">
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-brand-blue/25 bg-brand-blue/10 text-brand-blue">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
                   <Camera className="h-5 w-5" strokeWidth={1.8} />
                 </span>
                 <p className="mt-4 text-[14px] font-semibold text-white">Screenshot your chart</p>
@@ -427,7 +427,7 @@ export function ChartSnapPanel() {
                 type="checkbox"
                 checked={autoOnClose}
                 onChange={(e) => setAutoOnClose(e.target.checked)}
-                className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#2A7FFF]"
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#00FF88]"
               />
               <span>
                 Re-analyze when a {timeframe} candle closes. Refreshes the structure only — the written
@@ -460,7 +460,7 @@ export function ChartSnapPanel() {
                   <li key={s} className="flex items-center gap-3 text-[12.5px]">
                     <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                       i < step ? "border-brand-green/50 bg-brand-green/15 text-brand-green" :
-                      i === step ? "border-brand-blue/50 bg-brand-blue/15 text-brand-blue" :
+                      i === step ? "border-brand-accent/50 bg-brand-accent/15 text-brand-accent" :
                       "border-white/[0.1] text-transparent"
                     }`}>
                       {i < step ? <Check className="h-3 w-3" strokeWidth={3} /> : i === step ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
@@ -540,7 +540,7 @@ function LiveChartCard({
           href={tradingViewUrl(symbol, timeframe)}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto text-[11px] text-ink-muted underline-offset-2 transition-colors hover:text-brand-blue hover:underline"
+          className="ml-auto text-[11px] text-ink-muted underline-offset-2 transition-colors hover:text-brand-accent hover:underline"
         >
           Cross-check on TradingView
         </a>
@@ -618,7 +618,7 @@ function StructureCard({
         <ul className="space-y-2">
           {r.observations.map((o, i) => (
             <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-ink-muted">
-              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-blue" aria-hidden />
+              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-accent" aria-hidden />
               <span>{o}</span>
             </li>
           ))}
@@ -642,7 +642,7 @@ function StructureCard({
           <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /></div>
         ) : explainer ? (
           <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-4">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-brand-accent">
               Bakit ganito ang basa
             </p>
             <FormattedAI text={explainer} />
@@ -674,7 +674,7 @@ function ProfileCard({
             aria-checked={profile.useProfile}
             aria-label="Use trade profile in analysis"
             className={`relative h-5 w-9 rounded-full border transition-all duration-200 ${
-              profile.useProfile ? "border-brand-blue/50 bg-brand-blue/70" : "border-white/[0.1] bg-white/[0.06]"
+              profile.useProfile ? "border-brand-accent/50 bg-brand-accent/70" : "border-white/[0.1] bg-white/[0.06]"
             }`}
           >
             <span className={`absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-white transition-all duration-200 ${profile.useProfile ? "left-[19px]" : "left-[3px]"}`} />
@@ -762,7 +762,7 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
   };
 
   return (
-    <Card className="border-brand-blue/25">
+    <Card className="border-brand-accent/25">
       <CardHead
         title="Trade Plan"
         right={
@@ -848,7 +848,7 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
             { k: "Invalidation", v: `${f(p.stopLoss)} · ${p.stopPips}p`, tone: "text-brand-danger" },
             { k: `Target 1 (${p.rr1})`, v: f(p.target1), tone: "text-brand-green" },
             { k: `Target 2 (${p.rr2})`, v: f(p.target2), tone: "text-brand-green" },
-            { k: "Size", v: `${p.lots} lots · $${p.riskUsd} (${p.riskPctOfBalance}%)`, tone: "text-brand-blue" },
+            { k: "Size", v: `${p.lots} lots · $${p.riskUsd} (${p.riskPctOfBalance}%)`, tone: "text-brand-accent" },
           ].map((r) => (
             <div key={r.k} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
               <dt className="text-ink-muted">{r.k}</dt>
@@ -909,23 +909,23 @@ function PlanCard({ a, onToast }: { a: Analysis; onToast: (m: string) => void })
                 onToast("Plan copied");
               } catch { onToast("Copy failed — select the text manually"); }
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white"
           >
             <Copy className="h-3.5 w-3.5" strokeWidth={2} />
             Copy plan
           </button>
           ) : null}
-          <Link href={tabHref("market-analysis", a.symbol)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+          <Link href={tabHref("market-analysis", a.symbol)} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
             View on chart
           </Link>
-          <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white">
+          <Link href={tabHref("journal-analytics")} className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white">
             Check journal
           </Link>
           {p ? (
           <button
             type="button"
             onClick={share}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-blue/40 hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-ink transition-all duration-200 hover:border-brand-accent/40 hover:text-white"
           >
             <Share2 className="h-3.5 w-3.5" strokeWidth={2} />
             Share to community

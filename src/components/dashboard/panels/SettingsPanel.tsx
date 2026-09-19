@@ -114,7 +114,7 @@ export function SettingsPanel() {
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">Theme</p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-brand-blue/40 bg-brand-blue/[0.08] p-4 shadow-glow">
+                  <div className="rounded-lg border border-brand-accent/40 bg-brand-accent/[0.08] p-4 shadow-glow">
                     <p className="text-[13px] font-semibold text-white">Dark</p>
                     <p className="mt-1 text-[11.5px] text-ink-muted">Deep navy — the only theme</p>
                   </div>
@@ -129,8 +129,8 @@ export function SettingsPanel() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">Accent colour</p>
                 <div className="mt-3 flex gap-3">
                   {([
-                    { key: "blue" as const, label: "Electric Blue", hex: "#2A7FFF" },
-                    { key: "green" as const, label: "Trading Green", hex: "#00D094" },
+                    { key: "blue" as const, label: "Electric Blue", hex: "#00FF88" },
+                    { key: "green" as const, label: "Trading Green", hex: "#00FF88" },
                   ]).map((a) => (
                     <button
                       key={a.key}

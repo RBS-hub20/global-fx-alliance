@@ -65,7 +65,7 @@ export function DashboardApp() {
               type="button"
               onClick={() => setDrawer(false)}
               aria-label="Close navigation"
-              className="ml-3 mt-4 flex h-10 w-10 items-center justify-center self-start rounded-lg border border-white/10 bg-[rgba(16,22,38,0.9)] text-ink"
+              className="ml-3 mt-4 flex h-10 w-10 items-center justify-center self-start rounded-lg border border-white/10 bg-[rgba(20,20,20,0.9)] text-ink"
             >
               <X className="h-5 w-5" />
             </button>

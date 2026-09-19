@@ -40,8 +40,8 @@ export function MembershipPanel() {
       <PanelHeader title="Membership" />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_1fr]">
-        <section className="relative overflow-hidden rounded-2xl border border-brand-blue/30 bg-membership shadow-glow">
-          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-blue/25 blur-3xl" />
+        <section className="relative overflow-hidden rounded-2xl border border-brand-accent/30 bg-membership shadow-glow">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-accent/25 blur-3xl" />
           <div className="relative p-7">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -70,8 +70,8 @@ export function MembershipPanel() {
             <ul className="mt-7 space-y-3">
               {MEMBERSHIP_BENEFITS.map((b) => (
                 <li key={b} className="flex items-center gap-3 text-[13.5px] text-ink">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-blue/20">
-                    <Check className="h-3 w-3 text-brand-blue" strokeWidth={3} />
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-accent/20">
+                    <Check className="h-3 w-3 text-brand-accent" strokeWidth={3} />
                   </span>
                   {b}
                 </li>
@@ -106,7 +106,7 @@ export function MembershipPanel() {
                 <button
                   type="button"
                   onClick={copy}
-                  className="shrink-0 rounded-lg bg-brand-blue px-3 py-2 text-[12px] font-semibold text-white transition-all duration-200 hover:bg-[#4A93FF] hover:shadow-glow active:scale-95"
+                  className="shrink-0 rounded-lg bg-brand-accent px-3 py-2 font-mono text-[12px] font-bold text-[#0a0a0a] transition-all duration-200 hover:bg-[#33FFA0] hover:shadow-glow active:scale-95"
                 >
                   Copy
                 </button>

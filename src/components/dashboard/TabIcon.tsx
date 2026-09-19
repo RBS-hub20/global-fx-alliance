@@ -4,7 +4,7 @@ import type { TabDef } from "@/lib/tabs";
 /**
  * The AI tab carries the brand mark; every other tab uses its lucide glyph.
  *
- * `onFilled` is for the sidebar's active row, which is solid brand-blue — the
+ * `onFilled` is for the sidebar's active row, which is solid brand-accent — the
  * mark's own blue gradient nearly disappears against it, so there it falls back
  * to a flat white silhouette and matches the weight of the other nineteen icons.
  */

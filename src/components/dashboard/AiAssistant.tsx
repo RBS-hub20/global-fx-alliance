@@ -9,13 +9,13 @@ export function AiAssistant() {
   const [value, setValue] = useState("");
 
   return (
-    <section id="ai-assistant" className="relative overflow-hidden rounded-2xl border border-brand-blue/25 bg-[rgba(10,17,32,0.9)] shadow-glow backdrop-blur-xl">
-      <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-brand-blue/20 blur-3xl" />
+    <section id="ai-assistant" className="relative overflow-hidden rounded-2xl border border-brand-accent/25 bg-[rgba(10,17,32,0.9)] shadow-glow backdrop-blur-xl">
+      <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-brand-accent/20 blur-3xl" />
 
       <div className="relative p-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-blue/30 bg-brand-blue/10 text-brand-blue">
-            <AiMark width={17} height={17} title="GFXA AI" className="drop-shadow-[0_0_6px_rgba(0,217,255,0.5)]" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-accent/30 bg-brand-accent/10 text-brand-accent">
+            <AiMark width={17} height={17} title="GFXA AI" className="drop-shadow-[0_0_6px_rgba(0,255,136,0.5)]" />
           </span>
           <h2 className="text-[12px] font-bold uppercase tracking-[0.14em] text-white">
             GFXA AI Market Assistant
@@ -33,7 +33,7 @@ export function AiAssistant() {
             setValue("");
           }}
         >
-          <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1.5 backdrop-blur-xl transition-colors duration-200 focus-within:border-brand-blue/40">
+          <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1.5 backdrop-blur-xl transition-colors duration-200 focus-within:border-brand-accent/40">
             <input
               value={value}
               onChange={(e) => setValue(e.target.value)}
@@ -44,7 +44,7 @@ export function AiAssistant() {
             <button
               type="submit"
               aria-label="Send"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-blue text-white transition-all duration-200 hover:bg-[#4A93FF] active:scale-95"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-accent text-[#0a0a0a] transition-all duration-200 hover:bg-[#33FFA0] active:scale-95"
             >
               <ArrowUp className="h-4 w-4" strokeWidth={2.4} />
             </button>
@@ -57,7 +57,7 @@ export function AiAssistant() {
               key={c}
               type="button"
               onClick={() => setValue(c)}
-              className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-left text-[12px] text-ink-muted transition-all duration-200 hover:border-brand-blue/30 hover:bg-brand-blue/[0.08] hover:text-ink"
+              className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-left text-[12px] text-ink-muted transition-all duration-200 hover:border-brand-accent/30 hover:bg-brand-accent/[0.08] hover:text-ink"
             >
               {c}
             </button>

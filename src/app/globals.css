@@ -4,10 +4,10 @@
 
 :root {
   color-scheme: dark;
-  --navy-950: #070a12;
-  --navy-900: #0a1931;
-  --blue: #2a7fff;
-  --green: #00d094;
+  --navy-950: #0a0a0a;
+  --navy-900: #141414;
+  --accent: #00ff88;
+  --green: #00ff88;
   --danger: #ff4d4d;
   --hair: rgba(255, 255, 255, 0.08);
 }
@@ -29,13 +29,14 @@
 
   body {
     @apply bg-navy-950 text-ink antialiased;
-    background-image: linear-gradient(180deg, #070a12 0%, #0a1931 100%);
-    background-attachment: fixed;
+    /* Flat terminal black. The navy gradient that used to sit here tinted every
+       page blue from behind, whatever colour the page itself asked for. */
+    background-color: #0a0a0a;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   }
 
   ::selection {
-    background: rgba(42, 127, 255, 0.3);
+    background: rgba(0, 255, 136, 0.28);
     color: #fff;
   }
 
@@ -44,35 +45,35 @@
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: #070a12;
+    background: #0a0a0a;
   }
   ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.09);
     border-radius: 999px;
-    border: 2px solid #070a12;
+    border: 2px solid #0a0a0a;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(42, 127, 255, 0.45);
+    background: rgba(0, 255, 136, 0.45);
   }
 }
 
 @layer components {
   .glass {
-    background: rgba(16, 22, 38, 0.8);
+    background: rgba(20, 20, 20, 0.85);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .glass-soft {
-    background: rgba(16, 22, 38, 0.55);
+    background: rgba(20, 20, 20, 0.6);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .kicker {
-    @apply text-[12px] font-semibold uppercase tracking-kicker text-brand-blue;
+    @apply text-[12px] font-semibold uppercase tracking-kicker text-brand-accent;
   }
 
   .headline {
@@ -91,7 +92,13 @@
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-blue px-6 py-3 text-sm font-semibold tracking-tight text-white transition-all duration-200 hover:bg-[#4A93FF] hover:shadow-glow active:scale-[0.98];
+    /* Black on green: white text on #00ff88 fails contrast outright. */
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-accent px-6 py-3 font-mono text-sm font-bold tracking-tight text-[#0a0a0a] transition-all duration-200 hover:bg-[#33ffa0] hover:shadow-glow active:scale-[0.98];
+  }
+
+  /* Green outline — the secondary call to action beside .btn-primary. */
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-brand-accent bg-[#141414] px-6 py-3 font-mono text-sm font-bold tracking-tight text-brand-accent transition-all duration-200 hover:bg-brand-accent/10 active:scale-[0.98];
   }
 
   .btn-ghost {
@@ -99,7 +106,7 @@
   }
 
   .card-hover {
-    @apply transition-all duration-200 hover:-translate-y-1 hover:border-brand-blue/30 hover:shadow-glow;
+    @apply transition-all duration-200 hover:-translate-y-1 hover:border-brand-accent/30 hover:shadow-glow;
   }
 
   .num-mono {

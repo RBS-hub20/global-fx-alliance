@@ -6,12 +6,12 @@ export function GlobalCommunity() {
     <section id="global-community" className="relative overflow-hidden py-24 lg:py-32">
       <div
         className="orb left-[18%] top-1/2 h-[380px] w-[380px] -translate-y-1/2"
-        style={{ ["--orb" as string]: "rgba(42,127,255,0.16)" }}
+        style={{ ["--orb" as string]: "rgba(0,255,136,0.16)" }}
       />
       <div className="relative mx-auto max-w-[1280px] px-5 lg:px-8">
         <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[3fr_2fr] lg:gap-16">
           <div className="relative">
-            <div className="pointer-events-none absolute inset-0 -z-10 rounded-[28px] bg-[radial-gradient(60%_60%_at_50%_50%,rgba(42,127,255,0.12),transparent_70%)]" />
+            <div className="pointer-events-none absolute inset-0 -z-10 rounded-[28px] bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,255,136,0.12),transparent_70%)]" />
             <WorldMap density={132} dotOpacity={0.38} hubs className="h-auto w-full" />
           </div>
 

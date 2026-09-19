@@ -81,7 +81,7 @@ export function ChallengesPanel() {
                         <Award className="h-3 w-3" strokeWidth={2} />
                         Prize
                       </dt>
-                      <dd className="num-mono mt-1.5 text-[14px] font-bold text-brand-blue">{c.prize}</dd>
+                      <dd className="num-mono mt-1.5 text-[14px] font-bold text-brand-accent">{c.prize}</dd>
                     </div>
                     <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3">
                       <dt className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.1em] text-ink-muted">
@@ -105,7 +105,7 @@ export function ChallengesPanel() {
                     className={`mt-5 flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-[13px] font-semibold transition-all duration-200 active:scale-[0.98] ${
                       isIn
                         ? "border border-brand-green/40 bg-brand-green/[0.12] text-brand-green"
-                        : "bg-brand-blue text-white hover:bg-[#4A93FF] hover:shadow-glow"
+                        : "bg-brand-accent text-[#0a0a0a] hover:bg-[#33FFA0] hover:shadow-glow"
                     }`}
                   >
                     {isIn ? (
@@ -131,7 +131,7 @@ export function ChallengesPanel() {
                           <span aria-hidden className="mr-1.5">{l.flag}</span>
                           {l.name}
                         </span>
-                        <span className="num-mono shrink-0 text-[13px] font-semibold text-brand-blue">
+                        <span className="num-mono shrink-0 text-[13px] font-semibold text-brand-accent">
                           {l.score}
                         </span>
                       </li>

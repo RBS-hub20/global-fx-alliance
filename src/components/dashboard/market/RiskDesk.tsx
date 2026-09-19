@@ -63,7 +63,7 @@ export function RiskDesk({
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.06]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-brand-blue to-brand-green transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-green transition-all duration-500"
               style={{ width: `${gauge ?? 0}%` }}
             />
           </div>
@@ -91,7 +91,7 @@ export function RiskDesk({
                 aria-pressed={m === mult}
                 className={`flex-1 rounded border px-2 py-1.5 text-[11.5px] font-semibold transition-colors ${
                   m === mult
-                    ? "border-brand-blue/50 bg-brand-blue/[0.14] text-brand-blue"
+                    ? "border-brand-accent/50 bg-brand-accent/[0.14] text-brand-accent"
                     : "border-white/[0.08] text-ink-muted hover:text-ink"
                 }`}
               >
@@ -110,7 +110,7 @@ export function RiskDesk({
               min={0}
               value={balance}
               onChange={(e) => setBalance(Math.max(0, Number(e.target.value) || 0))}
-              className="num-mono rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[13px] text-ink outline-none focus:border-brand-blue/50"
+              className="num-mono rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[13px] text-ink outline-none focus:border-brand-accent/50"
             />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -122,7 +122,7 @@ export function RiskDesk({
               step={0.25}
               value={riskPct}
               onChange={(e) => setRiskPct(Number(e.target.value))}
-              className="mt-2 w-full accent-[#2D6BFF]"
+              className="mt-2 w-full accent-[#00FF88]"
             />
           </label>
         </div>

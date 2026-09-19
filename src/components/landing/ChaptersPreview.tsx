@@ -40,7 +40,7 @@ export function ChaptersPreview() {
 
               <Link
                 href={`/dashboard?ref=chapter-${c.code.toLowerCase()}`}
-                className="mt-6 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-4 py-2.5 text-[12.5px] font-semibold text-ink transition-all duration-200 group-hover:border-brand-blue/40 group-hover:bg-brand-blue/[0.1] group-hover:text-white"
+                className="mt-6 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-4 py-2.5 text-[12.5px] font-semibold text-ink transition-all duration-200 group-hover:border-brand-accent/40 group-hover:bg-brand-accent/[0.1] group-hover:text-white"
               >
                 Join Chapter
                 <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />

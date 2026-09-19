@@ -109,7 +109,7 @@ export function GfxaChat() {
         ) : (
           posts.map((p) => (
             <div key={p.id} className="flex gap-2.5 text-[12.5px] leading-relaxed">
-              <span className="num-mono shrink-0 text-brand-blue">{p.handle}</span>
+              <span className="num-mono shrink-0 text-brand-accent">{p.handle}</span>
               <span className="min-w-0 flex-1 text-ink-muted">{p.message}</span>
               <span className="shrink-0 text-[10.5px] text-ink-muted/60">{ago(p.createdAt)}</span>
             </div>
@@ -119,7 +119,7 @@ export function GfxaChat() {
       </div>
 
       <form onSubmit={send} className="border-t border-white/[0.06] p-4">
-        <div className="flex items-center gap-2 rounded-lg border border-white/[0.1] bg-black/25 p-1.5 focus-within:border-brand-blue/50">
+        <div className="flex items-center gap-2 rounded-lg border border-white/[0.1] bg-black/25 p-1.5 focus-within:border-brand-accent/50">
           <input
             value={text}
             maxLength={MAX}
@@ -133,7 +133,7 @@ export function GfxaChat() {
             type="submit"
             disabled={!text.trim() || busy}
             aria-label="Send"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-blue text-white transition-all duration-200 hover:bg-brand-blue/80 disabled:opacity-30"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-accent text-white transition-all duration-200 hover:bg-brand-accent/80 disabled:opacity-30"
           >
             <ArrowUp className="h-4 w-4" strokeWidth={2.4} />
           </button>

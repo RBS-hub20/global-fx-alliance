@@ -11,7 +11,7 @@ export function Sparkline({ points, positive, width = 120, height = 36, classNam
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;
-  const stroke = positive ? "#00D094" : "#FF4D4D";
+  const stroke = positive ? "#00FF88" : "#FF4D4D";
   const key = `${positive ? "up" : "dn"}-${points.length}-${Math.round(min * 1e4)}`;
 
   const coords = points.map((p, i) => {

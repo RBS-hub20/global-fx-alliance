@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
     <radialGradient id="g" cx="34%" cy="26%" r="82%">
-      <stop offset="0%" stop-color="#3B8FFF"/><stop offset="30%" stop-color="#1655BE"/>
-      <stop offset="66%" stop-color="#0A2A5F"/><stop offset="100%" stop-color="#050D1E"/>
+      <stop offset="0%" stop-color="#00FF88"/><stop offset="30%" stop-color="#00B862"/>
+      <stop offset="66%" stop-color="#0F2419"/><stop offset="100%" stop-color="#050D1E"/>
     </radialGradient>
     <linearGradient id="rf" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2A7FFF"/><stop offset="30%" stop-color="#E4EAF4"/>
-      <stop offset="60%" stop-color="#F6F9FD"/><stop offset="100%" stop-color="#7E8CA3"/>
+      <stop offset="0%" stop-color="#00FF88"/><stop offset="30%" stop-color="#E4EAF4"/>
+      <stop offset="60%" stop-color="#F6F9FD"/><stop offset="100%" stop-color="#8A8A8A"/>
     </linearGradient>
     <linearGradient id="gr" x1="0" y1="1" x2="0" y2="0">
       <stop offset="0%" stop-color="#009C70"/><stop offset="100%" stop-color="#7CEDB6"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="#070A12"/>
-  <ellipse cx="30" cy="34" rx="24" ry="7.4" transform="rotate(-20 30 34)" stroke="#1E5FCC" stroke-width="2.6" fill="none"/>
+  <rect width="64" height="64" rx="14" fill="#0A0A0A"/>
+  <ellipse cx="30" cy="34" rx="24" ry="7.4" transform="rotate(-20 30 34)" stroke="#00CC6E" stroke-width="2.6" fill="none"/>
   <circle cx="30" cy="33" r="15" fill="url(#g)"/>
-  <g stroke="#8FC2FF" fill="none" opacity="0.25" stroke-width="0.5">
+  <g stroke="#8CFFC8" fill="none" opacity="0.25" stroke-width="0.5">
     <ellipse cx="30" cy="33" rx="15" ry="5.2"/><ellipse cx="30" cy="33" rx="5.2" ry="15"/>
     <path d="M15 33h30M30 18v30"/>
   </g>

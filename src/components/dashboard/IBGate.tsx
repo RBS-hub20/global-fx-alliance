@@ -44,7 +44,7 @@ export function IBGate({ children }: { children: React.ReactNode }) {
           {children}
         </div>
         <div className="absolute inset-x-0 top-0 z-30 flex justify-center px-4 pt-10">
-          <div className="rounded-xl border border-white/[0.1] bg-[#0A0F1E]/95 px-5 py-4 text-[12.5px] text-ink-muted backdrop-blur-xl">
+          <div className="rounded-xl border border-white/[0.1] bg-[#141414]/95 px-5 py-4 text-[12.5px] text-ink-muted backdrop-blur-xl">
             Checking your access…
           </div>
         </div>
@@ -72,7 +72,7 @@ export function IBGate({ children }: { children: React.ReactNode }) {
         * indicator) below, and max-h-full then bounds the panel to what is left.
         */}
       <div className="fixed inset-0 z-40 flex justify-center overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-24 lg:pb-10 lg:pt-28">
-        <div className="flex max-h-full w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0A0F1E]/95 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <div className="flex max-h-full w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141414]/95 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
           {session ? <StatusPanel status={status} /> : <SignUpPanel />}
         </div>
       </div>
@@ -83,7 +83,7 @@ export function IBGate({ children }: { children: React.ReactNode }) {
 function Head({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-blue/30 bg-brand-blue/10 text-brand-blue">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-accent/30 bg-brand-accent/10 text-brand-accent">
         <Lock className="h-4 w-4" strokeWidth={2} />
       </span>
       <h2 className="text-[15px] font-semibold text-white">{children}</h2>
@@ -125,7 +125,7 @@ function StatusPanel({ status }: { status: string | null }) {
         )}
       </p>
       <p className="mt-3 text-[12px] text-ink-muted">Signed in as {user?.email}</p>
-      <button type="button" onClick={() => void logout()} disabled={busy} className="mt-4 text-[12.5px] text-brand-blue hover:text-white disabled:opacity-50">
+      <button type="button" onClick={() => void logout()} disabled={busy} className="mt-4 text-[12.5px] text-brand-accent hover:text-white disabled:opacity-50">
         {busy ? "Signing out…" : "Sign out"}
       </button>
       {error ? <p className="mt-2 text-[12px] text-brand-danger">{error}</p> : null}
@@ -246,8 +246,8 @@ export function SignUpPanel() {
             aria-pressed={broker === b}
             className={`rounded-lg border px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 ${
               broker === b
-                ? "border-brand-blue/50 bg-brand-blue/[0.12] text-white"
-                : "border-white/[0.1] bg-white/[0.02] text-ink-muted hover:border-brand-blue/30 hover:text-ink"
+                ? "border-brand-accent/50 bg-brand-accent/[0.12] text-white"
+                : "border-white/[0.1] bg-white/[0.02] text-ink-muted hover:border-brand-accent/30 hover:text-ink"
             }`}
           >
             {BROKER_INFO[b].label}
@@ -257,7 +257,7 @@ export function SignUpPanel() {
 
       {broker ? (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/[0.1] bg-black/30 px-3 py-2">
-          <code className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-brand-blue">{link}</code>
+          <code className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-brand-accent">{link}</code>
           <button
             type="button"
             onClick={() => { navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
@@ -326,14 +326,14 @@ export function SignUpPanel() {
       </div>
 
       {/* Outside the scroll area, so it is reachable at any viewport height. */}
-      <div className="shrink-0 border-t border-white/[0.07] bg-[#0A0F1E]/95 px-6 py-4">
+      <div className="shrink-0 border-t border-white/[0.07] bg-[#141414]/95 px-6 py-4">
         <button type="submit" disabled={busy} className="btn-primary w-full !py-2.5 text-[12.5px] disabled:opacity-50">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {busy ? "Submitting…" : "Create account"}
         </button>
         {/* In the pinned footer, not the scroll area: at the bottom of a
             scrolling body this sat under the mobile nav and could not be tapped. */}
-        <Link href="/login" className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] text-brand-blue hover:text-white">
+        <Link href="/login" className="mt-3 flex items-center justify-center gap-1.5 text-[12.5px] text-brand-accent hover:text-white">
           <LogIn className="h-3.5 w-3.5" strokeWidth={2} />
           Already a member? Sign in
         </Link>
@@ -359,7 +359,7 @@ function In({
         placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink placeholder:text-[#a3a3a3]/60 outline-none focus:border-brand-blue/50"
+        className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink placeholder:text-[#a3a3a3]/60 outline-none focus:border-brand-accent/50"
       />
       {hint ? <span className="text-[11px] text-ink-muted/70">{hint}</span> : null}
     </label>

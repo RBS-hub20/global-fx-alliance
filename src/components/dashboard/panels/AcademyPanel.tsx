@@ -7,7 +7,7 @@ import { TRACKS, type Lesson, type Track } from "@/lib/content";
 import { KEYS, usePersistentState } from "@/lib/storage";
 
 const LEVEL_STYLE: Record<Track["level"], string> = {
-  Foundation: "bg-brand-blue/[0.13] text-brand-blue",
+  Foundation: "bg-brand-accent/[0.13] text-brand-accent",
   Intermediate: "bg-[#FFB020]/[0.13] text-[#FFB020]",
   Advanced: "bg-brand-green/[0.13] text-brand-green",
 };
@@ -73,7 +73,7 @@ export function AcademyPanel() {
           <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.1em] ${LEVEL_STYLE[track.level]}`}>
             {track.level}
           </span>
-          <span className="ml-auto num-mono text-[13px] font-semibold text-brand-blue">
+          <span className="ml-auto num-mono text-[13px] font-semibold text-brand-accent">
             {pctFor(track)}% complete
           </span>
         </div>
@@ -87,7 +87,7 @@ export function AcademyPanel() {
                 const active = lesson?.id === l.id;
                 return (
                   <li key={l.id}>
-                    <div className={`flex items-center gap-3 px-4 py-3 transition-colors duration-200 ${active ? "bg-brand-blue/[0.07]" : "hover:bg-white/[0.02]"}`}>
+                    <div className={`flex items-center gap-3 px-4 py-3 transition-colors duration-200 ${active ? "bg-brand-accent/[0.07]" : "hover:bg-white/[0.02]"}`}>
                       <button
                         type="button"
                         onClick={() => toggle(l.id, l.title)}
@@ -96,7 +96,7 @@ export function AcademyPanel() {
                         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
                           complete
                             ? "border-brand-green/50 bg-brand-green/20 text-brand-green"
-                            : "border-white/[0.14] text-transparent hover:border-brand-blue/50"
+                            : "border-white/[0.14] text-transparent hover:border-brand-accent/50"
                         }`}
                       >
                         <Check className="h-3 w-3" strokeWidth={3} />
@@ -130,8 +130,8 @@ export function AcademyPanel() {
             <div className="p-5">
               {lesson ? (
                 <>
-                  <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-[radial-gradient(70%_70%_at_50%_40%,rgba(42,127,255,0.14),transparent_70%)]">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-brand-blue/40 bg-brand-blue/15 text-brand-blue shadow-glow">
+                  <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-[radial-gradient(70%_70%_at_50%_40%,rgba(0,255,136,0.14),transparent_70%)]">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-brand-accent/40 bg-brand-accent/15 text-brand-accent shadow-glow">
                       <Play className="ml-0.5 h-5 w-5" fill="currentColor" strokeWidth={0} />
                     </span>
                     <span className="absolute bottom-3 left-4 text-[11px] uppercase tracking-[0.14em] text-ink-muted">
@@ -181,7 +181,7 @@ export function AcademyPanel() {
         title="GFXA Academy"
         action={
           <span className="text-[12.5px] text-ink-muted">
-            Your progress <span className="num-mono ml-1 font-bold text-brand-blue">{overall}%</span>
+            Your progress <span className="num-mono ml-1 font-bold text-brand-accent">{overall}%</span>
           </span>
         }
       />
@@ -196,7 +196,7 @@ export function AcademyPanel() {
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.05]">
           <span
-            className="block h-full rounded-full bg-gradient-to-r from-brand-blue to-brand-green transition-all duration-200"
+            className="block h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-green transition-all duration-200"
             style={{ width: `${overall}%` }}
           />
         </div>
@@ -210,10 +210,10 @@ export function AcademyPanel() {
               key={t.id}
               type="button"
               onClick={() => setOpenTrack(t.id)}
-              className="group flex flex-col rounded-2xl glass p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-brand-blue/30 hover:shadow-glow"
+              className="group flex flex-col rounded-2xl glass p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-brand-accent/30 hover:shadow-glow"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-blue/25 bg-brand-blue/10 text-brand-blue">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
                   <GraduationCap className="h-[22px] w-[22px]" strokeWidth={1.8} />
                 </span>
                 <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.1em] ${LEVEL_STYLE[t.level]}`}>
@@ -232,11 +232,11 @@ export function AcademyPanel() {
                   <span className="text-ink-muted">
                     <span className="num-mono font-semibold text-ink">{t.lessons.length}</span> lessons
                   </span>
-                  <span className="num-mono font-bold text-brand-blue">{pct}%</span>
+                  <span className="num-mono font-bold text-brand-accent">{pct}%</span>
                 </div>
                 <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
                   <span
-                    className="block h-full rounded-full bg-brand-blue transition-all duration-200"
+                    className="block h-full rounded-full bg-brand-accent transition-all duration-200"
                     style={{ width: `${pct}%` }}
                   />
                 </div>

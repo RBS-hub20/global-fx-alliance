@@ -26,11 +26,11 @@ const SAMPLE_ACTIVITY = [
 ];
 
 const AVATARS = [
-  { initials: "MS", from: "#1E4C9E" },
+  { initials: "MS", from: "#1F3D2E" },
   { initials: "AK", from: "#0B5E4A" },
   { initials: "TX", from: "#5B2A86" },
   { initials: "SF", from: "#8A4B12" },
-  { initials: "PT", from: "#1E4C9E" },
+  { initials: "PT", from: "#1F3D2E" },
   { initials: "FM", from: "#0B5E4A" },
   { initials: "LM", from: "#7A1F3D" },
   { initials: "DP", from: "#14532D" },
@@ -83,7 +83,7 @@ export function SocialProof() {
             anyone else's community. The brokers are partners. */}
         <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="rounded-2xl glass p-7">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-blue">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-accent">
               Journal Analytics
             </p>
             <h3 className="mt-3 text-[19px] font-bold tracking-tight text-white">
@@ -96,7 +96,7 @@ export function SocialProof() {
             </p>
           </div>
           <div className="rounded-2xl glass p-7">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-blue">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-accent">
               Pattern Radar
             </p>
             <h3 className="mt-3 text-[19px] font-bold tracking-tight text-white">
@@ -113,7 +113,7 @@ export function SocialProof() {
         {/* Verified product facts */}
         <div className="mt-14 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-3 lg:grid-cols-5">
           {PRODUCT_STATS.map((s) => (
-            <div key={s.label} className="bg-[rgba(16,22,38,0.8)] px-5 py-7 text-center">
+            <div key={s.label} className="bg-[rgba(20,20,20,0.8)] px-5 py-7 text-center">
               <p className="num-mono text-[30px] font-bold leading-none text-white">{s.value}</p>
               <p className="mt-2.5 text-[11px] uppercase tracking-[0.14em] text-ink-muted">{s.label}</p>
             </div>
@@ -140,8 +140,8 @@ export function SocialProof() {
               <span
                 key={a.initials + n}
                 aria-hidden
-                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#070A12] text-[11px] font-bold text-white"
-                style={{ background: `linear-gradient(135deg, ${a.from}, #0A1931)` }}
+                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#0A0A0A] text-[11px] font-bold text-white"
+                style={{ background: `linear-gradient(135deg, ${a.from}, #141414)` }}
               >
                 {a.initials}
               </span>
@@ -162,12 +162,12 @@ export function SocialProof() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {QUOTES.map((q) => (
               <figure key={q.name} className="rounded-2xl glass p-6">
-                <Quote className="h-5 w-5 text-brand-blue/50" strokeWidth={2} />
+                <Quote className="h-5 w-5 text-brand-accent/50" strokeWidth={2} />
                 <blockquote className="mt-4 text-[13.5px] leading-relaxed text-ink">
                   {q.text}
                 </blockquote>
                 <figcaption className="mt-5 flex items-center gap-3 border-t border-white/[0.08] pt-4">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1E4C9E] to-[#0A1931] text-[11px] font-bold text-white">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-[#1F3D2E] to-[#141414] text-[11px] font-bold text-white">
                     {q.initials}
                   </span>
                   <span>

@@ -136,7 +136,7 @@ export function AdminPanel() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="GFXA_ADMIN_TOKEN"
-              className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue/50"
+              className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-accent/50"
             />
           </label>
           <button type="submit" disabled={busy || !token} className="btn-primary !py-2.5 text-[12.5px] disabled:opacity-50">
@@ -152,7 +152,7 @@ export function AdminPanel() {
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" strokeWidth={2} />
             <p className="text-[12.5px] leading-relaxed text-ink">
               <span className="font-semibold text-white">Reading the profiles table.</span> Approving here
-              flips <code className="text-brand-blue">profiles.status</code> with the service-role key, and
+              flips <code className="text-brand-accent">profiles.status</code> with the service-role key, and
               the member&apos;s dashboard opens on their next load — no re-entry of the account number, on
               any device.
             </p>
@@ -261,7 +261,7 @@ export function AdminPanel() {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. no funded account under the partner link"
-            className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-blue/50"
+            className="rounded-lg border border-white/[0.1] bg-white/[0.02] px-3 py-2 text-[12.5px] text-ink outline-none focus:border-brand-accent/50"
           />
         </label>
 

@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthShell
       title="Set a new password"
-      footer={<Link href="/login" className="text-brand-blue hover:text-white">Back to sign in</Link>}
+      footer={<Link href="/login" className="text-brand-accent hover:text-white">Back to sign in</Link>}
     >
       {done ? (
         <Notice tone="ok">Password changed. Taking you to sign in…</Notice>

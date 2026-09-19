@@ -179,7 +179,7 @@ export function Select({
       </span>
       <select
         {...props}
-        className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#0E1526] px-3 text-[14px] text-ink outline-none transition-all duration-200 focus:border-brand-accent/40 focus:shadow-glow"
+        className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#141414] px-3 text-[14px] text-ink outline-none transition-all duration-200 focus:border-brand-accent/40 focus:shadow-glow"
       >
         {children}
       </select>
@@ -258,7 +258,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative my-auto w-full rounded-2xl border border-white/[0.1] bg-[rgba(12,18,32,0.97)] shadow-glow-lg backdrop-blur-xl animate-riseIn ${
+        className={`relative my-auto w-full rounded-2xl border border-white/[0.1] bg-[rgba(20,20,20,0.97)] shadow-glow-lg backdrop-blur-xl animate-riseIn ${
           wide ? "max-w-3xl" : "max-w-lg"
         }`}
       >

@@ -11,7 +11,7 @@ export function AuthShell({ title, blurb, children, footer }: {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-5 py-12">
       <div className="w-full max-w-[400px]">
-        <Link href="/" className="mb-8 flex justify-center"><Logo size={34} /></Link>
+        <Link href="/" className="mb-8 flex justify-center" aria-label="GFXA Community home"><Logo height={96} priority className="!h-20 sm:!h-24" /></Link>
         <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-6">
           <h1 className="text-[17px] font-semibold text-white">{title}</h1>
           {blurb ? <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-muted">{blurb}</p> : null}

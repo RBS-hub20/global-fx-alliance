@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LogoMark } from "@/components/brand/LogoMark";
+import Image from "next/image";
+import wordmark from "../../../public/brand/gfxa-wordmark-trim.png";
 
 /**
  * Hero visual.
@@ -76,7 +77,7 @@ function Fallback() {
         ))}
       </div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <LogoMark width={104} height={104} className="opacity-30" />
+        <Image src={wordmark} alt="" aria-hidden width={200} height={Math.round(200 * wordmark.height / wordmark.width)} className="h-auto w-[200px] opacity-30" />
       </div>
     </div>
   );

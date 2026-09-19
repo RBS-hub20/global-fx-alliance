@@ -283,7 +283,7 @@ export function JournalAnalyticsPanel() {
                       style={{ height: `${height}%` }}
                     />
                     {b ? (
-                      <span className="pointer-events-none absolute -top-1 z-10 hidden whitespace-nowrap rounded border border-white/10 bg-[#0B1120] px-2 py-1 text-[10px] num-mono text-ink group-hover:block">
+                      <span className="pointer-events-none absolute -top-1 z-10 hidden whitespace-nowrap rounded border border-white/10 bg-[#0D0D0D] px-2 py-1 text-[10px] num-mono text-ink group-hover:block">
                         {key}:00 · {b.trades} trades · {b.winRate.toFixed(0)}% · {money(b.net, 0)}
                       </span>
                     ) : null}

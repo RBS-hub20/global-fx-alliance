@@ -172,7 +172,7 @@ export function PriceChart({
 
       {hover !== null ? (
         <div
-          className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-lg border border-white/10 bg-[#0B1120]/95 px-2.5 py-1.5 text-center shadow-glow backdrop-blur-xl"
+          className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-lg border border-white/10 bg-[#0D0D0D]/95 px-2.5 py-1.5 text-center shadow-glow backdrop-blur-xl"
           style={{ left: Math.min(Math.max(hx, 44), plotW - 44) }}
         >
           <div className="num-mono text-[13px] font-semibold text-white">

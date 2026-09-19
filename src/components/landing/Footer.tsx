@@ -11,12 +11,13 @@ const linkClass =
 
 export function Footer() {
   return (
-    <footer className="relative border-t border-white/[0.08] bg-[#050810]">
+    <footer className="relative border-t border-white/[0.08] bg-[#080808]">
       <div className="mx-auto max-w-[1280px] px-5 py-16 lg:px-8 lg:py-20">
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-4 lg:gap-8">
           <div className="col-span-2 lg:col-span-1">
-            <Link href="/" aria-label="GLOBAL FX ALLIANCE home">
-              <Logo size={38} wordmarkClass="text-[15px]" />
+            <Link href="/" aria-label="GFXA Community — Global FX Alliance home">
+              {/* 96px: the size at which the LEARN • CONNECT • ANALYZE • GROW line reads as text. */}
+              <Logo height={96} className="!h-20 lg:!h-24" />
             </Link>
             <p className="mt-5 max-w-[34ch] text-[14px] leading-relaxed text-ink-muted">
               The Global Community for Forex Traders. Connect. Learn. Analyze. Grow.

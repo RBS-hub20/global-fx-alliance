@@ -22,7 +22,7 @@ export default function LinksPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[520px] flex-col px-5 py-14">
       <div className="flex flex-col items-center text-center">
-        <Logo size={44} />
+        <Logo height={96} priority />
         <p className="mt-5 text-[13.5px] leading-relaxed text-ink-muted">
           The Global Community for Forex Traders. Every official channel is listed here — if a link is
           not on this page, it is not us.

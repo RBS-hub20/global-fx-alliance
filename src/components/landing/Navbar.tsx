@@ -76,13 +76,13 @@ export function Navbar() {
       style={{ top: "var(--gfxa-banner-h, 0px)" }}
       className={`fixed inset-x-0 z-50 transition-all duration-200 ${
         scrolled
-          ? "border-b border-white/[0.08] bg-[rgba(7,10,18,0.72)] backdrop-blur-xl"
+          ? "border-b border-white/[0.08] bg-[rgba(10,10,10,0.72)] backdrop-blur-xl"
           : "border-b border-transparent"
       }`}
     >
       <nav className="mx-auto flex h-[72px] max-w-[1280px] items-center justify-between px-5 lg:px-8">
-        <Link href="/" className="shrink-0" aria-label="GLOBAL FX ALLIANCE home">
-          <Logo size={36} wordmarkClass="text-[15px]" />
+        <Link href="/" className="shrink-0" aria-label="GFXA Community — Global FX Alliance home">
+          <Logo height={56} priority className="!h-11 lg:!h-14" />
         </Link>
 
         <div className="hidden items-center gap-8 lg:flex">
@@ -134,7 +134,7 @@ export function Navbar() {
       </nav>
 
       {open ? (
-        <div className="border-t border-white/[0.08] bg-[rgba(7,10,18,0.97)] backdrop-blur-xl lg:hidden">
+        <div className="border-t border-white/[0.08] bg-[rgba(10,10,10,0.97)] backdrop-blur-xl lg:hidden">
           <div className="flex flex-col gap-1 px-5 py-6">
             {NAV_LINKS.map((l) => (
               <a

@@ -14,7 +14,7 @@ export function TopHeader({
   onOpenNav: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(7,10,18,0.78)] backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(10,10,10,0.78)] backdrop-blur-xl">
       <div className="flex items-center gap-4 px-5 py-4 lg:px-8 lg:py-5">
         <button
           type="button"

@@ -35,7 +35,7 @@ function SignupInner() {
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#0A0A0A] px-4 py-8">
-      <Link href="/" className="mb-6 flex justify-center"><Logo size={34} /></Link>
+      <Link href="/" className="mb-6 flex justify-center" aria-label="GFXA Community home"><Logo height={80} priority className="!h-16 sm:!h-20" /></Link>
       <div className="flex max-h-[calc(100dvh-7rem)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141414]/95 shadow-[0_24px_60px_rgba(0,0,0,0.6)]">
         <SignUpPanel />
       </div>

@@ -23,8 +23,8 @@ export function Sidebar({
   return (
     <div className="flex h-full w-[280px] shrink-0 flex-col border-r border-white/[0.08] bg-[#0A0A0A]">
       <div className="flex h-[72px] shrink-0 items-center border-b border-white/[0.08] px-6">
-        <Link href="/" aria-label="GLOBAL FX ALLIANCE home">
-          <Logo size={34} tagline wordmarkClass="text-[13px]" />
+        <Link href="/" aria-label="GFXA Community — Global FX Alliance home">
+          <Logo height={52} />
         </Link>
       </div>
 

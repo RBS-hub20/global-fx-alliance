@@ -88,7 +88,7 @@ export default function JoinPage() {
 
         <div className="relative mx-auto w-full max-w-[760px]">
           <div className="mb-7 flex items-center justify-between gap-4">
-            <Logo size={30} />
+            <Logo height={44} />
             <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#A3A3A3]">
               47+ countries
             </span>

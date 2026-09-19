@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { LogoDefs } from "@/components/brand/LogoMark";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 import { AuthProvider } from "@/lib/AuthContext";
 import { AiMarkDefs } from "@/components/brand/AiMark";
@@ -69,15 +68,8 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    // iOS ignores the manifest for the home-screen icon and reads this instead.
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-  },
+  // Favicon and touch icon come from the file convention: src/app/favicon.ico,
+  // icon.png and apple-icon.png, all generated from the GFXA brand files.
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -106,7 +98,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={inter.variable}>
       <body>
         <ServiceWorker />
-        <LogoDefs />
         <AiMarkDefs />
         <AuthProvider>{children}</AuthProvider>
         <Analytics />

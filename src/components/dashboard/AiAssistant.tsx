@@ -9,7 +9,7 @@ export function AiAssistant() {
   const [value, setValue] = useState("");
 
   return (
-    <section id="ai-assistant" className="relative overflow-hidden rounded-2xl border border-brand-accent/25 bg-[rgba(10,17,32,0.9)] shadow-glow backdrop-blur-xl">
+    <section id="ai-assistant" className="relative overflow-hidden rounded-2xl border border-brand-accent/25 bg-[rgba(20,20,20,0.9)] shadow-glow backdrop-blur-xl">
       <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-brand-accent/20 blur-3xl" />
 
       <div className="relative p-6">

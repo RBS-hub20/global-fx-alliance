@@ -52,7 +52,7 @@ export function AiMarkDefs() {
         </linearGradient>
         <linearGradient id="gfxa-ai-plate" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#121A16" />
-          <stop offset="100%" stopColor="#060B1A" />
+          <stop offset="100%" stopColor="#0A0A0A" />
         </linearGradient>
       </defs>
     </svg>

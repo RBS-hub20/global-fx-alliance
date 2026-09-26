@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Mic, X } from "lucide-react";
+import { Check, Mic, PhoneOff, RotateCcw, X } from "lucide-react";
 import logo from "../../../public/brand/gfxa-logo-trim.png";
 
 /**
@@ -31,7 +31,14 @@ declare global {
     DograhWidget?: {
       setContext?: (vars: Record<string, string>) => unknown;
       start?: () => unknown;
+      stop?: () => unknown;
+      retry?: () => unknown;
       close?: () => unknown;
+      onCallStart?: (cb: () => void) => void;
+      onCallConnected?: (cb: () => void) => void;
+      onCallDisconnected?: (cb: () => void) => void;
+      onCallEnd?: (cb: () => void) => void;
+      onError?: (cb: (e: unknown) => void) => void;
     };
   }
 }
@@ -41,6 +48,8 @@ const API = process.env.NEXT_PUBLIC_HIRESTELLA_API || "https://voice.hirestella.
 const SCRIPT_ID = "dograh-widget";
 const CTA_ID = "dograh-widget-cta";
 const SEEN_KEY = "dograh-welcome-shown";
+
+type Phase = "idle" | "connecting" | "live" | "ended" | "error";
 
 /** Routes with a password field. Empty this array to load it everywhere. */
 const EXCLUDED_PREFIXES = ["/login", "/signup", "/forgot-password", "/reset-password"];
@@ -65,9 +74,12 @@ export function DograhWidget() {
   const tab = useSearchParams().get("tab");
   const [open, setOpen] = useState(false);
   const [tip, setTip] = useState(false);
-  const [starting, setStarting] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [seconds, setSeconds] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [bodyHeight, setBodyHeight] = useState<number | undefined>(undefined);
 
   const blocked =
     EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
@@ -153,31 +165,96 @@ export function DograhWidget() {
     return () => { clearTimeout(show); clearTimeout(hide); };
   }, [pathname, blocked]);
 
+  /* --------------------------------------------------- call lifecycle */
+
+  /*
+   * The vendor publishes call callbacks, so the panel can follow the real call
+   * instead of guessing from the button. They are registered once the script
+   * has defined its API; onStatusChange is not used because in floating mode it
+   * only fires for headless embeds.
+   */
+  useEffect(() => {
+    if (blocked) return;
+    let alive = true;
+
+    const attach = () => {
+      const w = window.DograhWidget;
+      if (!w?.onCallStart) return false;
+      w.onCallStart?.(() => alive && setPhase("connecting"));
+      w.onCallConnected?.(() => { if (alive) { setSeconds(0); setPhase("live"); } });
+      w.onCallDisconnected?.(() => alive && setPhase((p) => (p === "error" ? p : "ended")));
+      w.onCallEnd?.(() => alive && setPhase((p) => (p === "error" ? p : "ended")));
+      w.onError?.(() => {
+        if (!alive) return;
+        setError("The call dropped. You can try again.");
+        setPhase("error");
+      });
+      return true;
+    };
+
+    if (attach()) return () => { alive = false; };
+    const id = setInterval(() => { if (attach()) clearInterval(id); }, 400);
+    return () => { alive = false; clearInterval(id); };
+  }, [blocked]);
+
+  // Elapsed time, and the flag that hides the vendor button while we own the UI.
+  useEffect(() => {
+    const busy = phase === "connecting" || phase === "live";
+    if (busy) { document.body.dataset.gfxaCall = "1"; setOpen(true); }
+    else delete document.body.dataset.gfxaCall;
+    if (phase !== "live") return;
+    const id = setInterval(() => setSeconds((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Height morphs between states rather than jumping.
+  useEffect(() => {
+    if (!open || !bodyRef.current) return;
+    const el = bodyRef.current;
+    const ro = new ResizeObserver(() => setBodyHeight(el.scrollHeight));
+    ro.observe(el);
+    setBodyHeight(el.scrollHeight);
+    return () => ro.disconnect();
+  }, [open, phase, error]);
+
+  const startCall = useCallback(async () => {
+    setError(null);
+    setPhase("connecting");
+    try {
+      // Same user gesture the microphone prompt needs.
+      await window.DograhWidget?.start?.();
+    } catch {
+      setError("Could not start the call. Check that the browser has microphone access.");
+      setPhase("error");
+    }
+  }, []);
+
+  const endCall = useCallback(() => {
+    try { window.DograhWidget?.stop?.(); } catch { /* already gone */ }
+    setPhase("ended");
+  }, []);
+
+  const closePanel = useCallback(() => {
+    if (phase === "connecting" || phase === "live") endCall();
+    setOpen(false);
+    setPhase("idle");
+    setError(null);
+  }, [phase, endCall]);
+
   /* ---------------------------------------------------------------- panel */
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closePanel(); };
     window.addEventListener("keydown", onKey);
     panelRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  const startCall = useCallback(async () => {
-    setStarting(true);
-    setError(null);
-    try {
-      // Same user gesture the microphone prompt needs.
-      await window.DograhWidget?.start?.();
-      setOpen(false);
-    } catch {
-      setError("Could not start the call. Check that the browser has microphone access.");
-    } finally {
-      setStarting(false);
-    }
-  }, []);
+  }, [open, closePanel]);
 
   if (blocked) return null;
+
+  const busy = phase === "connecting" || phase === "live";
+  const mmss = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
   return (
     <>
@@ -186,67 +263,143 @@ export function DograhWidget() {
         <button
           type="button"
           onClick={() => setTip(false)}
-          className="fixed bottom-[76px] right-5 z-[999998] max-w-[250px] animate-riseIn rounded-lg border border-[#00ff88] bg-[#00ff88] px-3 py-2 text-left font-mono text-[12px] font-bold leading-snug text-[#0a0a0a] shadow-[0_8px_24px_rgba(0,255,136,0.3)] lg:bottom-[72px]"
+          className="gfxa-tip fixed bottom-[76px] right-5 z-[999998] max-w-[240px] rounded-lg border border-[#00ff88] bg-[#00ff88] px-3 py-2 text-left font-mono text-[12px] font-bold leading-snug text-[#0a0a0a] shadow-[0_8px_24px_rgba(0,255,136,0.3)] lg:bottom-[72px]"
         >
-          👋 Questions about the Dubai event? Ask me.
+          👋 Questions about the Dubai event?
           <span aria-hidden className="absolute -bottom-[7px] right-7 h-3 w-3 rotate-45 bg-[#00ff88]" />
         </button>
       ) : null}
 
-      {/* -------------------------------------------------------- our panel */}
       {open ? (
         <>
           <button
             type="button"
             aria-label="Close"
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-[999997] cursor-default bg-black/50 backdrop-blur-[6px] animate-fadeIn"
+            onClick={closePanel}
+            className="animate-fadeIn fixed inset-0 z-[999997] cursor-default bg-black/55 backdrop-blur-[6px]"
           />
+
           <div
             ref={panelRef}
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="GFXA AI assistant"
-            className="fixed bottom-4 right-4 z-[1000000] w-[min(360px,calc(100vw-2rem))] origin-bottom-right animate-popIn overflow-hidden rounded-3xl border-2 border-[#00ff88] bg-[#0a0a0a] shadow-[0_20px_60px_rgba(0,255,136,0.2)] outline-none sm:bottom-6 sm:right-6"
+            className="animate-popIn fixed bottom-4 right-4 z-[1000000] w-[min(340px,calc(100vw-2rem))] origin-bottom-right overflow-hidden rounded-3xl border border-[#00ff88]/70 bg-[#0a0a0a] shadow-[0_24px_70px_rgba(0,255,136,0.18)] outline-none sm:bottom-6 sm:right-6"
           >
-            <header className="flex items-center gap-2.5 border-b border-[#262626] bg-[#141414] px-4 py-3">
-              <Image src={logo} alt="" aria-hidden height={26} width={Math.round(26 * logo.width / logo.height)} className="h-[26px] w-auto" />
-              <div className="min-w-0 flex-1">
-                <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-[#00ff88]">
-                  <span className="text-[#00ff88]/50">_&gt;</span> GFXA AI ASSISTANT
-                </p>
-                <p className="truncate font-mono text-[10px] text-[#a3a3a3]">voice · answers in English</p>
-              </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-[#525252] transition-colors hover:text-[#e5e5e5]">
+            {/* A hairline of brand green across the top, and a live pulse while talking. */}
+            <span aria-hidden className={`block h-[2px] w-full bg-gradient-to-r from-transparent via-[#00ff88] to-transparent ${busy ? "gfxa-scan" : ""}`} />
+
+            <header className="flex items-center gap-2.5 px-4 pb-3 pt-3.5">
+              <Image src={logo} alt="" aria-hidden height={24} width={Math.round(24 * logo.width / logo.height)} className="h-6 w-auto" />
+              <p className="min-w-0 flex-1 truncate font-mono text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#00ff88]">
+                <span className="text-[#00ff88]/50">_&gt;</span> GFXA AI
+              </p>
+              <button type="button" onClick={closePanel} aria-label="Close"
+                className="-mr-1 rounded p-1 text-[#525252] transition-colors hover:bg-[#1a1a1a] hover:text-[#e5e5e5]">
                 <X className="h-4 w-4" />
               </button>
             </header>
 
-            <div className="space-y-3 px-4 py-4">
-              <p className="text-[12.5px] leading-relaxed text-[#e5e5e5]">Ask about the event, your QR code, the leaderboard or the markets.</p>
-              <ul className="space-y-1.5 font-mono text-[11.5px] leading-relaxed text-[#a3a3a3]">
-                <li className="flex gap-2"><span className="text-[#00ff88]">›</span> “Where is the Dubai event?”</li>
-                <li className="flex gap-2"><span className="text-[#00ff88]">›</span> “How do I get my QR code?”</li>
-                <li className="flex gap-2"><span className="text-[#00ff88]">›</span> “What is the GFXA score?”</li>
-              </ul>
+            {/* Height animates between states instead of snapping. */}
+            <div className="gfxa-morph overflow-hidden" style={{ height: bodyHeight }}>
+              <div ref={bodyRef} className="px-4 pb-4">
+                {phase === "idle" ? (
+                  <div key="idle" className="gfxa-enter space-y-3">
+                    <p className="text-[13px] leading-relaxed text-[#e5e5e5]" style={{ animationDelay: "40ms" }}>
+                      Ask about the Dubai event, your QR code or the leaderboard.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5" style={{ animationDelay: "90ms" }}>
+                      {["Where is the event?", "Get my QR code", "What is GFXA score?"].map((q) => (
+                        <span key={q} className="rounded-full border border-[#262626] px-2.5 py-1 font-mono text-[10.5px] text-[#a3a3a3] transition-colors hover:border-[#00ff88]/40 hover:text-[#e5e5e5]">
+                          {q}
+                        </span>
+                      ))}
+                    </div>
+                    <button type="button" onClick={() => void startCall()} style={{ animationDelay: "140ms" }}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#00ff88] px-4 py-2.5 font-mono text-[12.5px] font-bold uppercase tracking-[0.08em] text-[#0a0a0a] transition-all duration-200 hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:scale-[0.98]">
+                      <Mic className="h-4 w-4" strokeWidth={2.4} /> Start voice chat
+                    </button>
+                    <p className="text-center font-mono text-[9.5px] text-[#525252]" style={{ animationDelay: "180ms" }}>
+                      Mic on only during the call · handled by Hirestella
+                    </p>
+                  </div>
+                ) : null}
 
-              <button
-                type="button"
-                onClick={() => void startCall()}
-                disabled={starting}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#00ff88] px-4 py-2.5 font-mono text-[12.5px] font-bold uppercase tracking-[0.08em] text-[#0a0a0a] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
-              >
-                <Mic className="h-4 w-4" strokeWidth={2.4} />
-                {starting ? "Connecting…" : "_> Start voice chat"}
-              </button>
+                {busy ? (
+                  <div key="busy" className="gfxa-enter flex flex-col items-center gap-3 py-2 text-center">
+                    <span className="relative flex h-16 w-16 items-center justify-center">
+                      <span className="gfxa-ring absolute inset-0 rounded-full border border-[#00ff88]/50" />
+                      <span className="gfxa-ring absolute inset-0 rounded-full border border-[#00ff88]/50" style={{ animationDelay: "700ms" }} />
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00ff88] text-[#0a0a0a]">
+                        <Mic className="h-5 w-5" strokeWidth={2.4} />
+                      </span>
+                    </span>
 
-              {error ? <p className="font-mono text-[11px] leading-relaxed text-[#ff4d4d]">{error}</p> : null}
+                    {phase === "live" ? (
+                      <span aria-hidden className="flex h-5 items-end gap-[3px]">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <span key={i} className="gfxa-bar w-[3px] rounded-full bg-[#00ff88]" style={{ animationDelay: `${i * 110}ms` }} />
+                        ))}
+                      </span>
+                    ) : null}
 
-              <p className="font-mono text-[10px] leading-relaxed text-[#525252]">
-                Your microphone is used only while the call is running, and the call is handled by Hirestella, not by this
-                site. Educational only — not financial advice.
-              </p>
+                    <div>
+                      <p className="font-mono text-[12.5px] font-bold uppercase tracking-[0.1em] text-[#00ff88]">
+                        {phase === "connecting" ? "Connecting…" : "Live"}
+                      </p>
+                      <p className="num-mono mt-0.5 text-[11px] text-[#a3a3a3]">
+                        {phase === "connecting" ? "Allow the microphone when asked" : mmss}
+                      </p>
+                    </div>
+
+                    <button type="button" onClick={endCall}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#ff4d4d]/50 bg-[#ff4d4d]/10 px-4 py-2.5 font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-[#ff4d4d] transition-colors hover:bg-[#ff4d4d]/20">
+                      <PhoneOff className="h-4 w-4" strokeWidth={2.2} /> End call
+                    </button>
+                  </div>
+                ) : null}
+
+                {phase === "ended" ? (
+                  <div key="ended" className="gfxa-enter flex flex-col items-center gap-3 py-2 text-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#00ff88]/40 bg-[#00ff88]/10 text-[#00ff88]">
+                      <Check className="h-6 w-6" strokeWidth={2.6} />
+                    </span>
+                    <div>
+                      <p className="font-mono text-[12.5px] font-bold uppercase tracking-[0.1em] text-[#e5e5e5]">Call ended</p>
+                      {seconds > 0 ? <p className="num-mono mt-0.5 text-[11px] text-[#a3a3a3]">{mmss}</p> : null}
+                    </div>
+                    <div className="flex w-full gap-2">
+                      <button type="button" onClick={() => void startCall()}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#00ff88] px-3 py-2.5 font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-[#0a0a0a] transition-all duration-200 hover:brightness-110 active:scale-[0.98]">
+                        <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.4} /> Again
+                      </button>
+                      <button type="button" onClick={closePanel}
+                        className="rounded-lg border border-[#262626] px-4 py-2.5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#a3a3a3] transition-colors hover:text-[#e5e5e5]">
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {phase === "error" ? (
+                  <div key="error" className="gfxa-enter space-y-3">
+                    <p className="rounded-lg border border-[#ff4d4d]/40 bg-[#ff4d4d]/10 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-[#ff4d4d]">
+                      {error ?? "Something went wrong."}
+                    </p>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => void startCall()}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#00ff88] px-3 py-2.5 font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-[#0a0a0a] transition-all duration-200 hover:brightness-110">
+                        <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.4} /> Try again
+                      </button>
+                      <button type="button" onClick={closePanel}
+                        className="rounded-lg border border-[#262626] px-4 py-2.5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#a3a3a3] transition-colors hover:text-[#e5e5e5]">
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </>

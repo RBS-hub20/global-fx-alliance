@@ -190,9 +190,38 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-popIn { animation: gfxaPopIn 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-popIn { animation: gfxaPopIn 320ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-fadeIn { animation: gfxaFadeIn 200ms ease-out both; }
 
+/* The launcher is ours while a call runs — the vendor button is the generic UI. */
+body[data-gfxa-call] #dograh-widget-cta { display: none !important; }
+
+/* Panel height morphs between states instead of snapping. */
+.gfxa-morph { transition: height 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Each screen fades up, and its children stagger in behind it. */
+@keyframes gfxaEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.gfxa-enter { animation: gfxaEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.gfxa-enter > * { animation: gfxaEnter 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Tooltip drifts in and keeps a slow breathing motion. */
+@keyframes gfxaTip { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.gfxa-tip { animation: gfxaTip 320ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Call: expanding rings behind the mic, and a five-bar level meter. */
+@keyframes gfxaRing { 0% { opacity: 0.55; transform: scale(0.72); } 100% { opacity: 0; transform: scale(1.35); } }
+.gfxa-ring { animation: gfxaRing 1.6s ease-out infinite; }
+
+@keyframes gfxaBar { 0%, 100% { height: 5px; } 50% { height: 18px; } }
+.gfxa-bar { height: 5px; animation: gfxaBar 900ms ease-in-out infinite; }
+
+/* The hairline sweeps while a call is live. */
+@keyframes gfxaScan { 0% { opacity: 0.35; } 50% { opacity: 1; } 100% { opacity: 0.35; } }
+.gfxa-scan { animation: gfxaScan 1.8s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-popIn, .animate-fadeIn { animation-duration: 1ms; }
+  .animate-popIn, .animate-fadeIn, .gfxa-enter, .gfxa-enter > *, .gfxa-tip { animation-duration: 1ms; }
+  .gfxa-ring, .gfxa-bar, .gfxa-scan { animation: none; }
+  .gfxa-morph { transition: none; }
+  .gfxa-bar { height: 12px; }
 }

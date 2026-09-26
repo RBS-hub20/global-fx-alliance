@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 
 declare global {
   interface Window {
-    DograhWidget?: { setContext?: (vars: Record<string, string>) => unknown };
+    DograhWidget?: {
+      setContext?: (vars: Record<string, string>) => unknown;
+      close?: () => unknown;
+    };
   }
 }
 
@@ -54,7 +57,25 @@ export function DograhWidget() {
   const blocked = EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   useEffect(() => {
-    if (blocked) return;
+    const root = () => document.getElementById("dograh-widget-root");
+
+    /*
+     * Skipping the load is not enough on its own. Arriving at /login from the
+     * landing page is a client-side navigation, and the widget loaded there is
+     * still mounted — it would sit on the password form anyway. So it is hidden
+     * on the excluded routes and shown again on the way out.
+     */
+    if (blocked) {
+      const r = root();
+      if (r) {
+        window.DograhWidget?.close?.();
+        r.style.display = "none";
+      }
+      return;
+    }
+
+    const shown = root();
+    if (shown) shown.style.display = "";
 
     /*
      * The dashboard has a fixed bottom navigation bar on phones. The widget

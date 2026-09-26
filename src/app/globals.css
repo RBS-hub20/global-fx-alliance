@@ -143,16 +143,56 @@
 /*
  * Third-party voice widget (Hirestella / Dograh).
  *
- * No z-index rule here. The widget's own stylesheet sets 999999 on
- * #dograh-widget-root, which already clears everything this app paints (the
- * highest is the z-70 modal layer); a 9999 override would only lower it.
+ * The launcher's colour is inline (button.style.backgroundColor from the
+ * server config, currently #10b981), so matching JOIN THE ALLIANCE takes
+ * !important. Changing "buttonColor" to #00ff88 in the Hirestella dashboard
+ * would do the same thing at the source and is worth doing there too.
  *
- * What it does need: the dashboard's fixed bottom bar on phones sits exactly
- * where the launcher is anchored (bottom: 20px), so the two overlap. Lifted
- * clear of the bar and the home indicator, and only on dashboard routes.
+ * Scoped to the idle button on purpose: the vendor repaints it amber while
+ * connecting and red while a call is live, which is the only signal that the
+ * microphone is open. Overriding those would hide it.
+ *
+ * No z-index rule: its own stylesheet sets 999999 on #dograh-widget-root,
+ * already above everything this app paints.
  */
+#dograh-widget-cta:not(.dograh-state-connecting):not(.dograh-state-connected):not(.dograh-state-failed) {
+  background-color: #00ff88 !important;
+  color: #0a0a0a !important;
+  border-radius: 0.5rem !important; /* matches .btn-primary's rounded-lg */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3) !important;
+}
+
+#dograh-widget-cta:not(.dograh-state-connecting):not(.dograh-state-connected):not(.dograh-state-failed) svg {
+  color: #0a0a0a !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+#dograh-widget-cta:hover {
+  filter: brightness(1.1) !important;
+}
+
+/* The dashboard's fixed bottom bar on phones — lift the launcher above it. */
 @media (max-width: 1023px) {
   body[data-bottom-nav] > #dograh-widget-root {
     bottom: calc(env(safe-area-inset-bottom) + 4.75rem) !important;
   }
+}
+
+/* The GFXA panel that fronts the launcher. */
+@keyframes gfxaPopIn {
+  from { opacity: 0; transform: scale(0.9) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes gfxaFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-popIn { animation: gfxaPopIn 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fadeIn { animation: gfxaFadeIn 200ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-popIn, .animate-fadeIn { animation-duration: 1ms; }
 }

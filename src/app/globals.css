@@ -139,3 +139,20 @@
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Third-party voice widget (Hirestella / Dograh).
+ *
+ * No z-index rule here. The widget's own stylesheet sets 999999 on
+ * #dograh-widget-root, which already clears everything this app paints (the
+ * highest is the z-70 modal layer); a 9999 override would only lower it.
+ *
+ * What it does need: the dashboard's fixed bottom bar on phones sits exactly
+ * where the launcher is anchored (bottom: 20px), so the two overlap. Lifted
+ * clear of the bar and the home indicator, and only on dashboard routes.
+ */
+@media (max-width: 1023px) {
+  body[data-bottom-nav] > #dograh-widget-root {
+    bottom: calc(env(safe-area-inset-bottom) + 4.75rem) !important;
+  }
+}

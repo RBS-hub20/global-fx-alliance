@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { DograhWidget } from "@/components/widgets/DograhWidget";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 import { AuthProvider } from "@/lib/AuthContext";
 import { AiMarkDefs } from "@/components/brand/AiMark";
@@ -100,6 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ServiceWorker />
         <AiMarkDefs />
         <AuthProvider>{children}</AuthProvider>
+        <DograhWidget />
         <Analytics />
         <SpeedInsights />
       </body>

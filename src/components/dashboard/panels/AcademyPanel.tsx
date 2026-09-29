@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Clock, GraduationCap, Play } from "lucide-react";
 import { Card, CardHead, PanelHeader, Skeleton, Toast } from "@/components/ui/Primitives";
 import { TRACKS, type Lesson, type Track } from "@/lib/content";
 import { KEYS, usePersistentState } from "@/lib/storage";
+import { AcademyLibrary, AcademyLoading } from "@/components/dashboard/academy/AcademyLibrary";
 
 const LEVEL_STYLE: Record<Track["level"], string> = {
   Foundation: "bg-brand-accent/[0.13] text-brand-accent",
@@ -20,6 +21,30 @@ const INITIAL_DONE: string[] = [
 ];
 
 export function AcademyPanel() {
+  /*
+   * Two sources, one panel. When supabase/20250929_academy_books.sql has been
+   * run, the Academy is the five books and the member's own progress. Until
+   * then it stays exactly as it was — the curriculum fixture with progress in
+   * this browser — so the tab keeps working before the migration lands.
+   */
+  type LibraryData = Omit<React.ComponentProps<typeof AcademyLibrary>, "onSummary">;
+  const [library, setLibrary] = useState<LibraryData | null>(null);
+  const [checked, setChecked] = useState(false);
+
+  const loadLibrary = useCallback(async () => {
+    try {
+      const res = await fetch("/api/academy/books", { cache: "no-store" });
+      const j = await res.json();
+      if (res.ok && j?.ok) setLibrary({ books: j.books, lessons: j.lessons, summary: j.summary });
+    } catch {
+      /* offline: the fixture below still renders */
+    } finally {
+      setChecked(true);
+    }
+  }, []);
+
+  useEffect(() => { void loadLibrary(); }, [loadLibrary]);
+
   const { value: done, setValue: setDone, hydrated } = usePersistentState<string[]>(
     KEYS.academy,
     INITIAL_DONE
@@ -42,6 +67,19 @@ export function AcademyPanel() {
     setToast(nowDone ? `Completed: ${title}` : `Marked incomplete: ${title}`);
     setTimeout(() => setToast(null), 1800);
   };
+
+  if (!checked) return <AcademyLoading />;
+
+  if (library) {
+    return (
+      <AcademyLibrary
+        books={library.books}
+        lessons={library.lessons}
+        summary={library.summary}
+        onSummary={(summary) => setLibrary((prev) => (prev ? { ...prev, summary } : prev))}
+      />
+    );
+  }
 
   if (!hydrated) {
     return (

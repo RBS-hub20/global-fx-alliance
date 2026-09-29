@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Check, Loader2, X } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { trackViewContent } from "@/lib/pixel";
 
 /**
  * Page viewer for the Academy books.
@@ -82,6 +83,15 @@ export function BookViewer({
     }
     ctx.restore();
   }, [stamp]);
+
+  /*
+   * One ViewContent per lesson opened, not per page turned — a 12-page lesson
+   * is one piece of content, and firing on every page would inflate the event
+   * twelvefold and make the number useless for optimisation.
+   */
+  useEffect(() => {
+    trackViewContent({ content_name: `${bookTitle} · ${title}`, content_category: "Academy", content_ids: [lessonId] });
+  }, [lessonId, bookTitle, title]);
 
   /* ---------------------------------------------------------------- fetch */
 

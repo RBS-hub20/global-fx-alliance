@@ -24,16 +24,13 @@ import { META_PIXEL_ID, trackPageView } from "@/lib/pixel";
  * here — say the word.
  */
 
+/**
+ * The tags themselves take no hooks, so they render into the HTML at build
+ * time. They were briefly inside the Suspense boundary below, which meant the
+ * whole subtree fell back to null during static rendering and neither the
+ * snippet nor the noscript pixel appeared in the served HTML.
+ */
 export function MetaPixel() {
-  const pathname = usePathname();
-  const search = useSearchParams();
-  const first = useRef(true);
-
-  useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    trackPageView();
-  }, [pathname, search]);
-
   return (
     <>
       <Script id="meta-pixel" strategy="afterInteractive">
@@ -60,4 +57,23 @@ fbq('track', 'PageView');`}
       </noscript>
     </>
   );
+}
+
+/**
+ * Route changes. Separate because it reads searchParams, which needs a Suspense
+ * boundary — keeping it apart lets the tags above stay in the static HTML.
+ */
+export function MetaPixelRouteEvents() {
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const first = useRef(true);
+
+  useEffect(() => {
+    // The base snippet already counted the first page; counting it again here
+    // would report every landing twice.
+    if (first.current) { first.current = false; return; }
+    trackPageView();
+  }, [pathname, search]);
+
+  return null;
 }

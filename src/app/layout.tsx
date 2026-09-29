@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Suspense } from "react";
-import { MetaPixel } from "@/components/MetaPixel";
+import { MetaPixel, MetaPixelRouteEvents } from "@/components/MetaPixel";
 import { DograhWidget } from "@/components/widgets/DograhWidget";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 import { AuthProvider } from "@/lib/AuthContext";
@@ -100,8 +100,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <body>
+        <MetaPixel />
         <Suspense fallback={null}>
-          <MetaPixel />
+          <MetaPixelRouteEvents />
         </Suspense>
         <ServiceWorker />
         <AiMarkDefs />

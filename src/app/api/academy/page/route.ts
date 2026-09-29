@@ -1,58 +1,40 @@
-import { NextResponse } from "next/server";
-import { academyContext } from "@/lib/academyGuard";
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export async function GET(req: NextRequest) {
+  try {
+    const path = req.nextUrl.searchParams.get('path')
+    if (!path) {
+      return NextResponse.json({ error: 'Missing path' }, { status: 400 })
+    }
 
-const EXPIRY_SECONDS = 60;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
-/**
- * One signed URL for one page, valid for a minute.
- *
- * The bucket is private and has no storage policies, so a browser cannot read
- * it directly; this route is the only way in, and it checks the session and the
- * membership first. Each hand-out is logged with the member and the page.
- */
-export async function GET(request: Request) {
-  const ctx = await academyContext();
-  if (ctx instanceof NextResponse) return ctx;
-  const { user, db } = ctx;
+    if (!supabaseUrl || !serviceKey) {
+      console.error('Missing Supabase env')
+      return NextResponse.json({ error: 'Server config missing' }, { status: 500 })
+    }
 
-  const params = new URL(request.url).searchParams;
-  const lessonId = params.get("lesson") ?? "";
-  const page = Number(params.get("page") ?? "1");
+    const supabase = createClient(supabaseUrl, serviceKey)
+    const cleanPath = path.replace(/^\/+/, '').trim()
 
-  if (!lessonId || !Number.isInteger(page) || page < 1) {
-    return NextResponse.json({ ok: false, message: "Need a lesson and a page." }, { status: 400 });
+    const { data, error } = await supabase
+      .storage
+      .from('academy-books')
+      .createSignedUrl(cleanPath, 60 * 5)
+
+    if (error) {
+      console.error('Signed URL error:', error, 'path:', cleanPath)
+      return NextResponse.json({ error: error.message, path: cleanPath }, { status: 500 })
+    }
+
+    return NextResponse.json(
+      { url: data.signedUrl },
+      { headers: { 'Access-Control-Allow-Origin': '*' } }
+    )
+  } catch (e: any) {
+    console.error('Academy page error:', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
-
-  const { data: row, error } = await db
-    .from("academy_pages")
-    .select("id, page_number, content_type, object_path, body")
-    .eq("lesson_id", lessonId)
-    .eq("page_number", page)
-    .maybeSingle();
-
-  if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 502 });
-  if (!row) return NextResponse.json({ ok: false, message: "That page is not uploaded yet." }, { status: 404 });
-
-  // Text pages need no signature.
-  if (row.content_type === "text") {
-    await db.from("academy_views").insert({ user_id: user.id, lesson_id: lessonId, page_number: page });
-    return NextResponse.json({ ok: true, type: "text", body: row.body ?? "" }, { headers: { "Cache-Control": "no-store" } });
-  }
-
-  if (!row.object_path) return NextResponse.json({ ok: false, message: "That page has no image." }, { status: 404 });
-
-  const signed = await db.storage.from("academy-books").createSignedUrl(row.object_path, EXPIRY_SECONDS);
-  if (signed.error || !signed.data?.signedUrl) {
-    return NextResponse.json({ ok: false, message: signed.error?.message ?? "Could not sign that page." }, { status: 502 });
-  }
-
-  await db.from("academy_views").insert({ user_id: user.id, lesson_id: lessonId, page_number: page });
-
-  return NextResponse.json(
-    { ok: true, type: "image", url: signed.data.signedUrl, expiresIn: EXPIRY_SECONDS },
-    { headers: { "Cache-Control": "no-store" } }
-  );
 }

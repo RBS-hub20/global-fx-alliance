@@ -18,7 +18,11 @@ import { useAuth } from "@/lib/AuthContext";
  * camera defeats every web defence there is. The watermark is the real control.
  */
 
-interface PageResponse { ok: boolean; type?: "image" | "text"; url?: string; body?: string; message?: string }
+interface PageResponse {
+  ok: boolean; type?: "image" | "text"; url?: string; body?: string;
+  message?: string; path?: string; hint?: string;
+}
+interface PageError { message: string; path?: string; hint?: string; status: number }
 
 export function BookViewer({
   lessonId, title, bookTitle, pages, startPage, onClose, onProgress,
@@ -34,7 +38,8 @@ export function BookViewer({
   const { user, profile } = useAuth();
   const [page, setPage] = useState(Math.min(Math.max(startPage, 1), Math.max(pages, 1)));
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<PageError | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [text, setText] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [complete, setComplete] = useState(false);
@@ -91,17 +96,24 @@ export function BookViewer({
         const res = await fetch(`/api/academy/page?lesson=${encodeURIComponent(lessonId)}&page=${page}`, { cache: "no-store" });
         const j = (await res.json()) as PageResponse;
         if (!alive) return;
-        if (!res.ok || !j.ok) { setError(j.message ?? "Could not open that page."); setLoading(false); return; }
+        if (!res.ok || !j.ok) {
+          // The API says which of the several possible failures this is; the
+          // old blanket "Could not open that page" hid a 400 from a 404.
+          console.error("[academy] page failed", { lessonId, page, status: res.status, ...j });
+          setError({ message: j.message ?? "Could not open that page.", path: j.path, hint: j.hint, status: res.status });
+          setLoading(false);
+          return;
+        }
 
         if (j.type === "text") { setText(j.body ?? ""); setLoading(false); return; }
 
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => { if (alive) { draw(img); setLoading(false); } };
-        img.onerror = () => { if (alive) { setError("That page did not load. It may have expired — try again."); setLoading(false); } };
+        img.onerror = () => { if (alive) { setError({ message: "The image did not load — the signed link may have expired.", status: 0 }); setLoading(false); } };
         img.src = j.url ?? "";
       } catch {
-        if (alive) { setError("Could not reach the library."); setLoading(false); }
+        if (alive) { setError({ message: "Could not reach the library.", status: 0 }); setLoading(false); }
       }
     })();
 
@@ -112,7 +124,7 @@ export function BookViewer({
     }).then((r) => r.json()).then((j) => { if (j?.ok && j.summary) onProgress(j.summary); }).catch(() => {});
 
     return () => { alive = false; };
-  }, [lessonId, page, draw, onProgress]);
+  }, [lessonId, page, draw, onProgress, attempt]);
 
   /* ------------------------------------------------------------ deterrents */
 
@@ -184,8 +196,17 @@ export function BookViewer({
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : error ? (
-          <div className="mx-auto max-w-[460px] rounded-lg border border-[#ff4d4d]/40 bg-[#ff4d4d]/10 px-4 py-3 font-mono text-[12px] text-[#ff4d4d]">
-            {error}
+          <div className="mx-auto max-w-[460px] space-y-2 rounded-lg border border-[#ff4d4d]/40 bg-[#ff4d4d]/10 px-4 py-3">
+            <p className="font-mono text-[12px] leading-relaxed text-[#ff4d4d]">{error.message}</p>
+            {error.path ? <p className="break-all font-mono text-[10.5px] text-[#a3a3a3]">path: {error.path}</p> : null}
+            {error.hint ? <p className="font-mono text-[10.5px] text-[#a3a3a3]">{error.hint}</p> : null}
+            <p className="font-mono text-[10px] text-[#525252]">
+              lesson {lessonId.slice(0, 8)}… · page {page}{error.status ? ` · HTTP ${error.status}` : ""}
+            </p>
+            <button type="button" onClick={() => setAttempt((n) => n + 1)}
+              className="inline-flex items-center gap-1.5 rounded border border-[#00ff88] px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#00ff88] transition-colors hover:bg-[#00ff88]/10">
+              Retry
+            </button>
           </div>
         ) : text !== null ? (
           <article className="relative mx-auto max-w-[70ch] whitespace-pre-wrap text-[14px] leading-relaxed text-[#e5e5e5]">

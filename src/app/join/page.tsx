@@ -7,7 +7,8 @@ import { SOCIALS } from "@/lib/socials";
 import { DISCLAIMER } from "@/lib/data";
 import { HeroMedia } from "./HeroMedia";
 import { LivePresence } from "./LivePresence";
-import { JoinCta } from "./JoinCta";
+import { GFXA_BOT, JoinCta } from "./JoinCta";
+import { GridBackdrop, SocialProofRow, StatsRow } from "./SocialProofRow";
 
 /*
  * Domain: join.globalfxalliance.io
@@ -25,7 +26,12 @@ import { JoinCta } from "./JoinCta";
  * extra; a separate `.com` would mean buying another name for no benefit.
  */
 
-const TELEGRAM = "https://t.me/GFXAlliance";
+/*
+ * The funnel now runs through the access bot rather than straight into the
+ * channel: it can ask the short qualifying questions and hand out the invite,
+ * and the ?start= payload tells it which ad the visitor came from.
+ */
+const TELEGRAM_BOT = GFXA_BOT;
 
 export const metadata: Metadata = {
   title: "Join the community",
@@ -74,7 +80,11 @@ const INSIDE = [
 ];
 
 const STEPS = [
-  { n: 1, title: "Join the Telegram channel", body: "One tap. Free, and you can leave whenever you like." },
+  {
+    n: 1,
+    title: "Message @gfxa_access_bot on Telegram",
+    body: "A 30-second set of questions, then your invite to the free GFXA community arrives straight away. One tap, free, and you can leave whenever you like.",
+  },
   { n: 2, title: "Read the daily breakdowns", body: "How the sessions opened, which levels are in play, what the scanner found." },
   { n: 3, title: "Open the dashboard when you want it", body: "The charts, journal and tools live at globalfxalliance.io — there when you are ready, not before." },
 ];
@@ -85,6 +95,7 @@ export default function JoinPage() {
       {/* ------------------------------------------------------------- hero */}
       <section className="relative isolate flex min-h-[62vh] flex-col justify-end overflow-hidden px-5 pb-10 pt-8 sm:min-h-[58vh] sm:px-8 lg:min-h-[64vh]">
         <HeroMedia />
+        <GridBackdrop />
 
         <div className="relative mx-auto w-full max-w-[760px]">
           <div className="mb-7 flex items-center justify-between gap-4">
@@ -94,7 +105,10 @@ export default function JoinPage() {
             </span>
           </div>
 
-          <LivePresence />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <LivePresence />
+            <SocialProofRow />
+          </div>
 
           <h1 className="mt-5 text-[34px] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[46px] lg:text-[54px]">
             The global community
@@ -130,10 +144,11 @@ export default function JoinPage() {
           </div>
 
           <div className="mt-8 flex flex-col items-center gap-3.5 text-center">
-            <JoinCta href={TELEGRAM} where="hero" />
+            <JoinCta base="join_page" where="hero" />
             <p className="text-[12.5px] text-[#A3A3A3]">
               Free · Telegram channel · daily breakdowns · leave any time
             </p>
+            <StatsRow className="mt-1 w-full max-w-[420px]" />
             <a href="#whats-inside" className="text-[13px] font-medium text-[#00FF88] transition-colors hover:text-white">
               Or see what is inside first
             </a>
@@ -148,7 +163,7 @@ export default function JoinPage() {
                 {SOCIALS.map((s) => (
                   <li key={s.id}>
                     <a
-                      href={s.url}
+                      href={s.id === "telegram" ? `${TELEGRAM_BOT}?start=also_here` : s.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`${s.label} (opens in a new tab)`}
@@ -234,7 +249,7 @@ export default function JoinPage() {
           </ol>
 
           <div className="mt-11 flex flex-col items-center gap-3.5 text-center">
-            <JoinCta href={TELEGRAM} where="footer" />
+            <JoinCta base="join_page" where="footer" />
             <p className="text-[12.5px] text-[#A3A3A3]">Free · no spam · leave any time</p>
           </div>
         </div>
@@ -248,7 +263,7 @@ export default function JoinPage() {
               {SOCIALS.map((s) => (
                 <li key={s.id}>
                   <a
-                    href={s.url}
+                    href={s.id === "telegram" ? `${TELEGRAM_BOT}?start=footer_icons` : s.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${s.label} (opens in a new tab)`}

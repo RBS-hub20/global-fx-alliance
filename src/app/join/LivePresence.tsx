@@ -33,6 +33,7 @@ export function LivePresence() {
       {online && online > 0
         ? `${online} ${online === 1 ? "member" : "members"} checked in today`
         : "Open now — free to join"}
+      <span className="font-normal text-[#00FF88]/70">· 5,000+ traders</span>
     </span>
   );
 }

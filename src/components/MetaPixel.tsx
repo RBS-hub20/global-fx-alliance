@@ -65,7 +65,14 @@ fbq('track', 'PageView');`}
  */
 export function MetaPixelRouteEvents() {
   const pathname = usePathname();
-  const search = useSearchParams();
+  /*
+   * Serialised, not the object: useSearchParams() hands back a fresh instance
+   * on every render, so a dependency on it changed identity after hydration and
+   * re-ran this effect — past the first.current guard, which had already been
+   * spent. Every first load reported two PageViews. The string only changes
+   * when the query actually changes.
+   */
+  const searchString = useSearchParams().toString();
   const first = useRef(true);
 
   useEffect(() => {
@@ -73,7 +80,7 @@ export function MetaPixelRouteEvents() {
     // would report every landing twice.
     if (first.current) { first.current = false; return; }
     trackPageView();
-  }, [pathname, search]);
+  }, [pathname, searchString]);
 
   return null;
 }

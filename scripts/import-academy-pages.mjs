@@ -16,6 +16,11 @@
  *
  * Re-running is safe: the object path and the (lesson, page) row are both
  * upserted, so a corrected page replaces the old one instead of duplicating it.
+ *
+ * Pass --replace when the split itself changes. Upserting alone only rewrites
+ * the rows the new split touches: a lesson dropping from 8 pages to 7 keeps its
+ * orphaned 8th row, so the book ends up with more pages than it has files and
+ * one page assigned to two lessons.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -30,7 +35,7 @@ const args = Object.fromEntries(
 const bookNumber = Number(args.book);
 const dir = args.dir;
 if (!bookNumber || !dir) {
-  console.error("usage: --book <1-5> --dir <folder of page images> [--pages-per-lesson N]");
+  console.error("usage: --book <1-5> --dir <folder of page images> [--pages-per-lesson N] [--replace]");
   process.exit(1);
 }
 
@@ -80,6 +85,16 @@ const fixed = Number(args["pages-per-lesson"]) || 0;
 const base = Math.floor(files.length / lessons.length);
 const extra = files.length % lessons.length;
 const sizes = lessons.map((_, i) => (fixed ? fixed : base + (i < extra ? 1 : 0)));
+
+// Presence check: the pair-wise flag parser above would read a trailing
+// --replace as undefined and skip the clear without saying so.
+if (process.argv.includes("--replace")) {
+  const ids = lessons.map((l) => l.id);
+  const { error: delErr, count } = await db
+    .from("academy_pages").delete({ count: "exact" }).in("lesson_id", ids);
+  if (delErr) { console.error(`Could not clear existing pages: ${explain(delErr)}`); process.exit(1); }
+  console.log(`  cleared ${count ?? 0} existing page row(s) for this book`);
+}
 
 console.log(`${book.title}: ${files.length} pages over ${lessons.length} lessons`);
 console.log(`  split: ${sizes.join(", ")}`);

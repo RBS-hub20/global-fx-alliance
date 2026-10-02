@@ -45,16 +45,22 @@ s.parentNode.insertBefore(t,s)}(window, document,'script',
 fbq('init', '${META_PIXEL_ID}');
 fbq('track', 'PageView');`}
       </Script>
-      <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          alt=""
-          src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-        />
-      </noscript>
+      {/*
+        * Raw markup, not JSX children.
+        *
+        * React builds element children of <noscript> as real DOM nodes while
+        * hydrating, and a browser with scripting ON fetches an <img> created
+        * that way — so this tag was firing a second PageView
+        * (…&ev=PageView&noscript=1) on every load, on top of the snippet's.
+        * Assigning innerHTML on a noscript element keeps the markup as text
+        * when scripting is enabled, which is the whole point of the tag: it
+        * should only ever load for visitors without JavaScript.
+        */}
+      <noscript
+        dangerouslySetInnerHTML={{
+          __html: `<img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1" />`,
+        }}
+      />
     </>
   );
 }

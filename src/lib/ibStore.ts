@@ -1,3 +1,4 @@
+import "server-only";
 import type { Broker } from "./brokers";
 import { PROOF_BUCKET, TABLE, hasSupabase, supabaseAdmin } from "./supabaseAdmin";
 

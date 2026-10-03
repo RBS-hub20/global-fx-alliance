@@ -1,3 +1,4 @@
+import "server-only";
 import { NextResponse } from "next/server";
 import { guard } from "./adminAuth";
 import { supabaseAdmin } from "./supabaseAdmin";

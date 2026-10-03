@@ -3,7 +3,8 @@
 import { ArrowUpRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
-import { readAttribution, telegramLink } from "@/lib/attribution";
+import { readAttribution, buildStartParam, telegramLink } from "@/lib/attribution";
+import { sendBeacon } from "@/lib/beacon";
 
 export const GFXA_BOT = "https://t.me/gfxa_access_bot";
 
@@ -44,6 +45,12 @@ export function JoinCta({
         try {
           window.fbq?.("track", "Lead", { content_name: `${base}_telegram_cta`, content_category: "Telegram" });
         } catch { /* a blocked pixel must not swallow the click */ }
+        /*
+         * The same click, counted where we can read it back. The start payload
+         * goes with it: that string is the only thing linking this click to the
+         * /start the bot will see, so the admin funnel needs it on both sides.
+         */
+        sendBeacon("lead", { start_param: buildStartParam(base, readAttribution()) });
       }}
       className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#00FF88] px-8 py-4 font-mono text-[15px] font-bold text-[#0a0a0a] shadow-[0_12px_34px_-12px_rgba(0,255,136,0.95)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#33ffa0] hover:shadow-[0_18px_44px_-12px_rgba(0,255,136,1)] sm:w-auto ${className}`}
     >

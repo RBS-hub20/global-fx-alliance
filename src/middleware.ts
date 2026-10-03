@@ -90,7 +90,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Only the dashboard. The landing page, /join, /links, auth pages and API
-  // routes are untouched — the API routes authenticate each request themselves.
-  matcher: ["/dashboard", "/dashboard/:path*"],
+  /*
+   * The dashboard and the admin console. The landing page, /join, /links, auth
+   * pages and API routes are untouched — the API routes authenticate each
+   * request themselves.
+   *
+   * /admin is here so a signed-out admin lands on the login form rather than on
+   * the 404 the page itself returns for everyone who is not on the allow-list.
+   * The page still makes that decision; this only saves the wasted trip.
+   */
+  matcher: ["/dashboard", "/dashboard/:path*", "/admin", "/admin/:path*"],
 };

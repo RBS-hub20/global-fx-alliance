@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Suspense } from "react";
 import { MetaPixel, MetaPixelRouteEvents } from "@/components/MetaPixel";
+import { SiteBeacon } from "@/components/SiteBeacon";
 import { DograhWidget } from "@/components/widgets/DograhWidget";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 import { AuthProvider } from "@/lib/AuthContext";
@@ -103,6 +104,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <MetaPixel />
         <Suspense fallback={null}>
           <MetaPixelRouteEvents />
+          {/* First-party counting for /admin. Public funnel pages only. */}
+          <SiteBeacon />
         </Suspense>
         <ServiceWorker />
         <AiMarkDefs />

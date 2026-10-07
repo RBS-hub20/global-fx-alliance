@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AcademyTab } from "./AcademyTab";
 import { CrmTab } from "./CrmTab";
 import { DepositsTab } from "./DepositsTab";
+import { IndicatorsTab } from "./IndicatorsTab";
 import { SecurityTab, SettingsTab } from "./HealthTabs";
 import { OverviewTab, type Stats } from "./OverviewTab";
 import { PixelTab } from "./PixelTab";
@@ -17,6 +18,8 @@ const TABS = [
   { key: "deposits", label: "Deposits" },
   { key: "security", label: "Security" },
   { key: "settings", label: "Settings" },
+  // Management only. The member-facing showcase is /dashboard?tab=indicators.
+  { key: "indicators", label: "Indicators" },
 ] as const;
 
 type Key = (typeof TABS)[number]["key"];
@@ -84,6 +87,7 @@ export function AdminConsole({ email }: { email: string }) {
         {tab === "deposits" ? <DepositsTab /> : null}
         {tab === "security" ? <SecurityTab /> : null}
         {tab === "settings" ? <SettingsTab /> : null}
+        {tab === "indicators" ? <IndicatorsTab /> : null}
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-8 text-[11px] leading-relaxed text-[#525252]">

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Globe2, LineChart, Newspaper, Star, Radar, ClipboardList, Users, MessagesSquare,
   GraduationCap, Trophy, MapPin, Calculator, CalendarDays, NotebookPen, Camera, Sparkles,
-  UserRound, BadgeCheck, Settings, ShieldCheck, Bot, type LucideIcon,
+  UserRound, BadgeCheck, Settings, ShieldCheck, Bot, TrendingUp, type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -32,6 +32,7 @@ export const TABS: TabDef[] = [
   { slug: "community", label: "Community", icon: Users, group: "Community", blurb: "What traders around the world are posting right now." },
   { slug: "discussions", label: "Discussions", icon: MessagesSquare, group: "Community", blurb: "Longer-form threads on the questions that keep coming up.", badge: "12" },
   { slug: "academy", label: "Academy", icon: GraduationCap, group: "Community", blurb: "Three tracks, from first principles to execution." },
+  { slug: "indicators", label: "GFXA Indicators", icon: TrendingUp, group: "Community", blurb: "Invite-only TradingView scripts, for members with a verified deposit.", badge: "NEW" },
   { slug: "challenges", label: "Challenges", icon: Trophy, group: "Community", blurb: "Analysis competitions judged on reasoning, not returns." },
   { slug: "chapters", label: "Global Chapters", icon: MapPin, group: "Community", blurb: "Country communities inside the Alliance." },
 

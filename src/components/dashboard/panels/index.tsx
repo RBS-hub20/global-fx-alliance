@@ -11,6 +11,7 @@ import { WatchlistPanel } from "./WatchlistPanel";
 import { CommunityPanel } from "./CommunityPanel";
 import { DiscussionsPanel } from "./DiscussionsPanel";
 import { AcademyPanel } from "./AcademyPanel";
+import { IndicatorsPanel } from "@/components/dashboard/indicators/IndicatorsPanel";
 import { ChallengesPanel } from "./ChallengesPanel";
 import { ChaptersPanel } from "./ChaptersPanel";
 import { CalculatorPanel } from "./CalculatorPanel";
@@ -39,6 +40,7 @@ export const PANELS: Record<string, ComponentType<PanelProps>> = {
   community: CommunityPanel,
   discussions: DiscussionsPanel,
   academy: AcademyPanel,
+  indicators: IndicatorsPanel,
   challenges: ChallengesPanel,
   chapters: ChaptersPanel,
   calculator: CalculatorPanel,

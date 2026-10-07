@@ -47,6 +47,33 @@ export function BookViewer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
 
+  /*
+   * onProgress lives in a ref, and deliberately not in the fetch effect's
+   * dependency list.
+   *
+   * It used to be a dependency, which made this viewer re-fetch itself forever:
+   * the effect POSTs progress, the response calls onProgress, that sets state up
+   * in AcademyPanel, the panel re-renders and hands down a fresh inline
+   * callback, the identity changes, and the effect runs again. Measured in
+   * production before this fix — one member's page 1 was fetched 918 times, and
+   * because every run also sets `loading` back to true, the spinner never
+   * cleared and the book looked empty.
+   */
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
+
+  /*
+   * The decoded page, held until there is a canvas to put it on.
+   *
+   * The canvas is only rendered when `loading` is false, so calling draw() from
+   * the image's onload — which fires while the spinner is still up — looked up
+   * canvasRef.current, found null, and returned without drawing anything. Then
+   * loading flipped and an untouched canvas mounted. Every page of every book
+   * was blank, on every first open, and nothing errored: draw()'s own `if
+   * (!canvas) return` swallowed it.
+   */
+  const imageRef = useRef<HTMLImageElement | null>(null);
+
   const stamp = [
     user?.email ?? "member",
     profile?.account_number ? `#${profile.account_number}` : "",
@@ -100,6 +127,8 @@ export function BookViewer({
     setLoading(true);
     setError(null);
     setText(null);
+    // So a page turn cannot redraw the page before it.
+    imageRef.current = null;
 
     (async () => {
       try {
@@ -119,8 +148,12 @@ export function BookViewer({
 
         const img = new Image();
         img.crossOrigin = "anonymous";
-        img.onload = () => { if (alive) { draw(img); setLoading(false); } };
-        img.onerror = () => { if (alive) { setError({ message: "The image did not load — the signed link may have expired.", status: 0 }); setLoading(false); } };
+        // Stored, not drawn: the effect below draws it once the canvas is mounted.
+        img.onload = () => { if (alive) { imageRef.current = img; setLoading(false); } };
+        // Not necessarily expiry: a 300-second link that fails on first load is
+        // more likely a network drop or a blocked request, and naming expiry as
+        // the cause sent the last investigation to the wrong place.
+        img.onerror = () => { if (alive) { setError({ message: "The page image did not load. Check the connection and retry.", status: 0 }); setLoading(false); } };
         img.src = j.url ?? "";
       } catch {
         if (alive) { setError({ message: "Could not reach the library.", status: 0 }); setLoading(false); }
@@ -131,10 +164,24 @@ export function BookViewer({
     void fetch("/api/academy/progress", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lesson_id: lessonId, page }),
-    }).then((r) => r.json()).then((j) => { if (j?.ok && j.summary) onProgress(j.summary); }).catch(() => {});
+    }).then((r) => r.json()).then((j) => { if (j?.ok && j.summary) onProgressRef.current(j.summary); }).catch(() => {});
 
     return () => { alive = false; };
-  }, [lessonId, page, draw, onProgress, attempt]);
+    // onProgress is intentionally absent — see onProgressRef above.
+  }, [lessonId, page, draw, attempt]);
+
+  /*
+   * Draw after the canvas exists.
+   *
+   * Runs on the render where `loading` has just become false, which is the first
+   * render that includes the <canvas>. `page` is in the deps so turning a page
+   * repaints even when the other flags are unchanged.
+   */
+  useEffect(() => {
+    if (loading || error || text !== null) return;
+    const img = imageRef.current;
+    if (img) draw(img);
+  }, [loading, error, text, page, draw]);
 
   /* ------------------------------------------------------------ deterrents */
 

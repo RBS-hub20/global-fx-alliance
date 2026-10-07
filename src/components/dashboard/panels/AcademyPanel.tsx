@@ -45,6 +45,15 @@ export function AcademyPanel() {
 
   useEffect(() => { void loadLibrary(); }, [loadLibrary]);
 
+  /*
+   * Memoised, not inline. An inline arrow here changed identity on every render
+   * of this panel, which was one half of the loop that stopped the book viewer
+   * ever finishing a page — the other half was BookViewer depending on it.
+   */
+  const onSummary = useCallback((summary: LibraryData["summary"]) => {
+    setLibrary((prev) => (prev ? { ...prev, summary } : prev));
+  }, []);
+
   const { value: done, setValue: setDone, hydrated } = usePersistentState<string[]>(
     KEYS.academy,
     INITIAL_DONE
@@ -76,7 +85,7 @@ export function AcademyPanel() {
         books={library.books}
         lessons={library.lessons}
         summary={library.summary}
-        onSummary={(summary) => setLibrary((prev) => (prev ? { ...prev, summary } : prev))}
+        onSummary={onSummary}
       />
     );
   }

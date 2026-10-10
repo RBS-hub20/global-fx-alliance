@@ -190,6 +190,25 @@ export function normaliseSymbol(raw: string): string {
   return (raw || "").toUpperCase().trim() || "UNKNOWN";
 }
 
+/**
+ * Every table title in the export.
+ *
+ * An MT5 report is several tables stacked in one document and the parser reads
+ * only the first that has a symbol and a profit column. Listing the rest makes
+ * it obvious when the realised history is sitting further down the same file.
+ */
+function sectionsIn(grid: string[][]): string[] {
+  const found: string[] = [];
+  for (const row of grid) {
+    const filled = row.filter((x) => (x ?? "").trim() !== "");
+    if (filled.length === 1 && SECTION_TITLE.test(filled[0].trim())) {
+      const title = filled[0].trim();
+      if (!found.includes(title)) found.push(title);
+    }
+  }
+  return found;
+}
+
 /** Single-cell rows that start a new table inside one export. */
 const SECTION_TITLE = /^(positions?|orders?|deals?|working orders|open trades|open positions|closed transactions)$/i;
 
@@ -264,6 +283,11 @@ export interface ParseReport {
    * paste to someone.
    */
   samples: { field: string; raw: string | null; ok: boolean }[];
+  /** How many of the parsed trades actually carry a close time and costs. */
+  withCloseTime: number;
+  withCosts: number;
+  /** Every table found in the export, so it is obvious what else is in there. */
+  sections: string[];
 }
 
 export interface ParseResult { trades: Trade[]; report: ParseReport }
@@ -276,7 +300,8 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
   const empty = (rowCount: number): ParseResult => ({
     trades: [],
     report: { rows: rowCount, headerRow: -1, headers: [], mapped: [], trades: 0,
-              skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [] },
+              skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [],
+              withCloseTime: 0, withCosts: 0, sections: [] },
   });
 
   const grid = rows.filter((r) => r.some((c) => (c ?? "").trim() !== ""));
@@ -335,6 +360,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
         rows: grid.length, headerRow: headerIdx, headers: headerCells,
         mapped: [`header has ${headerWidth} columns, the ${modalCount} rows below have ${modalWidth} — columns cannot be matched`],
         trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [],
+        withCloseTime: 0, withCosts: 0, sections: sectionsIn(grid),
       },
     };
   }
@@ -384,6 +410,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
         rows: grid.length, headerRow: headerIdx, headers: headerCells,
         mapped: [`profit=${headerCells[map.profit] ?? "?"}[${map.profit}] — collides with a price or time column`],
         trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [],
+        withCloseTime: 0, withCosts: 0, sections: sectionsIn(grid),
       },
     };
   }
@@ -517,6 +544,11 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
       skippedSymbol,
       stoppedAt,
       samples,
+      // Zero close times across every row is the signature of a table of open
+      // positions, where Profit is floating rather than realised.
+      withCloseTime: out.filter((t) => t.closeTime !== null).length,
+      withCosts: out.filter((t) => t.commission !== 0 || t.swap !== 0).length,
+      sections: sectionsIn(grid),
     },
   };
 }

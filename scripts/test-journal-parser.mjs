@@ -194,6 +194,60 @@ ok("money samples disclose no value", oneBad.report.samples.filter((x) => x.fiel
    JSON.stringify(oneBad.report.samples.find((x) => x.field === "profit")));
 ok("hold time is null, not a wrong number", oneBad.trades[0].durationMinutes === null, String(oneBad.trades[0].durationMinutes));
 
+
+console.log("=== the real ReportHistory-1327247.html layout ===");
+// headers exactly as the Copy column layout button reported them, trailing blank included
+const HDR = ["Time","Position","Symbol","Type","Volume","Price","S / L","T / P","Time","Price","Commission","Swap","Profit",""];
+const openRow = (t, px, pf) =>
+  [t,"41550011","XAUUSD","buy","0.01",px,"0.00","0.00","",String(Number(px)+1),"","",pf,""];
+
+const realOpen = parseStatementRows([
+  ["Trade History Report"], [], ["Account:","1327247"], [], [], ["Positions"], HDR,
+  openRow("2026.09.17 20:14:46","4187.49","0.07"),
+  openRow("2026.09.17 20:15:02","4187.52","0.06"),
+  openRow("2026.09.17 20:15:44","4187.60","0.08"),
+  [], ["Orders"], ["Open Time","Order","Symbol","Type","Volume","Price"],
+  ["2026.09.18 08:00","41550099","XAUUSD","buy limit","0.01","4100.00"],
+  [], ["Deals"], ["Time","Deal","Symbol","Type","Direction","Volume","Price","Order","Commission","Swap","Profit"],
+  ["2026.09.16 11:00","9001","XAUUSD","buy","in","0.01","4180.00","41550001","-0.02","0.00","0.00"],
+], "ReportHistory-1327247.html");
+
+const m = realOpen.report.mapped.join(" ");
+ok("openTime=Time[0]", /openTime=Time\[0\]/.test(m), m);
+ok("closeTime=Time[8]", /closeTime=Time\[8\]/.test(m), m);
+ok("profit=Profit[12]", /profit=Profit\[12\]/.test(m), m);
+ok("commission=Commission[10]", /commission=Commission\[10\]/.test(m), m);
+ok("swap=Swap[11] — no collision", /swap=Swap\[11\]/.test(m), m);
+ok("3 positions, Orders and Deals not read", realOpen.trades.length === 3, String(realOpen.trades.length));
+ok("no close times at all", realOpen.report.withCloseTime === 0, String(realOpen.report.withCloseTime));
+ok("no costs charged yet", realOpen.report.withCosts === 0, String(realOpen.report.withCosts));
+ok("every table in the file is listed", realOpen.report.sections.join(",") === "Positions,Orders,Deals", realOpen.report.sections.join(","));
+ok("hold time is null for an open position", realOpen.trades.every((t) => t.durationMinutes === null));
+const ro = computeAnalytics(realOpen.trades);
+ok("costs read 0.00, which is correct here", ro.summary.totalCosts === 0, String(ro.summary.totalCosts));
+ok("net is the floating total", Math.abs(ro.summary.netPL - 0.21) < 0.001, String(ro.summary.netPL));
+const cs = realOpen.report.samples.find((x) => x.field === "closeTime");
+ok("close time sample reports (empty) FAILED", cs?.raw === "(empty)" && cs?.ok === false, JSON.stringify(cs));
+
+console.log("=== the same layout with real closed trades ===");
+const closedRow = (t1, t2, px, cx, comm, swap, pf) =>
+  [t1,"41550011","XAUUSD","buy","0.10",px,"0.00","0.00",t2,cx,comm,swap,pf,""];
+const realClosed = parseStatementRows([
+  ["Positions"], HDR,
+  closedRow("2026.09.17 20:14:46","2026.09.17 20:59:46","4187.49","4192.10","-1.20","-0.10","46.10"),
+  closedRow("2026.09.18 09:00:00","2026.09.18 11:40:00","4195.00","4190.20","-1.20","-0.30","-48.00"),
+], "ReportHistory-1327247.html");
+ok("2 trades", realClosed.trades.length === 2, String(realClosed.trades.length));
+ok("both have close times", realClosed.report.withCloseTime === 2, String(realClosed.report.withCloseTime));
+ok("costs are charged", realClosed.report.withCosts === 2, String(realClosed.report.withCosts));
+ok("hold times are real", realClosed.trades.map((t) => t.durationMinutes).join(",") === "45,160",
+   realClosed.trades.map((t) => t.durationMinutes).join(","));
+const rc = computeAnalytics(realClosed.trades);
+ok("win rate 50%", rc.summary.winRate === 50, String(rc.summary.winRate));
+ok("costs are commission+swap", Math.abs(rc.summary.totalCosts + 2.8) < 0.001, String(rc.summary.totalCosts));
+ok("avg winner 45m, avg loser 160m", rc.holdTime.avgWinnerMin === 45 && rc.holdTime.avgLoserMin === 160,
+   `${rc.holdTime.avgWinnerMin}/${rc.holdTime.avgLoserMin}`);
+
 console.log("=== regression: the CSV sample is unchanged ===");
 const csv = parseTradesCSV(SAMPLE_STATEMENT_CSV, "");
 const s = computeAnalytics(csv).summary;

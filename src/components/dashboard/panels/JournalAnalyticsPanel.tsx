@@ -37,6 +37,12 @@ interface Saved {
   trades: Trade[];
   fileName: string | null;
   at: string;
+  /*
+   * Stored with the trades. Without it the diagnostics and the copy button
+   * vanished on the next page load, which is exactly when someone goes looking
+   * for them.
+   */
+  report?: ParseReport | null;
 }
 
 export function JournalAnalyticsPanel() {
@@ -58,6 +64,7 @@ export function JournalAnalyticsPanel() {
     if (saved?.trades?.length) {
       setTrades(saved.trades);
       setFileName(saved.fileName);
+      setReport(saved.report ?? null);
       setIsReal(true);
     } else {
       setTrades(parseTradesCSV(SAMPLE_STATEMENT_CSV, ""));
@@ -128,7 +135,7 @@ export function JournalAnalyticsPanel() {
       setTrades(parsed);
       setFileName(file.name);
       setIsReal(true);
-      writeStore(STORE_KEY, { trades: parsed, fileName: file.name, at: new Date().toISOString() });
+      writeStore(STORE_KEY, { trades: parsed, fileName: file.name, at: new Date().toISOString(), report: parseReport });
       trackEvent(EVENTS.journalImported, { trades: parsed.length });
       flash(`Imported ${parsed.length} trades`);
     } catch (e) {
@@ -249,11 +256,13 @@ export function JournalAnalyticsPanel() {
         {report ? (
           <div className="mt-2">
             <p className="font-mono text-[11px] leading-relaxed text-ink-muted/70">
-              {report.rows} rows read · {report.trades} closed positions
+              {report.rows} rows read · {report.trades}{" "}
+              {report.trades > 0 && report.withCloseTime === 0 ? "open positions (no close times)" : "closed positions"}
               {report.skippedBalance ? ` · ${report.skippedBalance} balance operations ignored` : ""}
               {report.skippedPending ? ` · ${report.skippedPending} pending or non-trade rows ignored` : ""}
               {report.skippedSymbol ? ` · ${report.skippedSymbol} rows with no instrument` : ""}
               {report.stoppedAt !== null ? " · stopped at the next table" : ""}
+              {report.sections.length > 1 ? ` · tables: ${report.sections.join(", ")}` : ""}
               {report.mapped.length ? <><br />columns: {report.mapped.join("  ")}</> : null}
               {report.samples.length ? (
                 <>
@@ -330,7 +339,7 @@ export function JournalAnalyticsPanel() {
       {/* The curve first: it is the one picture that answers "how did this go". */}
       <EquityCurve curve={a.equityCurve} maxDrawdown={s.maxDrawdown} />
 
-      <RiskNotes a={a} trades={trades} />
+      <RiskNotes a={a} trades={trades} report={report} />
 
       {/* What the numbers say */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

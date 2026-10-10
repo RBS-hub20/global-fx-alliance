@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Clock, LineChart as LineIcon } from "lucide-react";
 import { Card, CardHead, money } from "@/components/ui/Primitives";
-import type { Bucket, JournalAnalytics, Trade } from "@/lib/journalParser";
+import type { Bucket, JournalAnalytics, ParseReport, Trade } from "@/lib/journalParser";
 
 /**
  * The visual half of the journal report.
@@ -209,11 +209,34 @@ export function HoldHistogram({ trades }: { trades: Trade[] }) {
  * is useful; claiming to have detected a specific strategy from a P/L column
  * would not be.
  */
-export function RiskNotes({ a, trades }: { a: JournalAnalytics; trades: Trade[] }) {
+export function RiskNotes({ a, trades, report }: { a: JournalAnalytics; trades: Trade[]; report?: ParseReport | null }) {
   const s = a.summary;
   const notes: { tone: "warn" | "info"; head: string; body: string }[] = [];
 
-  if (s.losses === 0 && s.trades >= 20) {
+  /*
+   * No close time on any row means this is not a history of closed trades — it
+   * is the list of positions that are still open, where Profit is the floating
+   * number the terminal is showing right now. Every statistic below changes
+   * meaning, so this is said first and said plainly rather than left for the
+   * reader to infer from "hold time: no close times".
+   */
+  const openPositions = trades.length > 0 && trades.every((t) => t.closeTime === null);
+  if (openPositions) {
+    const others = (report?.sections ?? []).filter((x) => !/^positions?$/i.test(x));
+    notes.push({
+      tone: "warn",
+      head: `These are ${trades.length} open positions, not closed trades`,
+      body:
+        `Not one row has a close time, and commission and swap are empty — the terminal has not charged them yet. ` +
+        `So ${money(s.netPL)} is floating profit on positions you still hold, not money you have made, and a ` +
+        `"100% win rate" only means every one of them happens to be in profit at this moment. Nothing here is realised.` +
+        (others.length
+          ? ` This export also contains ${others.join(" and ")} further down — the realised history lives there.`
+          : ""),
+    });
+  }
+
+  if (s.losses === 0 && s.trades >= 20 && !openPositions) {
     notes.push({
       tone: "warn",
       head: `No losing trade in ${s.trades} closed positions`,

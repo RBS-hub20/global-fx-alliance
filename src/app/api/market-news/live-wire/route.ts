@@ -23,17 +23,50 @@ const SOURCES = [
   // The analysis feed is where most gold-specific pieces land — 11 of 30 on
   // the day this was written, against 1 of 30 on the general news feed.
   { provider: "FXStreet Analysis", url: "https://www.fxstreet.com/rss/analysis" },
+  /*
+   * Added after the wire was found running on one feed out of three.
+   *
+   * The two FXStreet feeds answer this machine and refuse Vercel, and before
+   * the User-Agent below ForexLive did the opposite — so the live wire was
+   * reading a single desk and showing "nothing tagged Gold". These three answer
+   * both, and between them they cover the things that actually move gold:
+   * dollar and rates commentary, Fed announcements from the source, and the
+   * macro tape.
+   *
+   * Deliberately not added: mining.com's gold feed and Yahoo's GC=F headlines.
+   * Both are full of junior-miner drilling results, which carry the word gold
+   * and move the price of nothing. A fuller wire of noise is worse than a short
+   * one that is all signal.
+   */
+  { provider: "FXEmpire", url: "https://www.fxempire.com/api/v1/en/articles/rss/news" },
+  { provider: "Federal Reserve", url: "https://www.federalreserve.gov/feeds/press_all.xml" },
+  { provider: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories" },
 ] as const;
 
 const TIMEOUT_MS = 6000;
 const MAX_AGE_MS = 36 * 3_600_000;
 const LIMIT = 30;
 
+/*
+ * A desk's feed reader, not an anonymous bot.
+ *
+ * Several of these publishers refuse a request with no User-Agent outright —
+ * ForexLive answered 403 without one and 200 with it — and two of them answer a
+ * redirect rather than the feed. Both were enough to take a source off the wire
+ * silently, since a failed fetch just means that provider contributes nothing.
+ */
+const UA = "Mozilla/5.0 (compatible; GFXA-Wire/1.0; +https://globalfxalliance.io)";
+
 async function fetchText(url: string): Promise<string | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      cache: "no-store",
+      redirect: "follow",
+      headers: { "User-Agent": UA, Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8" },
+    });
     if (!res.ok) return null;
     const body = await res.text();
     return body.includes("<item") ? body : null;

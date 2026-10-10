@@ -255,6 +255,19 @@ export function JournalAnalyticsPanel() {
               {report.skippedSymbol ? ` · ${report.skippedSymbol} rows with no instrument` : ""}
               {report.stoppedAt !== null ? " · stopped at the next table" : ""}
               {report.mapped.length ? <><br />columns: {report.mapped.join("  ")}</> : null}
+              {report.samples.length ? (
+                <>
+                  <br />
+                  {report.samples.map((x) => (
+                    <span key={x.field} className={x.ok ? "text-brand-green/80" : "text-brand-danger"}>
+                      {x.field}
+                      {x.raw !== null ? `="${x.raw}"` : ""}
+                      {x.ok ? " ok" : " FAILED"}
+                      {"  "}
+                    </span>
+                  ))}
+                </>
+              ) : null}
             </p>
             {/*
               * The header row itself, on request. Reading a column mapping off a
@@ -271,6 +284,7 @@ export function JournalAnalyticsPanel() {
                   `skipped: balance=${report.skippedBalance} pending=${report.skippedPending} nosymbol=${report.skippedSymbol}`,
                   `headers: ${report.headers.map((h, i) => `${i}:${h || "(blank)"}`).join(" | ")}`,
                   `mapped: ${report.mapped.join("  ")}`,
+                  `first row: ${report.samples.map((x) => `${x.field}${x.raw !== null ? `="${x.raw}"` : ""}${x.ok ? "" : " FAILED"}`).join("  ")}`,
                 ].join("\n");
                 navigator.clipboard?.writeText(text).then(
                   () => flash("Layout copied — paste it and I can add this broker"),
@@ -360,8 +374,16 @@ export function JournalAnalyticsPanel() {
           <CardHead title="Hold Time" icon={Clock} />
           <div className="p-5">
             <div className="space-y-3">
-              <Row k="Avg winner" v={a.holdTime.avgWinnerMin === null ? "n/a" : `${a.holdTime.avgWinnerMin}m`} tone="up" />
-              <Row k="Avg loser" v={a.holdTime.avgLoserMin === null ? "n/a" : `${a.holdTime.avgLoserMin}m`} tone="down" />
+              <Row
+                k="Avg winner"
+                v={a.holdTime.avgWinnerMin === null ? (s.wins ? "no close times" : "n/a") : `${a.holdTime.avgWinnerMin}m`}
+                tone="up"
+              />
+              <Row
+                k="Avg loser"
+                v={a.holdTime.avgLoserMin === null ? (s.losses ? "no close times" : "no losers") : `${a.holdTime.avgLoserMin}m`}
+                tone="down"
+              />
               <Row k="Avg win" v={money(s.avgWin)} tone="up" />
               <Row k="Avg loss" v={money(s.avgLoss)} tone="down" />
               <Row k="Costs paid" v={money(s.totalCosts)} />

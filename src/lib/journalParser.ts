@@ -113,31 +113,71 @@ const num = (v: string | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** MT4/MT5 timestamps are broker-server local with no zone; treated as UTC. */
+/**
+ * A broker timestamp, as a UTC instant.
+ *
+ * Deliberately tolerant. These values come out of whatever a terminal wrote
+ * into an HTML table or a spreadsheet cell, and the formats seen in the wild
+ * include MT5's `2026.10.09 16:20:25`, MT4's `2026.10.09 16:20`, ISO with a T,
+ * day-first `09/10/2026 16:20`, Excel's day count, and any of those padded with
+ * non-breaking spaces or carrying a trailing timezone label.
+ *
+ * Treated as UTC rather than guessed at: these are broker-server times with no
+ * zone attached, and inventing one would shift every session bucket.
+ */
 export function parseTradeTime(raw: string | undefined): string | null {
-  if (!raw) return null;
+  if (raw === undefined || raw === null) return null;
+
+  // Non-breaking spaces survive an HTML export and are not matched by a literal
+  // space, which is one way a perfectly good timestamp reads as unparseable.
+  const text = String(raw).replace(/[   ]/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) return null;
 
   /*
    * Excel stores a date as days since 1899-12-30, and an .xlsx cell carries that
-   * number rather than the text the spreadsheet displays — so an MT5 workbook
-   * hands over "45936.4" where the HTML report would say "2025.10.10 09:55".
-   * Bounded to roughly 1954-2064 so a ticket number that wandered into a time
-   * column is not read as a date.
+   * number rather than the text the spreadsheet displays. Bounded to roughly
+   * 1954-2064 so a ticket number that wandered into a time column is not read
+   * as a date.
    */
-  const serial = Number(raw.trim());
+  const serial = Number(text);
   if (Number.isFinite(serial) && serial > 20000 && serial < 80000) {
     return new Date(Math.round((serial - 25569) * 86400_000)).toISOString();
   }
 
-  const v = raw.trim().replace(/\./g, "-");
-  const m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (m) {
-    const [, y, mo, d, h, mi, s] = m;
-    return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +(s ?? 0))).toISOString();
+  const utc = (y: number, mo: number, d: number, h = 0, mi = 0, sec = 0): string | null => {
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || sec > 59) return null;
+    const t = Date.UTC(y, mo - 1, d, h, mi, sec);
+    return Number.isNaN(t) ? null : new Date(t).toISOString();
+  };
+
+  const TIME = String.raw`(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?`;
+
+  // Year first: 2026.10.09, 2026-10-09, 2026/10/09. The common case, and
+  // unambiguous, so it is tried before anything day-first.
+  const ymd = text.match(new RegExp(String.raw`^(\d{4})[./-](\d{1,2})[./-](\d{1,2})${TIME}`));
+  if (ymd) {
+    const got = utc(+ymd[1], +ymd[2], +ymd[3], +(ymd[4] ?? 0), +(ymd[5] ?? 0), +(ymd[6] ?? 0));
+    if (got) return got;
   }
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-};
+
+  // Day first: 09.10.2026, 09/10/2026. Read as day-month because every terminal
+  // that writes this order is configured European; a US month-first file would
+  // be wrong for the first twelve days of a month either way, and there is
+  // nothing in the cell to tell them apart.
+  const dmy = text.match(new RegExp(String.raw`^(\d{1,2})[./-](\d{1,2})[./-](\d{4})${TIME}`));
+  if (dmy) {
+    const got = utc(+dmy[3], +dmy[2], +dmy[1], +(dmy[4] ?? 0), +(dmy[5] ?? 0), +(dmy[6] ?? 0));
+    if (got) return got;
+  }
+
+  // Anything else the platform recognises, with the zone forced off when the
+  // string carries none.
+  const direct = Date.parse(/[zZ]|[+-]\d{2}:?\d{2}$/.test(text) ? text : `${text.replace(" ", "T")}Z`);
+  if (!Number.isNaN(direct)) return new Date(direct).toISOString();
+
+  const loose = Date.parse(text);
+  return Number.isNaN(loose) ? null : new Date(loose).toISOString();
+}
 
 /** Normalises broker symbol spellings: EURUSD, EURUSD.m, XAUUSD# -> EUR/USD. */
 export function normaliseSymbol(raw: string): string {
@@ -211,6 +251,19 @@ export interface ParseReport {
   skippedPending: number;
   skippedSymbol: number;
   stoppedAt: number | null;
+  /*
+   * One row's worth of evidence from the first trade that parsed.
+   *
+   * A column mapping alone was not enough to find the last bug: openTime and
+   * closeTime were both matched to a Time column, both looked right in the
+   * mapping, and one of them still came back null. What the cell actually
+   * contained is the missing half.
+   *
+   * `raw` is filled for the timestamp columns only. The money columns report
+   * whether they parsed as a number and nothing else, so this stays safe to
+   * paste to someone.
+   */
+  samples: { field: string; raw: string | null; ok: boolean }[];
 }
 
 export interface ParseResult { trades: Trade[]; report: ParseReport }
@@ -223,7 +276,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
   const empty = (rowCount: number): ParseResult => ({
     trades: [],
     report: { rows: rowCount, headerRow: -1, headers: [], mapped: [], trades: 0,
-              skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null },
+              skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [] },
   });
 
   const grid = rows.filter((r) => r.some((c) => (c ?? "").trim() !== ""));
@@ -281,7 +334,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
       report: {
         rows: grid.length, headerRow: headerIdx, headers: headerCells,
         mapped: [`header has ${headerWidth} columns, the ${modalCount} rows below have ${modalWidth} — columns cannot be matched`],
-        trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null,
+        trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [],
       },
     };
   }
@@ -330,7 +383,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
       report: {
         rows: grid.length, headerRow: headerIdx, headers: headerCells,
         mapped: [`profit=${headerCells[map.profit] ?? "?"}[${map.profit}] — collides with a price or time column`],
-        trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null,
+        trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null, samples: [],
       },
     };
   }
@@ -347,6 +400,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
   let skippedPending = 0;
   let skippedSymbol = 0;
   let stoppedAt: number | null = null;
+  let samples: ParseReport["samples"] = [];
 
   for (let i = headerIdx + 1; i < grid.length; i++) {
     const c = grid[i];
@@ -399,6 +453,30 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
     const duration =
       rawDuration === null || rawDuration < 0 || rawDuration > MAX_HOLD_MIN ? null : rawDuration;
 
+    if (!samples.length) {
+      const cell = (i: number | undefined) => (i === undefined ? undefined : c[i]);
+      const timeField = (field: "openTime" | "closeTime", parsed: string | null) => ({
+        field,
+        // Shown, because this is the value that has to be read to fix a format.
+        raw: (cell(map[field]) ?? "").slice(0, 32) || "(empty)",
+        ok: parsed !== null,
+      });
+      const moneyField = (field: "profit" | "commission" | "swap" | "lot") => {
+        const v = cell(map[field]);
+        return {
+          field,
+          // Not disclosed — only whether a number could be read from it.
+          raw: v === undefined ? "(no such column)" : null,
+          ok: v !== undefined && v.trim() !== "" && Number.isFinite(Number(v.replace(/[^0-9.\-+]/g, ""))),
+        };
+      };
+      samples = [
+        timeField("openTime", openTime),
+        timeField("closeTime", closeTime),
+        moneyField("profit"), moneyField("commission"), moneyField("swap"), moneyField("lot"),
+      ];
+    }
+
     const comment = c[map.comment ?? -1] ?? "";
     const brokerFromComment =
       /vantage/i.test(comment) ? "Vantage" :
@@ -438,6 +516,7 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
       skippedPending,
       skippedSymbol,
       stoppedAt,
+      samples,
     },
   };
 }

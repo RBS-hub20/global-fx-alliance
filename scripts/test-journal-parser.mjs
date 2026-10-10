@@ -14,7 +14,7 @@ import { Buffer } from "node:buffer";
 
 const LIB = new URL("../src/lib/", import.meta.url).href;
 const { xlsxToRows, looksLikeXlsx } = await import(LIB + "xlsxRows.ts");
-const { parseTradeRows, parseStatementRows, parseTradesHTML, parseTradesCSV, computeAnalytics, isPosition } =
+const { parseTradeRows, parseStatementRows, parseTradesHTML, parseTradesCSV, computeAnalytics, isPosition, parseTradeTime } =
   await import(LIB + "journalParser.ts");
 const { SAMPLE_STATEMENT_CSV } = await import(LIB + "journalSample.ts");
 
@@ -161,6 +161,38 @@ ok("trade kept", nc.trades.length === 1, String(nc.trades.length));
 const nca = computeAnalytics(nc.trades);
 ok("session chart has data", nca.bySession.length > 0, `${nca.bySession.length}`);
 ok("hour chart has data", nca.byHourLocal.length > 0, `${nca.byHourLocal.length}`);
+
+
+console.log("=== timestamp formats a terminal actually writes ===");
+const T = (raw, want) => ok(`"${raw}"`, parseTradeTime(raw) === want, String(parseTradeTime(raw)));
+T("2026.10.09 16:20:25", "2026-10-09T16:20:25.000Z");   // MT5
+T("2026.10.09 16:20", "2026-10-09T16:20:00.000Z");      // MT4
+T("2026-10-09 16:20:25", "2026-10-09T16:20:25.000Z");
+T("2026/10/09 16:20", "2026-10-09T16:20:00.000Z");
+T("2026.10.09T16:20:25", "2026-10-09T16:20:25.000Z");
+T("09.10.2026 16:20", "2026-10-09T16:20:00.000Z");      // day-first
+T("09/10/2026 16:20:25", "2026-10-09T16:20:25.000Z");
+T("2026.10.09", "2026-10-09T00:00:00.000Z");            // date only
+T("2026.10.09 16:20", "2026-10-09T16:20:00.000Z"); // non-breaking space
+T("  2026.10.09   16:20  ", "2026-10-09T16:20:00.000Z");
+T("45936", "2025-10-06T00:00:00.000Z");                 // excel serial: 20,367 days after the epoch
+ok('empty -> null', parseTradeTime("") === null);
+ok('"(empty)" -> null', parseTradeTime("   ") === null);
+ok('a ticket number is not a date', parseTradeTime("41550011") === null, String(parseTradeTime("41550011")));
+ok('junk -> null', parseTradeTime("not a date") === null, String(parseTradeTime("not a date")));
+
+console.log("=== the report says which cell failed ===");
+const oneBad = parseStatementRows([
+  ["Position","Symbol","Type","S / L","Volume","Price","Time","T / P","Time","Price","Commission","Profit"],
+  ["9001","XAUUSD","buy","0.00","0.10","4187.49","2026.10.09 16:20:25","0.00","","4192.10","-0.40","4.60"],
+], "r.html");
+const openS = oneBad.report.samples.find((x) => x.field === "openTime");
+const closeS = oneBad.report.samples.find((x) => x.field === "closeTime");
+ok("open time sample shows the value and ok", openS?.ok === true && /2026\.10\.09/.test(openS.raw ?? ""), JSON.stringify(openS));
+ok("close time sample shows (empty) and FAILED", closeS?.ok === false && closeS?.raw === "(empty)", JSON.stringify(closeS));
+ok("money samples disclose no value", oneBad.report.samples.filter((x) => x.field === "profit")[0]?.raw === null,
+   JSON.stringify(oneBad.report.samples.find((x) => x.field === "profit")));
+ok("hold time is null, not a wrong number", oneBad.trades[0].durationMinutes === null, String(oneBad.trades[0].durationMinutes));
 
 console.log("=== regression: the CSV sample is unchanged ===");
 const csv = parseTradesCSV(SAMPLE_STATEMENT_CSV, "");

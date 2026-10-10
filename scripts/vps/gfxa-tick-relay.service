@@ -1,0 +1,34 @@
+# /etc/systemd/system/gfxa-tick-relay.service
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now gfxa-tick-relay
+#   journalctl -u gfxa-tick-relay -f
+#
+# EnvironmentFile holds the key, so it is not in this unit and not in `ps`.
+# Create it as root with chmod 600:
+#
+#   TWELVEDATA_API_KEY=...
+#   VPS_SECRET=...            # the same value Vercel has
+#   INGEST_URL=https://globalfxalliance.io/api/market/ingest
+#   SYMBOLS=XAU/USD
+
+[Unit]
+Description=GFXA tick relay (TwelveData WebSocket -> globalfxalliance.io)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gfxa
+EnvironmentFile=/etc/gfxa/tick-relay.env
+ExecStart=/usr/bin/python3 /opt/gfxa/gfxa_tick_relay.py
+Restart=always
+RestartSec=5
+# The relay reads one key and talks to two hosts; it needs nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLiveTick } from "@/lib/useLiveTick";
 import { useAuth } from "@/lib/AuthContext";
 import { supabaseBrowser } from "@/lib/supabaseClient";
 import { generateDrawings } from "@/lib/autoDraw";
@@ -136,18 +137,36 @@ export function GoldIntelPanel() {
   const win = useMemo(() => newsWindow(calendar ?? [], now), [calendar, now]);
   const spot = movers?.find((m) => m.symbol === "XAUUSD") ?? null;
 
+  /*
+   * The relayed price, when the VPS daemon is running. Additive on purpose: the
+   * polled figure above stays the source of truth and this only overrides the
+   * number in the header while ticks are actually arriving, so the page is
+   * unchanged if the daemon is not deployed or stops.
+   */
+  const { tick, live: tickLive } = useLiveTick("XAU/USD");
+  const headPrice = tickLive && tick ? tick.price : spot?.price ?? null;
+  const headPct = tickLive && tick && tick.changePercent !== null ? tick.changePercent : spot?.pct ?? null;
+
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h2 className="font-mono text-[13px] font-bold uppercase tracking-[0.14em] text-[#00ff88]">
           <span className="text-[#00ff88]/50">_&gt;</span> XAUUSD MARKET INTELLIGENCE
         </h2>
-        {spot ? (
-          <span className="num-mono whitespace-nowrap text-[15px] font-bold text-[#e5e5e5]">
-            {spot.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}{" "}
-            <span className={`text-[12px] ${spot.pct >= 0 ? "text-[#00ff88]" : "text-[#ff4d4d]"}`}>
-              {spot.pct >= 0 ? "▲ +" : "▼ "}{spot.pct.toFixed(2)}%
-            </span>
+        {headPrice !== null ? (
+          <span className="num-mono flex items-center gap-1.5 whitespace-nowrap text-[15px] font-bold text-[#e5e5e5]">
+            {tickLive ? (
+              <span className="relative flex h-1.5 w-1.5" title="Streaming from the relay">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00ff88] opacity-70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88]" />
+              </span>
+            ) : null}
+            {headPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}{" "}
+            {headPct !== null ? (
+              <span className={`text-[12px] ${headPct >= 0 ? "text-[#00ff88]" : "text-[#ff4d4d]"}`}>
+                {headPct >= 0 ? "▲ +" : "▼ "}{headPct.toFixed(2)}%
+              </span>
+            ) : null}
           </span>
         ) : null}
         {win.active ? (

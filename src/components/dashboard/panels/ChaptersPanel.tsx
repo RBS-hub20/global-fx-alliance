@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Check, MapPin, MessageSquare, Users } from "lucide-react";
 import { WorldMap } from "@/components/ui/WorldMap";
 import { AlliancePulse } from "@/components/dashboard/chapters/AlliancePulse";
@@ -69,17 +69,65 @@ const CHAPTER_ROWS: ChapterRow[] = [
     posts: [], events: [] },
 ];
 
+interface Membership { installed: boolean; counts: Record<string, number>; mine: string[] }
+
 export function ChaptersPanel() {
-  const { value: joined, setValue: setJoined } = usePersistentState<string[]>(KEYS.chapters, []);
+  /*
+   * Two sources, one panel.
+   *
+   * With supabase/20251010_chapter_members.sql run, joining writes a row and the
+   * counts on the cards are how many people are actually in each chapter. Until
+   * then it behaves exactly as it did — joined kept in this browser, counts from
+   * the fixture — so the tab keeps working before the migration lands.
+   */
+  const { value: localJoined, setValue: setLocalJoined } = usePersistentState<string[]>(KEYS.chapters, []);
+  const [remote, setRemote] = useState<Membership | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const toggle = (code: string, name: string) => {
+  const live = remote?.installed === true;
+  const joined = live ? remote!.mine : localJoined;
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/chapters", { cache: "no-store" });
+      const j = await res.json();
+      if (res.ok && j.ok) setRemote({ installed: !!j.installed, counts: j.counts ?? {}, mine: j.mine ?? [] });
+    } catch {
+      /* offline: the local behaviour below still works */
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  /** Real member count when there is one, the fixture otherwise. */
+  const membersOf = (code: string, fallback: number) => (live ? remote!.counts[code] ?? 0 : fallback);
+
+  const toggle = async (code: string, name: string) => {
     const isJoining = !joined.includes(code);
-    setJoined((prev) => (isJoining ? [...prev, code] : prev.filter((c) => c !== code)));
     if (isJoining) trackEvent(EVENTS.chapterJoined, { chapter: code });
     setToast(isJoining ? `Joined the ${name} chapter` : `Left the ${name} chapter`);
     setTimeout(() => setToast(null), 1800);
+
+    if (!live) {
+      setLocalJoined((prev) => (isJoining ? [...prev, code] : prev.filter((c) => c !== code)));
+      return;
+    }
+
+    // Optimistic, then reconciled against what the server actually stored.
+    setRemote((prev) => prev && ({
+      ...prev,
+      mine: isJoining ? [...prev.mine, code] : prev.mine.filter((c) => c !== code),
+      counts: { ...prev.counts, [code]: Math.max(0, (prev.counts[code] ?? 0) + (isJoining ? 1 : -1)) },
+    }));
+    try {
+      await fetch("/api/chapters", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, join: isJoining }),
+      });
+    } finally {
+      void load();
+    }
   };
 
   const chapter = CHAPTER_ROWS.find((c) => c.code === open);
@@ -150,11 +198,21 @@ export function ChaptersPanel() {
               <div className="grid grid-cols-2 gap-3 p-5">
                 <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3.5">
                   <p className="text-[10.5px] uppercase tracking-[0.1em] text-ink-muted">Total</p>
-                  <p className="num-mono mt-1.5 text-[20px] font-bold text-white">{chapter.members}</p>
+                  <p className="num-mono mt-1.5 text-[20px] font-bold text-white">{membersOf(chapter.code, chapter.members)}</p>
                 </div>
                 <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3.5">
-                  <p className="text-[10.5px] uppercase tracking-[0.1em] text-ink-muted">Online</p>
-                  <p className="num-mono mt-1.5 text-[20px] font-bold text-brand-green">{chapter.online}</p>
+                  <p className="text-[10.5px] uppercase tracking-[0.1em] text-ink-muted">
+                    {live ? "Joined" : "Online"}
+                  </p>
+                  {/*
+                    * There is no source for "online" per chapter — the dashboard
+                    * is deliberately not tracked — so once membership is real the
+                    * slot shows something that is, rather than a number beside a
+                    * measured one that is not.
+                    */}
+                  <p className="num-mono mt-1.5 text-[20px] font-bold text-brand-green">
+                    {live ? (isIn ? "yes" : "no") : chapter.online}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -213,20 +271,28 @@ export function ChaptersPanel() {
               <button type="button" onClick={() => setOpen(c.code)} className="text-left">
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-[28px] leading-none" aria-hidden>{c.flag}</span>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-brand-green">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-60 animate-pulseRing" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-green" />
+                  {live ? null : (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-brand-green">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-60 animate-pulseRing" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-green" />
+                      </span>
+                      <span className="num-mono">{c.online}</span> online
                     </span>
-                    <span className="num-mono">{c.online}</span> online
-                  </span>
+                  )}
                 </div>
 
                 <h3 className="mt-4 text-[15px] font-bold tracking-tight text-white">{c.name}</h3>
                 <p className="mt-0.5 text-[12px] text-ink-muted">{c.hub}</p>
                 <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-ink-muted">
                   <Users className="h-3.5 w-3.5" strokeWidth={1.9} />
-                  <span className="num-mono font-semibold text-white">{c.members}</span> members
+                  {live && membersOf(c.code, c.members) === 0 ? (
+                    <span className="text-ink-muted">No members yet — be the first</span>
+                  ) : (
+                    <>
+                      <span className="num-mono font-semibold text-white">{membersOf(c.code, c.members)}</span> members
+                    </>
+                  )}
                 </p>
               </button>
 

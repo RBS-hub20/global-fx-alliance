@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowLeft, Check, MapPin, MessageSquare, Users } from "lucide-react";
 import { WorldMap } from "@/components/ui/WorldMap";
+import { AlliancePulse } from "@/components/dashboard/chapters/AlliancePulse";
 import { Card, CardHead, PanelHeader, Toast } from "@/components/ui/Primitives";
 import { KEYS, usePersistentState } from "@/lib/storage";
 import { EVENTS, trackEvent } from "@/lib/analytics";
@@ -192,6 +193,10 @@ export function ChaptersPanel() {
           </span>
         }
       />
+
+      {/* Measured activity, above the map it describes. Renders nothing when
+          there is nothing counted, rather than showing a confident zero. */}
+      <AlliancePulse />
 
       <Card className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,255,136,0.10),transparent_70%)]" />

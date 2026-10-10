@@ -48,9 +48,19 @@ const SOURCES = [
    * and move the price of nothing. A fuller wire of noise is worse than a short
    * one that is all signal.
    */
-  { provider: "FXEmpire", url: "https://www.fxempire.com/api/v1/en/articles/rss/news" },
   { provider: "Federal Reserve", url: "https://www.federalreserve.gov/feeds/press_all.xml" },
-  { provider: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories" },
+  /*
+   * Two sources were added here and removed again within the hour, which is
+   * worth recording so they are not added back:
+   *
+   *   FXEmpire     answers 200 with 20 items whose newest is two months old.
+   *                The age window drops every one of them, correctly.
+   *   MarketWatch  answers 200 and is current, but its top-stories feed is
+   *                equities and personal finance. Nought of ten were relevant.
+   *
+   * Both looked like wins on item count alone. Item count is not the measure —
+   * kept is.
+   */
 ] as const;
 
 const TIMEOUT_MS = 6000;

@@ -50,6 +50,24 @@ const SOURCES = [
    */
   { provider: "Federal Reserve", url: "https://www.federalreserve.gov/feeds/press_all.xml" },
   /*
+   * Chosen on kept, not on item count — the mistake that put two useless feeds
+   * in here for an hour. Measured against the live classifier and the 36-hour
+   * window before being added:
+   *
+   *   Investing commodities  10 items, all fresh, 8 kept, 8 tagged Gold
+   *   Investing news         10 items, all fresh, 2 kept, 1 tagged Gold
+   *   ActionForex            20 items, newest 2h, 2 kept
+   *   Seeking Alpha           7 items, all fresh, 1 kept, 1 tagged Gold
+   *
+   * The commodities feed is the one that matters: it is gold-specific and
+   * current, which is exactly what the wire has been missing while FXStreet
+   * refuses this host.
+   */
+  { provider: "Investing Commodities", url: "https://www.investing.com/rss/commodities.rss" },
+  { provider: "Investing", url: "https://www.investing.com/rss/news_11.rss" },
+  { provider: "ActionForex", url: "https://www.actionforex.com/feed/" },
+  { provider: "Seeking Alpha", url: "https://seekingalpha.com/market_currents.xml" },
+  /*
    * Two sources were added here and removed again within the hour, which is
    * worth recording so they are not added back:
    *

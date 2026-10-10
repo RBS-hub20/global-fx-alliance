@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { JournalPro } from "@/components/dashboard/journal/JournalPro";
 import { NotebookPen, Plus, Trash2 } from "lucide-react";
 import { PriceChart } from "@/components/ui/PriceChart";
 import {
@@ -39,7 +40,23 @@ function pnl(t: Trade): number | null {
   return pips * pipValuePerLot(t.symbol, t.lots, t.exit);
 }
 
+/**
+ * Two journals, one tab.
+ *
+ * With supabase/20251011_journal.sql run, this is the Supabase-backed log —
+ * setups, mistakes, emotions, the member's own risk rules and the daily review,
+ * all surviving a change of device. Until then it stays exactly as it was: a
+ * local journal in this browser, so the tab keeps working before the migration
+ * lands and nobody loses what they have already typed.
+ */
 export function JournalPanel() {
+  const [legacy, setLegacy] = useState(false);
+  const fallBack = useCallback(() => setLegacy(true), []);
+  if (!legacy) return <JournalPro onLegacy={fallBack} />;
+  return <LocalJournal />;
+}
+
+function LocalJournal() {
   const { value: trades, setValue: setTrades, hydrated } = usePersistentState<Trade[]>(
     KEYS.journal,
     SEED

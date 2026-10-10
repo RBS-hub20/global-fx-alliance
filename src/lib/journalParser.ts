@@ -116,6 +116,19 @@ const num = (v: string | undefined): number => {
 /** MT4/MT5 timestamps are broker-server local with no zone; treated as UTC. */
 export function parseTradeTime(raw: string | undefined): string | null {
   if (!raw) return null;
+
+  /*
+   * Excel stores a date as days since 1899-12-30, and an .xlsx cell carries that
+   * number rather than the text the spreadsheet displays — so an MT5 workbook
+   * hands over "45936.4" where the HTML report would say "2025.10.10 09:55".
+   * Bounded to roughly 1954-2064 so a ticket number that wandered into a time
+   * column is not read as a date.
+   */
+  const serial = Number(raw.trim());
+  if (Number.isFinite(serial) && serial > 20000 && serial < 80000) {
+    return new Date(Math.round((serial - 25569) * 86400_000)).toISOString();
+  }
+
   const v = raw.trim().replace(/\./g, "-");
   const m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (m) {
@@ -137,23 +150,51 @@ export function normaliseSymbol(raw: string): string {
   return (raw || "").toUpperCase().trim() || "UNKNOWN";
 }
 
-export function parseTradesCSV(text: string, fileName = ""): Trade[] {
-  if (!text || !text.trim()) return [];
-  const delim = detectDelimiter(text);
-  const rows = text.split(/\r?\n/).filter((r) => r.trim().length > 0);
-  if (rows.length < 2) return [];
+/** Single-cell rows that start a new table inside one export. */
+const SECTION_TITLE = /^(positions?|orders?|deals?|working orders|open trades|open positions|closed transactions)$/i;
 
-  // The header is the first row containing a recognisable symbol/profit column.
+/**
+ * A closed position, as opposed to a pending order or a cash movement.
+ *
+ * "buy limit", "sell stop" and "buy stop limit" all contain buy or sell, which
+ * is how a pending order slipped through a plain /buy|sell/ test. Balance,
+ * credit and deposit rows never matched and still do not.
+ */
+export function isPosition(rawType: string): boolean {
+  const t = rawType.toLowerCase().trim();
+  if (/limit|stop/.test(t)) return false;
+  return /^(buy|sell|long|short)\b/.test(t);
+}
+
+/**
+ * Rows -> trades. The one place column matching happens.
+ *
+ * Every supported export funnels through here as a string[][]: a CSV split on
+ * its delimiter, the cells of an MT4 HTML report's table, or an MT5 .xlsx
+ * worksheet. They differ only in how the grid is obtained, so the alias
+ * matching, symbol normalisation and broker detection are shared rather than
+ * reimplemented per format — which is how the HTML path drifted out of support
+ * in the first place.
+ */
+export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
+  const grid = rows.filter((r) => r.some((c) => (c ?? "").trim() !== ""));
+  if (grid.length < 2) return [];
+
+  /*
+   * The header is the first row with a recognisable symbol and profit column.
+   * Scanned deep: an MT5 report puts the account name, broker, period and a
+   * blank run above the positions table, so the header can be twenty rows down.
+   */
   let headerIdx = 0;
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const cells = splitRow(rows[i], delim).map((c) => c.toLowerCase());
+  for (let i = 0; i < Math.min(grid.length, 40); i++) {
+    const cells = grid[i].map((c) => (c ?? "").toLowerCase());
     if (cells.some((c) => /symbol|item|instrument/.test(c)) && cells.some((c) => /profit|p\/l|pnl/.test(c))) {
       headerIdx = i;
       break;
     }
   }
 
-  const map = mapHeaders(splitRow(rows[headerIdx], delim));
+  const map = mapHeaders(grid[headerIdx]);
   if (map.symbol === undefined || map.profit === undefined) return [];
 
   // Separators in exported filenames are usually hyphens or underscores.
@@ -165,12 +206,27 @@ export function parseTradesCSV(text: string, fileName = ""): Trade[] {
 
   const out: Trade[] = [];
 
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const c = splitRow(rows[i], delim);
+  for (let i = headerIdx + 1; i < grid.length; i++) {
+    const c = grid[i];
     if (c.length < 3) continue;
 
-    const rawType = (c[map.type ?? -1] ?? "").toLowerCase();
-    if (!/buy|sell|long|short/.test(rawType)) continue; // skips balance/credit rows
+    /*
+     * Stop at the next section.
+     *
+     * An MT5 report is three tables in one sheet — Positions, then Orders, then
+     * Deals — and MT4 statements append Working Orders. Reading straight through
+     * them counted a pending order as a trade, and would have counted every
+     * position twice over, since each one appears again as two deals. Measured
+     * on a generated MT5 report: 5 positions came back as 6 trades.
+     */
+    const filled = c.filter((x) => (x ?? "").trim() !== "");
+    if (filled.length === 1 && SECTION_TITLE.test(filled[0].trim())) break;
+    const lower = c.map((x) => (x ?? "").toLowerCase().trim());
+    // A second header row means a second table.
+    if (lower.some((x) => x === "symbol" || x === "item" || x === "instrument")) break;
+
+    const rawType = (c[map.type ?? -1] ?? "").toLowerCase().trim();
+    if (!isPosition(rawType)) continue; // skips balance, credit and pending orders
 
     const symbol = normaliseSymbol(c[map.symbol]);
     if (symbol === "UNKNOWN") continue;
@@ -211,6 +267,57 @@ export function parseTradesCSV(text: string, fileName = ""): Trade[] {
   }
 
   return out;
+}
+
+export function parseTradesCSV(text: string, fileName = ""): Trade[] {
+  if (!text || !text.trim()) return [];
+  const delim = detectDelimiter(text);
+  const rows = text.split(/\r?\n/).filter((r) => r.trim().length > 0).map((r) => splitRow(r, delim));
+  return parseTradeRows(rows, fileName);
+}
+
+/* ------------------------------------------------------------------- HTML */
+
+/**
+ * An MT4/MT5 HTML report's table cells, as rows.
+ *
+ * Scanned with regular expressions rather than DOMParser so the same code runs
+ * under Node for the tests and on the server if it is ever needed. These reports
+ * are machine-generated tables with no nesting to speak of, which is the only
+ * reason that is safe here — this is not a general HTML parser.
+ */
+export function parseTradesHTML(html: string, fileName = ""): Trade[] {
+  return parseTradeRows(htmlToRows(html), fileName);
+}
+
+export function htmlToRows(html: string): string[][] {
+  const rows: string[][] = [];
+  const rowRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  let row: RegExpExecArray | null;
+
+  while ((row = rowRe.exec(html)) !== null) {
+    const cells: string[] = [];
+    const cellRe = /<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    let cell: RegExpExecArray | null;
+    while ((cell = cellRe.exec(row[1])) !== null) {
+      cells.push(
+        cell[1]
+          // <br> inside a cell is a line break, not a word join.
+          .replace(/<br\s*\/?>/gi, " ")
+          .replace(/<[^>]*>/g, "")
+          .replace(/&nbsp;/gi, " ")
+          .replace(/&amp;/gi, "&")
+          .replace(/&lt;/gi, "<")
+          .replace(/&gt;/gi, ">")
+          .replace(/&quot;/gi, '"')
+          .replace(/\s+/g, " ")
+          .trim()
+      );
+    }
+    if (cells.length) rows.push(cells);
+  }
+
+  return rows;
 }
 
 /* ------------------------------------------------------------- analytics */

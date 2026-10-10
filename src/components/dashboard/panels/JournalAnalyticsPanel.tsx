@@ -5,10 +5,28 @@ import {
   AlertTriangle, Clock, Download, FileUp, Loader2, ShieldCheck, Trash2, TriangleAlert, Upload,
 } from "lucide-react";
 import { Card, CardHead, Skeleton, Toast, money } from "@/components/ui/Primitives";
-import { computeAnalytics, parseTradesCSV, type JournalAnalytics, type Trade } from "@/lib/journalParser";
+import {
+  computeAnalytics, parseTradeRows, parseTradesCSV, parseTradesHTML,
+  type JournalAnalytics, type Trade,
+} from "@/lib/journalParser";
+import { looksLikeXlsx, xlsxToRows } from "@/lib/xlsxRows";
 import { SAMPLE_STATEMENT_CSV } from "@/lib/journalSample";
 import { readStore, writeStore } from "@/lib/storage";
 import { EVENTS, trackEvent } from "@/lib/analytics";
+
+/**
+ * Bytes -> text, honouring a byte-order mark.
+ *
+ * Some MT5 builds write their HTML report as UTF-16, which decoded as UTF-8
+ * comes out as every other character being a null — a file that looks empty to
+ * a parser for no visible reason.
+ */
+function decodeStatement(buffer: ArrayBuffer): string {
+  const b = new Uint8Array(buffer);
+  if (b.length >= 2 && b[0] === 0xff && b[1] === 0xfe) return new TextDecoder("utf-16le").decode(buffer);
+  if (b.length >= 2 && b[0] === 0xfe && b[1] === 0xff) return new TextDecoder("utf-16be").decode(buffer);
+  return new TextDecoder("utf-8").decode(buffer);
+}
 
 const STORE_KEY = "gfxa-journal-import";
 /** Dubai — the community's home timezone. */
@@ -54,12 +72,37 @@ export function JournalAnalyticsPanel() {
     setBusy(true);
     setError(null);
     try {
-      const text = await file.text();
-      // Parsed in the browser on purpose — a trading history never leaves the device.
-      const parsed = parseTradesCSV(text, file.name);
+      /*
+       * Read as bytes first, and decide the format from the content.
+       *
+       * This used to be `await file.text()` straight into the CSV parser, which
+       * is why MT5's export never worked: "History → Report" saves an .xlsx,
+       * and an .xlsx is a ZIP — decoding it as text produces binary noise and
+       * zero trades. MT4's "Save as Report" writes HTML, which failed the same
+       * way for a different reason. The extension is only a hint, so the ZIP
+       * magic number and the markup decide.
+       *
+       * Parsed in the browser on purpose — a trading history never leaves the device.
+       */
+      const buffer = await file.arrayBuffer();
+      let parsed: Trade[];
+
+      if (looksLikeXlsx(buffer)) {
+        parsed = parseTradeRows(await xlsxToRows(buffer), file.name);
+      } else {
+        const text = decodeStatement(buffer);
+        parsed = /<\s*(table|html|body)\b/i.test(text.slice(0, 8000))
+          ? parseTradesHTML(text, file.name)
+          : parseTradesCSV(text, file.name);
+      }
+
       if (!parsed.length) {
+        // .xls is the pre-2007 binary format, not a ZIP, and is not supported —
+        // naming it beats "no trades found" when that is the actual reason.
         setError(
-          "No trades found in that file. In MT4: Account History → right-click → Save as Report. In MT5: History → Report. Then upload the CSV."
+          /\.xls$/i.test(file.name)
+            ? "That is an old .xls workbook, which this reader cannot open. In MT5, re-save the report as .xlsx (History → Report), or export CSV."
+            : "No trades found in that file. MT4: Account History → right-click → Save as Report. MT5: History → Report. The .html, .xlsx and .csv a terminal produces all work."
         );
         return;
       }
@@ -69,8 +112,11 @@ export function JournalAnalyticsPanel() {
       writeStore(STORE_KEY, { trades: parsed, fileName: file.name, at: new Date().toISOString() });
       trackEvent(EVENTS.journalImported, { trades: parsed.length });
       flash(`Imported ${parsed.length} trades`);
-    } catch {
-      setError("That file could not be read. A plain CSV export works best.");
+    } catch (e) {
+      // The reader names the reason it failed (bad zip, odd compression), which
+      // is more use than a blanket message.
+      const why = e instanceof Error && e.message ? ` (${e.message})` : "";
+      setError(`That file could not be read${why}. An MT4 .html report, an MT5 .xlsx report or a CSV export all work.`);
     } finally {
       setBusy(false);
     }
@@ -152,8 +198,9 @@ export function JournalAnalyticsPanel() {
               Drop your MT4/MT5 statement — Vantage, VT Markets, PUPRIME, any broker
             </p>
             <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
-              MT4: Account History → right-click → Save as Report. MT5: History → Report. Columns are
-              matched by name, so broker-specific layouts still work.
+              MT4: Account History → right-click → Save as Report (.html). MT5: History → Report
+              (.xlsx or .html). CSV works too. Columns are matched by name, so broker-specific layouts
+              still work.
             </p>
           </div>
           <button type="button" onClick={() => inputRef.current?.click()} className="btn-primary !px-4 !py-2.5 text-[12.5px]">
@@ -163,7 +210,7 @@ export function JournalAnalyticsPanel() {
           <input
             ref={inputRef}
             type="file"
-            accept=".csv,.txt,text/csv,text/plain"
+            accept=".html,.htm,.xlsx,.csv,.txt,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];

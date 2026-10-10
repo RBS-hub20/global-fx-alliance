@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, NotebookPen, Plus, Settings2, Trash2 } from "lucide-react";
+import { AlertTriangle, ImageUp, NotebookPen, Plus, Settings2, Trash2 } from "lucide-react";
 import { Card, CardHead, EmptyState, Modal, PanelHeader, Toast, money } from "@/components/ui/Primitives";
 import { JournalCalendar } from "./JournalCalendar";
 import { JournalCommunity } from "./JournalCommunity";
@@ -50,6 +50,10 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
   const [rules, setRules] = useState(false);
   const [filterClass, setFilterClass] = useState<"all" | AssetClass>("all");
   const [filterSymbol, setFilterSymbol] = useState("");
+
+  /** Screenshot reading. The image is never kept — only the preview, in memory. */
+  const [shot, setShot] = useState<{ preview: string; busy: boolean } | null>(null);
+  const [ocr, setOcr] = useState<{ summary: string; confidence: string; warnings: string[]; missing: string[] } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -125,6 +129,61 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
     if (filterSymbol && !t.symbol.toUpperCase().includes(filterSymbol.toUpperCase())) return false;
     return true;
   }), [trades, filterClass, filterSymbol]);
+
+  const readScreenshot = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) { flash("That is not an image."); return; }
+    const dataUrl = await new Promise<string>((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.onerror = () => rej(new Error("read failed"));
+      fr.readAsDataURL(file);
+    }).catch(() => "");
+    if (!dataUrl) { flash("Could not read that file."); return; }
+
+    setShot({ preview: dataUrl, busy: true });
+    setOcr(null);
+    try {
+      const res = await fetch("/api/journal/ocr", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      const j = await res.json();
+      if (!res.ok || j.ok === false) { flash(j.message ?? "Could not read that screenshot."); return; }
+
+      // Only what was actually read is applied; a null leaves the field alone
+      // rather than wiping something already typed.
+      setDraft((d) => {
+        const f = j.fields as Record<string, unknown>;
+        const next = { ...(d ?? {}) } as Draft;
+        if (f.symbol) next.symbol = normaliseSymbolInput(String(f.symbol));
+        if (f.direction) next.direction = f.direction as "buy" | "sell";
+        for (const [from, to] of [["entry", "entryPrice"], ["exit", "exitPrice"], ["size", "size"], ["pnl", "pnl"], ["fees", "fees"]] as const) {
+          if (f[from] !== null && f[from] !== undefined) (next as Record<string, unknown>)[to] = f[from];
+        }
+        return next;
+      });
+      setOcr({
+        summary: j.summary ?? "", confidence: j.review?.confidence ?? "low",
+        warnings: j.review?.warnings ?? [], missing: j.review?.missing ?? [],
+      });
+    } catch {
+      flash("Could not reach the reader.");
+    } finally {
+      setShot((v) => (v ? { ...v, busy: false } : null));
+    }
+  }, []);
+
+  // Ctrl/Cmd-V while the form is open, which is how a screenshot usually arrives.
+  useEffect(() => {
+    if (!draft) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const file = Array.from(e.clipboardData?.items ?? [])
+        .find((i) => i.type.startsWith("image/"))?.getAsFile();
+      if (file) { e.preventDefault(); void readScreenshot(file); }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [draft, readScreenshot]);
 
   const s = useMemo(() => summarise(trades), [trades]);
   const str = useMemo(() => streaks(trades), [trades]);
@@ -426,8 +485,54 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
         ) : null}
       </Modal>
 
-      <Modal open={!!draft} onClose={() => setDraft(null)} title={draft?.id ? "Edit trade" : "Log a trade"} wide>
+      <Modal open={!!draft} onClose={() => { setDraft(null); setShot(null); setOcr(null); }} title={draft?.id ? "Edit trade" : "Log a trade"} wide>
         {draft ? (
+          <>
+          <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) void readScreenshot(f); }}
+            className="mb-4 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/[0.14] bg-white/[0.02] px-4 py-3 transition-colors hover:border-brand-accent/40"
+          >
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void readScreenshot(f); e.target.value = ""; }} />
+            {shot ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={shot.preview} alt="" className="h-10 w-16 shrink-0 rounded border border-white/10 object-cover" />
+            ) : (
+              <ImageUp className="h-5 w-5 shrink-0 text-brand-accent" strokeWidth={1.8} />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold text-white">
+                {shot?.busy ? "Reading the screenshot…" : "Drop a screenshot of the trade, or paste it"}
+              </span>
+              <span className="block text-[11.5px] leading-relaxed text-ink-muted">
+                MT4, MT5 or any broker. The image is read and discarded — it is not stored.{" "}
+                <span className="text-ink-muted/70">It is sent to OpenAI to be read, so crop out your account number and balance first.</span>
+              </span>
+            </span>
+          </label>
+
+          {ocr ? (
+            <div className={`mb-4 rounded-xl border px-4 py-3 ${
+              ocr.confidence === "high" ? "border-brand-green/40 bg-brand-green/[0.07]"
+              : ocr.confidence === "medium" ? "border-[#FFB020]/40 bg-[#FFB020]/[0.07]"
+              : "border-brand-danger/40 bg-brand-danger/[0.07]"}`}>
+              <p className="text-[13px] font-semibold text-white">Read: {ocr.summary}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-ink-muted">
+                {ocr.confidence === "high"
+                  ? "Every field was found and the P/L agrees with the prices and size. Check it against your platform, then log it."
+                  : ocr.confidence === "medium"
+                    ? "Some of it could not be read or could not be cross-checked. Fill the gaps before logging."
+                    : "Treat this as a starting point — check every field."}
+                {ocr.missing.length ? ` Not found: ${ocr.missing.join(", ")}.` : ""}
+              </p>
+              {ocr.warnings.map((w) => (
+                <p key={w} className="mt-1 text-[12px] font-semibold text-[#FFB020]">{w}</p>
+              ))}
+              <p className="mt-1.5 text-[11px] text-ink-muted/70">Nothing is saved until you press Log trade.</p>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {/* Symbol first: it decides the contract size, the live price and
                 which asset class the trade lands in. */}
@@ -508,9 +613,10 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
               <button type="button" disabled={busy} onClick={() => void saveTrade()} className="btn-primary !px-4 !py-2.5 text-[12.5px]">
                 {busy ? "Saving…" : draft.id ? "Save changes" : "Log trade"}
               </button>
-              <button type="button" onClick={() => setDraft(null)} className="btn-ghost !px-4 !py-2.5 text-[12.5px]">Cancel</button>
+              <button type="button" onClick={() => { setDraft(null); setShot(null); setOcr(null); }} className="btn-ghost !px-4 !py-2.5 text-[12.5px]">Cancel</button>
             </div>
           </div>
+          </>
         ) : null}
       </Modal>
 

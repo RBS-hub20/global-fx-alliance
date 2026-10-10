@@ -304,8 +304,24 @@ export function parseStatementRows(rows: string[][], fileName = ""): ParseResult
     [map.openPrice, map.closePrice, map.openTime, map.closeTime, map.lot, map.ticket]
       .filter((i): i is number => i !== undefined)
   );
+  /*
+   * profit belongs in this set too.
+   *
+   * The first version of this guard compared commission and swap only against
+   * the price and time columns, so a swap that resolved to the *profit* column
+   * went straight through. On a real VT Markets report that is what happened —
+   * profit=Profit[11] and swap=Swap[11], the same index — which made
+   * net = profit + commission + profit and costs = commission + profit. The
+   * account read 3,550 wins out of 3,550 with $0.00 of costs.
+   *
+   * The three money fields must be three different columns. A duplicate is
+   * dropped rather than added to itself.
+   */
+  const taken = new Set(positional);
+  taken.add(map.profit);
   for (const field of ["commission", "swap"] as const) {
-    if (map[field] !== undefined && positional.has(map[field])) delete map[field];
+    if (map[field] !== undefined && taken.has(map[field])) delete map[field];
+    else if (map[field] !== undefined) taken.add(map[field]);
   }
   if (positional.has(map.profit)) {
     const headerCells = grid[headerIdx].map((h) => (h ?? "").trim());
@@ -609,13 +625,21 @@ export function computeAnalytics(trades: Trade[], tzOffsetHours = 4): JournalAna
   const shift = (iso: string | null, hours: number) =>
     iso ? new Date(Date.parse(iso) + hours * 3600_000) : null;
 
+  /*
+   * When a close time is missing, bucket by the open time instead of dropping
+   * the trade. A statement whose close column does not parse used to leave the
+   * session and hour charts completely blank, which looks like "you have never
+   * traded" rather than "one column could not be read".
+   */
+  const when = (t: Trade) => t.closeTime ?? t.openTime;
+
   const byPair = bucketise(source.map((t) => ({ key: t.symbol, net: t.net })))
     .sort((a, b) => b.trades - a.trades);
 
   const hourRows = (offset: number) =>
     source
       .map((t) => {
-        const d = shift(t.closeTime, offset);
+        const d = shift(when(t), offset);
         return d ? { key: String(d.getUTCHours()).padStart(2, "0"), net: t.net } : null;
       })
       .filter((v): v is { key: string; net: number } => v !== null);
@@ -626,7 +650,7 @@ export function computeAnalytics(trades: Trade[], tzOffsetHours = 4): JournalAna
   const byDay = bucketise(
     source
       .map((t) => {
-        const d = shift(t.closeTime, tzOffsetHours);
+        const d = shift(when(t), tzOffsetHours);
         return d ? { key: DAYS[d.getUTCDay()], net: t.net } : null;
       })
       .filter((v): v is { key: string; net: number } => v !== null)
@@ -635,7 +659,7 @@ export function computeAnalytics(trades: Trade[], tzOffsetHours = 4): JournalAna
   const bySession = bucketise(
     source
       .map((t) => {
-        const d = shift(t.closeTime, 0);
+        const d = shift(when(t), 0);
         return d ? { key: sessionFor(d.getUTCHours()), net: t.net } : null;
       })
       .filter((v): v is { key: string; net: number } => v !== null)

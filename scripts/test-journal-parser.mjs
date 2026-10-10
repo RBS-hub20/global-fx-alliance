@@ -130,6 +130,38 @@ const onePair = computeAnalytics(r.trades);
 ok("best is XAU/USD", onePair.patterns.bestPair?.key === "XAU/USD", String(onePair.patterns.bestPair?.key));
 ok("worst is null, not the same pair", onePair.patterns.worstPair === null, String(onePair.patterns.worstPair?.key));
 
+
+console.log("=== profit and swap on one column must not double-count ===");
+// The real VT Markets report: the swap alias resolved to the profit column, so
+// net = profit + commission + profit and costs = commission + profit.
+const collide = [
+  ["Position","Symbol","Type","S / L","Volume","Price","Time","T / P","Time","Price","Commission","Profit"],
+  ["9001","XAUUSD","buy","0.00","0.10","4187.49","2026.10.09 16:20:25","0.00","2026.10.09 16:41:10","4192.10","-0.40","4.60"],
+  ["9002","XAUUSD","sell","0.00","0.10","4195.00","2026.10.09 17:02:11","0.00","2026.10.09 18:30:40","4199.80","-0.40","-5.20"],
+];
+const cl = parseStatementRows(collide, "ReportHistory-1327247.html");
+const mapped = cl.report.mapped.join(" ");
+ok("swap did not land on the profit column", !/swap=/.test(mapped) || !/swap=\w*\[11\]/.test(mapped), mapped);
+ok("2 trades", cl.trades.length === 2, String(cl.trades.length));
+ok("net is profit + commission, counted once", Math.abs(cl.trades[0].net - 4.2) < 0.001, String(cl.trades[0].net));
+ok("there is a losing trade", cl.trades.some((t) => t.net < 0), cl.trades.map((t) => t.net).join(","));
+const ca = computeAnalytics(cl.trades);
+ok("win rate is 50%, not 100%", ca.summary.winRate === 50, String(ca.summary.winRate));
+ok("costs are commission only, not profit", Math.abs(ca.summary.totalCosts + 0.8) < 0.001, String(ca.summary.totalCosts));
+ok("hold time parsed from the duplicated Time columns", cl.trades[0].durationMinutes === 21, String(cl.trades[0].durationMinutes));
+ok("sessions are not blank", ca.bySession.length > 0, `${ca.bySession.length} sessions`);
+
+console.log("=== a missing close time still buckets by open time ===");
+const noClose = [
+  ["Position","Symbol","Type","Volume","Price","Time","Commission","Profit"],
+  ["9001","XAUUSD","buy","0.10","4187.49","2026.10.09 16:20:25","-0.40","4.60"],
+];
+const nc = parseStatementRows(noClose, "x.html");
+ok("trade kept", nc.trades.length === 1, String(nc.trades.length));
+const nca = computeAnalytics(nc.trades);
+ok("session chart has data", nca.bySession.length > 0, `${nca.bySession.length}`);
+ok("hour chart has data", nca.byHourLocal.length > 0, `${nca.byHourLocal.length}`);
+
 console.log("=== regression: the CSV sample is unchanged ===");
 const csv = parseTradesCSV(SAMPLE_STATEMENT_CSV, "");
 const s = computeAnalytics(csv).summary;

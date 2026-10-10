@@ -11,6 +11,7 @@ import {
 } from "@/lib/journalParser";
 import { looksLikeXlsx, xlsxToRows } from "@/lib/xlsxRows";
 import { SAMPLE_STATEMENT_CSV } from "@/lib/journalSample";
+import { EquityCurve, HoldHistogram, PairChart, RiskNotes } from "@/components/dashboard/journal/JournalCharts";
 import { readStore, writeStore } from "@/lib/storage";
 import { EVENTS, trackEvent } from "@/lib/analytics";
 
@@ -246,14 +247,41 @@ export function JournalAnalyticsPanel() {
         </p>
 
         {report ? (
-          <p className="mt-2 font-mono text-[11px] leading-relaxed text-ink-muted/70">
-            {report.rows} rows read · {report.trades} closed positions
-            {report.skippedBalance ? ` · ${report.skippedBalance} balance operations ignored` : ""}
-            {report.skippedPending ? ` · ${report.skippedPending} pending or non-trade rows ignored` : ""}
-            {report.skippedSymbol ? ` · ${report.skippedSymbol} rows with no instrument` : ""}
-            {report.stoppedAt !== null ? " · stopped at the next table" : ""}
-            {report.mapped.length ? <><br />columns: {report.mapped.join("  ")}</> : null}
-          </p>
+          <div className="mt-2">
+            <p className="font-mono text-[11px] leading-relaxed text-ink-muted/70">
+              {report.rows} rows read · {report.trades} closed positions
+              {report.skippedBalance ? ` · ${report.skippedBalance} balance operations ignored` : ""}
+              {report.skippedPending ? ` · ${report.skippedPending} pending or non-trade rows ignored` : ""}
+              {report.skippedSymbol ? ` · ${report.skippedSymbol} rows with no instrument` : ""}
+              {report.stoppedAt !== null ? " · stopped at the next table" : ""}
+              {report.mapped.length ? <><br />columns: {report.mapped.join("  ")}</> : null}
+            </p>
+            {/*
+              * The header row itself, on request. Reading a column mapping off a
+              * phone photo cost two rounds of guessing; this copies the layout as
+              * text. It carries column names and the parser's own matches —
+              * no account number, no balance, no P/L.
+              */}
+            <button
+              type="button"
+              onClick={() => {
+                const text = [
+                  `file: ${fileName ?? "(none)"}`,
+                  `rows: ${report.rows}  positions: ${report.trades}  header row: ${report.headerRow}`,
+                  `skipped: balance=${report.skippedBalance} pending=${report.skippedPending} nosymbol=${report.skippedSymbol}`,
+                  `headers: ${report.headers.map((h, i) => `${i}:${h || "(blank)"}`).join(" | ")}`,
+                  `mapped: ${report.mapped.join("  ")}`,
+                ].join("\n");
+                navigator.clipboard?.writeText(text).then(
+                  () => flash("Layout copied — paste it and I can add this broker"),
+                  () => flash("Clipboard blocked — screenshot the line above instead")
+                );
+              }}
+              className="mt-1.5 rounded border border-white/[0.12] px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-ink-muted transition-colors duration-200 hover:border-brand-accent/40 hover:text-white"
+            >
+              Copy column layout
+            </button>
+          </div>
         ) : null}
 
         {error ? (
@@ -284,6 +312,11 @@ export function JournalAnalyticsPanel() {
         />
         <Stat label="Max Drawdown" value={money(s.maxDrawdown)} tone="down" sub={`expectancy ${money(s.expectancy)}/trade`} />
       </div>
+
+      {/* The curve first: it is the one picture that answers "how did this go". */}
+      <EquityCurve curve={a.equityCurve} maxDrawdown={s.maxDrawdown} />
+
+      <RiskNotes a={a} trades={trades} />
 
       {/* What the numbers say */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -344,6 +377,11 @@ export function JournalAnalyticsPanel() {
             ) : null}
           </div>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <HoldHistogram trades={trades} />
+        <PairChart buckets={a.byPair} />
       </div>
 
       {/* Hour histogram */}

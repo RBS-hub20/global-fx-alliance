@@ -284,3 +284,38 @@ export function byDay(trades: JournalTrade[]): Map<string, { net: number; trades
   }
   return out;
 }
+
+/** Net and win rate by weekday, Monday first — the "never trade Fridays" check. */
+export function byWeekday(trades: JournalTrade[], offsetHours = 4): TagStat[] {
+  const NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const groups = new Map<string, JournalTrade[]>();
+  for (const t of trades.filter(isClosed)) {
+    const iso = t.closedAt ?? t.openedAt;
+    if (!iso) continue;
+    const d = new Date(Date.parse(iso) + offsetHours * 3600_000);
+    // getUTCDay is Sunday-first; shift so the week starts on Monday, which is
+    // how a trading week is actually read.
+    const name = NAMES[(d.getUTCDay() + 6) % 7];
+    groups.set(name, [...(groups.get(name) ?? []), t]);
+  }
+  return NAMES
+    .filter((n) => groups.has(n))
+    .map((n) => {
+      const sum = summarise(groups.get(n)!);
+      return { key: n, trades: sum.trades, wins: sum.wins, winRate: sum.winRate, net: sum.netPL, profitFactor: sum.profitFactor };
+    });
+}
+
+/** The days of a month grid, Monday-first, padded to whole weeks. */
+export function monthGrid(year: number, month: number): string[] {
+  const first = new Date(Date.UTC(year, month, 1));
+  const lead = (first.getUTCDay() + 6) % 7;
+  const start = new Date(Date.UTC(year, month, 1 - lead));
+  const days: string[] = [];
+  // Six weeks always, so the grid does not change height between months.
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getTime() + i * 86400_000);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  return days;
+}

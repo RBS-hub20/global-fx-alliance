@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, NotebookPen, Plus, Settings2, Trash2 } from "lucide-react";
 import { Card, CardHead, EmptyState, Modal, PanelHeader, Toast, money } from "@/components/ui/Primitives";
+import { JournalCalendar } from "./JournalCalendar";
+import { JournalCommunity } from "./JournalCommunity";
 import {
   DEFAULT_SETTINGS, byTag, compliance, dayOf, equityCurve, net, streaks, summarise,
   type JournalSettings, type JournalTrade, type Rule,
@@ -51,6 +53,10 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
   const [review, setReview] = useState<Record<string, string>>({});
   const [reviewLoaded, setReviewLoaded] = useState(false);
 
+  /** The day a calendar square opened, and that day's saved review. */
+  const [openDay, setOpenDay] = useState<string | null>(null);
+  const [openDayReview, setOpenDayReview] = useState<Record<string, unknown> | null>(null);
+
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2200); };
 
   const load = useCallback(async () => {
@@ -88,6 +94,19 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
       .catch(() => {})
       .finally(() => setReviewLoaded(true));
   }, [today]);
+
+  useEffect(() => {
+    if (!openDay) { setOpenDayReview(null); return; }
+    void fetch(`/api/journal/daily?day=${openDay}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setOpenDayReview(j?.days?.[0] ?? null))
+      .catch(() => setOpenDayReview(null));
+  }, [openDay]);
+
+  const dayTrades = useMemo(
+    () => (openDay ? trades.filter((t) => dayOf(t.closedAt ?? t.openedAt) === openDay) : []),
+    [openDay, trades]
+  );
 
   const s = useMemo(() => summarise(trades), [trades]);
   const str = useMemo(() => streaks(trades), [trades]);
@@ -203,7 +222,11 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
         ))}
       </div>
 
+      <JournalCalendar trades={trades} onOpenDay={setOpenDay} />
+
       {curve.length > 2 ? <MiniCurve points={curve.map((p) => p.cumulative)} /> : null}
+
+      <JournalCommunity mine={s} />
 
       {/* ---------------------------------------------- what the tags say */}
       {s.trades > 0 ? (
@@ -305,6 +328,68 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
       </Card>
 
       {/* ------------------------------------------------------------ modals */}
+      <Modal open={!!openDay} onClose={() => setOpenDay(null)} title={openDay ? `Review · ${openDay}` : ""} wide>
+        {openDay ? (
+          <div className="space-y-5">
+            <div className="flex flex-wrap gap-4">
+              {([
+                ["Trades", String(dayTrades.length)],
+                ["Net", money(dayTrades.reduce((a, t) => a + net(t), 0))],
+                ["Won", `${dayTrades.filter((t) => net(t) > 0).length} of ${dayTrades.length}`],
+              ] as const).map(([k, v]) => (
+                <span key={k}>
+                  <span className="block text-[10.5px] uppercase tracking-[0.1em] text-ink-muted">{k}</span>
+                  <span className="num-mono text-[16px] font-bold text-white">{v}</span>
+                </span>
+              ))}
+            </div>
+
+            {dayTrades.length ? (
+              <ul className="divide-y divide-white/[0.06] rounded-xl border border-white/[0.08]">
+                {dayTrades.map((t) => (
+                  <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-[12.5px]">
+                    <span className={`num-mono font-semibold ${t.direction === "buy" ? "text-brand-green" : "text-brand-danger"}`}>{t.direction}</span>
+                    <span className="num-mono text-ink-muted">{t.entryPrice ?? "—"} → {t.exitPrice ?? "—"}</span>
+                    {t.setupType ? <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-ink-muted">{t.setupType}</span> : null}
+                    {t.mistakeTag ? <span className="rounded bg-[#FFB020]/15 px-1.5 py-0.5 text-[11px] text-[#FFB020]">{t.mistakeTag}</span> : null}
+                    {t.emotion ? <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-ink-muted">{t.emotion}</span> : null}
+                    <span className={`num-mono ml-auto font-semibold ${net(t) >= 0 ? "text-brand-green" : "text-brand-danger"}`}>{money(net(t))}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {/* The plan and the review as they were written on the day — read
+                only here, because editing a past day from a calendar square is
+                how a journal quietly becomes a rewrite of history. */}
+            {openDayReview ? (
+              <div className="space-y-3">
+                {([
+                  ["Plan", openDayReview.pre_market_plan],
+                  ["What went well", openDayReview.what_went_well],
+                  ["What went wrong", openDayReview.what_went_wrong],
+                  ["Tomorrow", openDayReview.tomorrow_plan],
+                ] as const).filter(([, v]) => !!v).map(([k, v]) => (
+                  <div key={k}>
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-brand-accent">{k}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-muted">{String(v)}</p>
+                  </div>
+                ))}
+                {openDayReview.bias ? (
+                  <p className="num-mono text-[12px] text-ink-muted">
+                    bias {String(openDayReview.bias)}
+                    {openDayReview.support ? ` · support ${String(openDayReview.support)}` : ""}
+                    {openDayReview.resistance ? ` · resistance ${String(openDayReview.resistance)}` : ""}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-[12.5px] text-ink-muted">No review was written for this day.</p>
+            )}
+          </div>
+        ) : null}
+      </Modal>
+
       <Modal open={!!draft} onClose={() => setDraft(null)} title={draft?.id ? "Edit trade" : "Log a trade"} wide>
         {draft ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

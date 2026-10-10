@@ -6,8 +6,8 @@ import {
 } from "lucide-react";
 import { Card, CardHead, Skeleton, Toast, money } from "@/components/ui/Primitives";
 import {
-  computeAnalytics, parseTradeRows, parseTradesCSV, parseTradesHTML,
-  type JournalAnalytics, type Trade,
+  computeAnalytics, csvToRows, htmlToRows, parseStatementRows, parseTradesCSV,
+  type JournalAnalytics, type ParseReport, type Trade,
 } from "@/lib/journalParser";
 import { looksLikeXlsx, xlsxToRows } from "@/lib/xlsxRows";
 import { SAMPLE_STATEMENT_CSV } from "@/lib/journalSample";
@@ -47,6 +47,8 @@ export function JournalAnalyticsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  // What the parser actually did with the file, shown on screen.
+  const [report, setReport] = useState<ParseReport | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Restore a previous import, else fall back to the sample statement.
@@ -85,15 +87,31 @@ export function JournalAnalyticsPanel() {
        * Parsed in the browser on purpose — a trading history never leaves the device.
        */
       const buffer = await file.arrayBuffer();
-      let parsed: Trade[];
+      let rows: string[][];
 
       if (looksLikeXlsx(buffer)) {
-        parsed = parseTradeRows(await xlsxToRows(buffer), file.name);
+        rows = await xlsxToRows(buffer);
       } else {
         const text = decodeStatement(buffer);
-        parsed = /<\s*(table|html|body)\b/i.test(text.slice(0, 8000))
-          ? parseTradesHTML(text, file.name)
-          : parseTradesCSV(text, file.name);
+        rows = /<\s*(table|html|body)\b/i.test(text.slice(0, 8000)) ? htmlToRows(text) : csvToRows(text);
+      }
+
+      const { trades: parsed, report: parseReport } = parseStatementRows(rows, file.name);
+      setReport(parseReport);
+
+      if (!parsed.length) {
+        /*
+         * The parser says why. A refusal because the header did not line up with
+         * the data is a different problem from a file with no trades in it, and
+         * the previous blanket message hid the difference — which is how a
+         * misaligned report came out as 343 trades at a 100% win rate instead of
+         * an error.
+         */
+        const diagnosis = parseReport.mapped[0];
+        if (diagnosis && /cannot be matched|collides/.test(diagnosis)) {
+          setError(`That statement's columns could not be matched: ${diagnosis}. Send the file and I can add its layout.`);
+          return;
+        }
       }
 
       if (!parsed.length) {
@@ -126,6 +144,7 @@ export function JournalAnalyticsPanel() {
     writeStore(STORE_KEY, null);
     setTrades(parseTradesCSV(SAMPLE_STATEMENT_CSV, ""));
     setIsReal(false);
+    setReport(null);
     setFileName(null);
     flash("Import cleared — showing the sample statement");
   };
@@ -226,6 +245,17 @@ export function JournalAnalyticsPanel() {
           and is saved only to this browser&apos;s local storage.
         </p>
 
+        {report ? (
+          <p className="mt-2 font-mono text-[11px] leading-relaxed text-ink-muted/70">
+            {report.rows} rows read · {report.trades} closed positions
+            {report.skippedBalance ? ` · ${report.skippedBalance} balance operations ignored` : ""}
+            {report.skippedPending ? ` · ${report.skippedPending} pending or non-trade rows ignored` : ""}
+            {report.skippedSymbol ? ` · ${report.skippedSymbol} rows with no instrument` : ""}
+            {report.stoppedAt !== null ? " · stopped at the next table" : ""}
+            {report.mapped.length ? <><br />columns: {report.mapped.join("  ")}</> : null}
+          </p>
+        ) : null}
+
         {error ? (
           <p role="alert" className="mt-3 rounded-lg border border-brand-danger/30 bg-brand-danger/[0.08] px-3.5 py-2.5 text-[12.5px] text-brand-danger">
             {error}
@@ -237,11 +267,20 @@ export function JournalAnalyticsPanel() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Net P/L" value={money(s.netPL)} tone={s.netPL >= 0 ? "up" : "down"} sub={`${s.trades} trades`} />
         <Stat label="Win Rate" value={`${s.winRate.toFixed(0)}%`} sub={`${s.wins}W / ${s.losses}L`} />
+        {/*
+          * profitFactor is null when there were no losing trades at all, which is
+          * infinite, not zero. `?? 0` read that as 0 and printed "∞ below
+          * breakeven" under a 100% win rate.
+          */}
         <Stat
           label="Profit Factor"
-          value={s.profitFactor === null ? "∞" : s.profitFactor.toFixed(2)}
-          tone={(s.profitFactor ?? 0) >= 1 ? "up" : "down"}
-          sub={(s.profitFactor ?? 0) >= 1 ? "above breakeven" : "below breakeven"}
+          value={s.profitFactor === null ? (s.trades ? "∞" : "n/a") : s.profitFactor.toFixed(2)}
+          tone={s.profitFactor === null ? (s.trades ? "up" : undefined) : s.profitFactor >= 1 ? "up" : "down"}
+          sub={
+            s.profitFactor === null
+              ? s.trades ? "no losing trades" : "no trades yet"
+              : s.profitFactor >= 1 ? "above breakeven" : "below breakeven"
+          }
         />
         <Stat label="Max Drawdown" value={money(s.maxDrawdown)} tone="down" sub={`expectancy ${money(s.expectancy)}/trade`} />
       </div>

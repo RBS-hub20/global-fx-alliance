@@ -14,7 +14,7 @@ import { Buffer } from "node:buffer";
 
 const LIB = new URL("../src/lib/", import.meta.url).href;
 const { xlsxToRows, looksLikeXlsx } = await import(LIB + "xlsxRows.ts");
-const { parseTradeRows, parseTradesHTML, parseTradesCSV, computeAnalytics, isPosition } =
+const { parseTradeRows, parseStatementRows, parseTradesHTML, parseTradesCSV, computeAnalytics, isPosition } =
   await import(LIB + "journalParser.ts");
 const { SAMPLE_STATEMENT_CSV } = await import(LIB + "journalSample.ts");
 
@@ -76,6 +76,59 @@ const d = parseTradeRows([
 ], "r.xlsx");
 ok("one position, not three rows", d.length === 1, `got ${d.length}`);
 ok("counted once at 66.80", d[0].net === 66.8, String(d[0].net));
+
+
+console.log("=== the reported failure: misaligned header must not invent profit ===");
+// 13 data columns, but a header row whose cells do not line up — which is what
+// put commission and swap on the two Price columns.
+const skewed = [
+  ["Positions"],
+  ["Time","Position","Symbol","Type","Volume","Price","Time","Price","Commission","Swap","Profit"], // 11
+  ["2026.10.09 16:20","9001","XAUUSD","buy","0.10","4187.49","","","2026.10.09 16:41","4192.10","-1.20","0.00","46.10"], // 13
+];
+const sk = parseStatementRows(skewed, "ReportHistory-1029247.html");
+ok("does not report a price as profit", !sk.trades.some((t) => Math.abs(t.net) > 1000),
+   sk.trades.map((t) => t.net).join(",") || "no trades");
+ok("report explains the column mapping", sk.report.mapped.length > 0, sk.report.mapped.slice(0, 4).join(" "));
+
+console.log("=== balance operations are not trades ===");
+const withOps = [
+  ["Positions"],
+  ["Time","Position","Symbol","Type","Volume","Price","S / L","T / P","Time","Price","Commission","Swap","Profit"],
+  ["2026.10.09 16:20","9001","XAUUSD","buy","0.10","4187.49","0.00","0.00","2026.10.09 16:41","4192.10","-1.20","0.00","46.10"],
+  ["2026.10.09 17:02","9002","XAUUSD","sell","0.20","4195.00","0.00","0.00","2026.10.09 18:30","4199.80","-2.40","-0.10","-96.00"],
+  // cash movements, worded the way terminals word them
+  ["2026.10.01 00:00","9100","","balance","","","","","","","","","132634.13"],
+  ["2026.10.05 00:00","9101","","withdrawal","","","","","","","","","-140497.69"],
+  ["2026.10.05 00:00","9102","Deposit","deposit","","","","","","","","","5000.00"],
+  ["2026.10.06 00:00","9103","","credit","","","","","","","","","0.00"],
+  ["2026.10.06 00:00","9104","","bonus","","","","","","","","","250.00"],
+  ["2026.10.07 00:00","9105","XAUUSD","buy limit","0.10","4100.00","","","","","","",""],
+];
+const r = parseStatementRows(withOps, "ReportHistory-1029247.html");
+ok("2 real positions only", r.trades.length === 2, `got ${r.trades.length}`);
+ok("deposits/withdrawals counted as skipped", r.report.skippedBalance >= 4, String(r.report.skippedBalance));
+ok("pending order counted as skipped", r.report.skippedPending >= 1, String(r.report.skippedPending));
+const ra = computeAnalytics(r.trades);
+ok("net is trading P/L, not deposits", Math.abs(ra.summary.netPL - (46.10 - 1.20 + (-96.00 - 2.40 - 0.10))) < 0.01, String(ra.summary.netPL));
+ok("win rate is not 100%", ra.summary.winRate === 50, String(ra.summary.winRate));
+ok("costs are commission+swap only", Math.abs(ra.summary.totalCosts + 3.70) < 0.01, String(ra.summary.totalCosts));
+
+console.log("=== hold time cannot be 2,225 years ===");
+const badTime = [
+  ["Time","Position","Symbol","Type","Volume","Price","Time","Price","Commission","Swap","Profit"],
+  ["not a date","9001","XAUUSD","buy","0.10","4187.49","2026.10.09 16:41","4192.10","-1.20","0.00","46.10"],
+];
+const bt = parseStatementRows(badTime, "x.html").trades;
+ok("unparseable open time -> duration null", bt.length === 1 && bt[0].durationMinutes === null,
+   bt.length ? String(bt[0].durationMinutes) : "no trade");
+ok("avg winner reports n/a, not a number", computeAnalytics(bt).holdTime.avgWinnerMin === null,
+   String(computeAnalytics(bt).holdTime.avgWinnerMin));
+
+console.log("=== one instrument has no 'worst' ===");
+const onePair = computeAnalytics(r.trades);
+ok("best is XAU/USD", onePair.patterns.bestPair?.key === "XAU/USD", String(onePair.patterns.bestPair?.key));
+ok("worst is null, not the same pair", onePair.patterns.worstPair === null, String(onePair.patterns.worstPair?.key));
 
 console.log("=== regression: the CSV sample is unchanged ===");
 const csv = parseTradesCSV(SAMPLE_STATEMENT_CSV, "");

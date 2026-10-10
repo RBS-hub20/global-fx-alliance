@@ -153,17 +153,38 @@ export function normaliseSymbol(raw: string): string {
 /** Single-cell rows that start a new table inside one export. */
 const SECTION_TITLE = /^(positions?|orders?|deals?|working orders|open trades|open positions|closed transactions)$/i;
 
+/** Cash movements, which are not trades however much P/L the row carries. */
+const BALANCE_OP = /balance|deposit|withdraw|credit|bonus|correction|charge|dividend|interest|rollover|transfer|adjustment|commission/i;
+
 /**
  * A closed position, as opposed to a pending order or a cash movement.
  *
- * "buy limit", "sell stop" and "buy stop limit" all contain buy or sell, which
- * is how a pending order slipped through a plain /buy|sell/ test. Balance,
- * credit and deposit rows never matched and still do not.
+ * Exact match, not a prefix. "buy limit" and "sell stop" are pending orders and
+ * were slipping through a plain /buy|sell/ test; a prefix test still let
+ * "buy stop limit" style values through on brokers that word them differently.
+ * Anything that is not plainly buy or sell is not a position.
  */
 export function isPosition(rawType: string): boolean {
   const t = rawType.toLowerCase().trim();
-  if (/limit|stop/.test(t)) return false;
-  return /^(buy|sell|long|short)\b/.test(t);
+  if (!t) return false;
+  if (BALANCE_OP.test(t)) return false;
+  return /^(buy|sell|long|short)$/.test(t);
+}
+
+/**
+ * Does this look like something you can trade?
+ *
+ * A deposit row's symbol cell is empty, or carries the word "Deposit", and a
+ * blank symbol used to normalise to UNKNOWN and get dropped — but a worded one
+ * became the "instrument" DEPOSIT and was counted. Accepts normalised FX pairs
+ * and plain tickers (US30, NAS100, XAUUSD, BTCUSD), rejects prose.
+ */
+export function isTradableSymbol(symbol: string): boolean {
+  const s = (symbol || "").trim().toUpperCase();
+  if (!s || s === "UNKNOWN") return false;
+  if (BALANCE_OP.test(s)) return false;
+  if (/^[A-Z]{3}\/[A-Z]{3}$/.test(s)) return true;
+  return /^[A-Z0-9._#-]{2,14}$/.test(s);
 }
 
 /**
@@ -176,9 +197,37 @@ export function isPosition(rawType: string): boolean {
  * reimplemented per format — which is how the HTML path drifted out of support
  * in the first place.
  */
+/**
+ * What the parser did, so a file that comes out wrong can be diagnosed from the
+ * screen instead of from a console nobody has open. Surfaced in the panel.
+ */
+export interface ParseReport {
+  rows: number;
+  headerRow: number;
+  headers: string[];
+  mapped: string[];
+  trades: number;
+  skippedBalance: number;
+  skippedPending: number;
+  skippedSymbol: number;
+  stoppedAt: number | null;
+}
+
+export interface ParseResult { trades: Trade[]; report: ParseReport }
+
 export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
+  return parseStatementRows(rows, fileName).trades;
+}
+
+export function parseStatementRows(rows: string[][], fileName = ""): ParseResult {
+  const empty = (rowCount: number): ParseResult => ({
+    trades: [],
+    report: { rows: rowCount, headerRow: -1, headers: [], mapped: [], trades: 0,
+              skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null },
+  });
+
   const grid = rows.filter((r) => r.some((c) => (c ?? "").trim() !== ""));
-  if (grid.length < 2) return [];
+  if (grid.length < 2) return empty(grid.length);
 
   /*
    * The header is the first row with a recognisable symbol and profit column.
@@ -195,7 +244,80 @@ export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
   }
 
   const map = mapHeaders(grid[headerIdx]);
-  if (map.symbol === undefined || map.profit === undefined) return [];
+  if (map.symbol === undefined || map.profit === undefined) return empty(grid.length);
+
+  /*
+   * The header must be at least as wide as the rows beneath it.
+   *
+   * This is the failure a real MT5 report hit. Its header row carried fewer
+   * cells than its data rows, so every index past the gap addressed the wrong
+   * column: profit read the commission cell, commission read a timestamp, swap
+   * read the closing price. net became profit + a price, so all 343 rows came
+   * out positive, the win rate read 100%, and the average "win" was $4,268 —
+   * the price of gold.
+   *
+   * Nothing can recover the alignment from here, because which column the gap
+   * belongs to is unknowable. Refusing and naming both widths is the only
+   * truthful option; guessing produces exactly the numbers above.
+   *
+   * The modal width is used rather than the maximum, so one wide summary row
+   * (they are written with colspan) does not condemn the file.
+   */
+  const widths = new Map<number, number>();
+  for (let i = headerIdx + 1; i < grid.length; i++) {
+    const w = grid[i].length;
+    if (w < 3) continue;
+    widths.set(w, (widths.get(w) ?? 0) + 1);
+  }
+  let modalWidth = 0;
+  let modalCount = 0;
+  widths.forEach((count, w) => { if (count > modalCount) { modalCount = count; modalWidth = w; } });
+
+  const headerWidth = grid[headerIdx].length;
+  if (modalWidth > headerWidth) {
+    const headerCells = grid[headerIdx].map((h) => (h ?? "").trim());
+    return {
+      trades: [],
+      report: {
+        rows: grid.length, headerRow: headerIdx, headers: headerCells,
+        mapped: [`header has ${headerWidth} columns, the ${modalCount} rows below have ${modalWidth} — columns cannot be matched`],
+        trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null,
+      },
+    };
+  }
+
+  /*
+   * No two money fields may read the same column.
+   *
+   * This is the check that was missing when a real MT5 report produced 343
+   * "trades" at a 100% win rate: commission and swap had landed on the two Price
+   * columns, so net = profit + commission + swap summed the price of gold and
+   * every row came out positive. Costs paid read $1,463,963.83 — the same figure
+   * as the net — which is the signature of it.
+   *
+   * A collision means the header did not line up with the data, and the honest
+   * response is to drop the field rather than add a price to a P/L. profit is
+   * the one field that cannot be dropped, so a collision there fails the parse
+   * and the report says which column it landed on.
+   */
+  const positional = new Set(
+    [map.openPrice, map.closePrice, map.openTime, map.closeTime, map.lot, map.ticket]
+      .filter((i): i is number => i !== undefined)
+  );
+  for (const field of ["commission", "swap"] as const) {
+    if (map[field] !== undefined && positional.has(map[field])) delete map[field];
+  }
+  if (positional.has(map.profit)) {
+    const headerCells = grid[headerIdx].map((h) => (h ?? "").trim());
+    return {
+      trades: [],
+      report: {
+        rows: grid.length, headerRow: headerIdx, headers: headerCells,
+        mapped: [`profit=${headerCells[map.profit] ?? "?"}[${map.profit}] — collides with a price or time column`],
+        trades: 0, skippedBalance: 0, skippedPending: 0, skippedSymbol: 0, stoppedAt: null,
+      },
+    };
+  }
 
   // Separators in exported filenames are usually hyphens or underscores.
   const SEP = "[\\s\\-_.]*";
@@ -205,6 +327,10 @@ export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
     new RegExp(`pu${SEP}prime`, "i").test(fileName) ? "PUPRIME" : null;
 
   const out: Trade[] = [];
+  let skippedBalance = 0;
+  let skippedPending = 0;
+  let skippedSymbol = 0;
+  let stoppedAt: number | null = null;
 
   for (let i = headerIdx + 1; i < grid.length; i++) {
     const c = grid[i];
@@ -220,16 +346,20 @@ export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
      * on a generated MT5 report: 5 positions came back as 6 trades.
      */
     const filled = c.filter((x) => (x ?? "").trim() !== "");
-    if (filled.length === 1 && SECTION_TITLE.test(filled[0].trim())) break;
+    if (filled.length === 1 && SECTION_TITLE.test(filled[0].trim())) { stoppedAt = i; break; }
     const lower = c.map((x) => (x ?? "").toLowerCase().trim());
     // A second header row means a second table.
-    if (lower.some((x) => x === "symbol" || x === "item" || x === "instrument")) break;
+    if (lower.some((x) => x === "symbol" || x === "item" || x === "instrument")) { stoppedAt = i; break; }
 
     const rawType = (c[map.type ?? -1] ?? "").toLowerCase().trim();
-    if (!isPosition(rawType)) continue; // skips balance, credit and pending orders
+    if (!isPosition(rawType)) {
+      if (BALANCE_OP.test(rawType)) skippedBalance++;
+      else if (rawType) skippedPending++;
+      continue;
+    }
 
     const symbol = normaliseSymbol(c[map.symbol]);
-    if (symbol === "UNKNOWN") continue;
+    if (!isTradableSymbol(symbol)) { skippedSymbol++; continue; }
 
     const openTime = parseTradeTime(c[map.openTime ?? -1]);
     const closeTime = parseTradeTime(c[map.closeTime ?? -1]);
@@ -237,10 +367,21 @@ export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
     const commission = num(c[map.commission ?? -1]);
     const swap = num(c[map.swap ?? -1]);
 
-    const duration =
+    /*
+     * Hold time, or nothing.
+     *
+     * A reported average winner of 1,170,000,009 minutes — 2,225 years — came
+     * from one timestamp failing to parse, landing on the 1970 epoch, and being
+     * subtracted from a 2026 close. A duration that long is not a hold time, so
+     * anything beyond a year is treated as unparseable rather than averaged in.
+     */
+    const MAX_HOLD_MIN = 365 * 24 * 60;
+    const rawDuration =
       openTime && closeTime
-        ? Math.max(0, Math.round((Date.parse(closeTime) - Date.parse(openTime)) / 60000))
+        ? Math.round((Date.parse(closeTime) - Date.parse(openTime)) / 60000)
         : null;
+    const duration =
+      rawDuration === null || rawDuration < 0 || rawDuration > MAX_HOLD_MIN ? null : rawDuration;
 
     const comment = c[map.comment ?? -1] ?? "";
     const brokerFromComment =
@@ -266,14 +407,34 @@ export function parseTradeRows(rows: string[][], fileName = ""): Trade[] {
     });
   }
 
-  return out;
+  const headers = grid[headerIdx].map((h) => (h ?? "").trim());
+  return {
+    trades: out,
+    report: {
+      rows: grid.length,
+      headerRow: headerIdx,
+      headers,
+      // Which column each field was read from, which is the first thing to look
+      // at when the numbers are wrong.
+      mapped: Object.entries(map).map(([field, idx]) => `${field}=${headers[idx] ?? "?"}[${idx}]`),
+      trades: out.length,
+      skippedBalance,
+      skippedPending,
+      skippedSymbol,
+      stoppedAt,
+    },
+  };
+}
+
+/** Delimited text -> grid. */
+export function csvToRows(text: string): string[][] {
+  if (!text || !text.trim()) return [];
+  const delim = detectDelimiter(text);
+  return text.split(/\r?\n/).filter((r) => r.trim().length > 0).map((r) => splitRow(r, delim));
 }
 
 export function parseTradesCSV(text: string, fileName = ""): Trade[] {
-  if (!text || !text.trim()) return [];
-  const delim = detectDelimiter(text);
-  const rows = text.split(/\r?\n/).filter((r) => r.trim().length > 0).map((r) => splitRow(r, delim));
-  return parseTradeRows(rows, fileName);
+  return parseTradeRows(csvToRows(text), fileName);
 }
 
 /* ------------------------------------------------------------------- HTML */
@@ -297,11 +458,22 @@ export function htmlToRows(html: string): string[][] {
 
   while ((row = rowRe.exec(html)) !== null) {
     const cells: string[] = [];
-    const cellRe = /<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    const cellRe = /<t[dh]\b([^>]*)>([\s\S]*?)<\/t[dh]>/gi;
     let cell: RegExpExecArray | null;
     while ((cell = cellRe.exec(row[1])) !== null) {
-      cells.push(
-        cell[1]
+      /*
+       * colspan is why a real MT5 report parsed into nonsense.
+       *
+       * These reports group header cells — <td colspan=2> and friends — so a
+       * header row of 13 visible columns is fewer <td> elements than the data
+       * rows beneath it. Ignoring the attribute shifted every column left of the
+       * gap: commission and swap landed on the two Price columns, profit landed
+       * on a column of blanks, and the result was 343 "trades" at a 100% win
+       * rate whose average win was $4,268 — the price of gold, summed.
+       */
+      const span = Math.min(40, Math.max(1, Number(cell[1].match(/\bcolspan\s*=\s*"?(\d+)/i)?.[1] ?? 1)));
+      const value =
+        cell[2]
           // <br> inside a cell is a line break, not a word join.
           .replace(/<br\s*\/?>/gi, " ")
           .replace(/<[^>]*>/g, "")
@@ -311,8 +483,10 @@ export function htmlToRows(html: string): string[][] {
           .replace(/&gt;/gi, ">")
           .replace(/&quot;/gi, '"')
           .replace(/\s+/g, " ")
-          .trim()
-      );
+          .trim();
+      cells.push(value);
+      // The spanned columns still exist in the grid; they are just empty.
+      for (let k = 1; k < span; k++) cells.push("");
     }
     if (cells.length) rows.push(cells);
   }
@@ -402,7 +576,12 @@ function rank(buckets: Bucket[], minTrades: number) {
   const pool = eligible.length ? eligible : buckets;
   if (!pool.length) return { best: null, worst: null };
   const sorted = [...pool].sort((a, b) => b.net - a.net || b.winRate - a.winRate);
-  return { best: sorted[0], worst: sorted[sorted.length - 1] };
+  /*
+   * With one instrument there is no worst one. Returning the same bucket as both
+   * printed "best XAU/USD +$X" above "worst XAU/USD +$X", which reads as a
+   * finding when it is only a statement that gold is all they trade.
+   */
+  return { best: sorted[0], worst: sorted.length > 1 ? sorted[sorted.length - 1] : null };
 }
 
 export function computeAnalytics(trades: Trade[], tzOffsetHours = 4): JournalAnalytics {

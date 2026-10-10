@@ -53,6 +53,19 @@ const CHAPTER_ROWS: ChapterRow[] = [
   { code: "ID", name: "Indonesia", hub: "Jakarta", flag: "\u{1F1EE}\u{1F1E9}", members: 61, online: 6, lead: "Dimas P.",
     posts: [{ author: "Dimas P.", time: "10h", body: "Journaling challenge starts Monday. Two weeks, every trade logged." }],
     events: [{ date: "Sep 15", title: "Journaling challenge kickoff" }] },
+
+  /*
+   * Newly opened, so no posts and no events — rather than a thread and a meetup
+   * invented to match the eight above. An empty chapter reads as new; a chapter
+   * with a fabricated conversation in it reads as a chapter nobody turned up to
+   * once a member opens it. The lead is unassigned for the same reason.
+   */
+  { code: "CA", name: "Canada", hub: "Toronto", flag: "\u{1F1E8}\u{1F1E6}", members: 112, online: 14, lead: "unassigned",
+    posts: [], events: [] },
+  { code: "IN", name: "India", hub: "Mumbai", flag: "\u{1F1EE}\u{1F1F3}", members: 187, online: 26, lead: "unassigned",
+    posts: [], events: [] },
+  { code: "TR", name: "Turkey", hub: "Istanbul", flag: "\u{1F1F9}\u{1F1F7}", members: 94, online: 11, lead: "unassigned",
+    posts: [], events: [] },
 ];
 
 export function ChaptersPanel() {
@@ -88,7 +101,7 @@ export function ChaptersPanel() {
           <div>
             <h2 className="text-[22px] font-bold tracking-tight text-white">{chapter.name}</h2>
             <p className="mt-0.5 text-[12.5px] text-ink-muted">
-              {chapter.hub} · Chapter lead {chapter.lead}
+              {chapter.hub} · {chapter.lead === "unassigned" ? "chapter lead unassigned" : `Chapter lead ${chapter.lead}`}
             </p>
           </div>
           <button
@@ -107,6 +120,11 @@ export function ChaptersPanel() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHead title="Recent Posts" icon={MessageSquare} />
+            {chapter.posts.length === 0 ? (
+              <p className="px-5 py-10 text-center text-[13px] text-ink-muted">
+                Nothing posted yet — this chapter has just opened.
+              </p>
+            ) : null}
             <ul className="divide-y divide-white/[0.06]">
               {chapter.posts.map((p, i) => (
                 <li key={i} className="flex gap-3 px-5 py-4">
@@ -142,6 +160,9 @@ export function ChaptersPanel() {
 
             <Card>
               <CardHead title="Upcoming Events" icon={MapPin} />
+              {chapter.events.length === 0 ? (
+                <p className="px-5 py-6 text-center text-[12.5px] text-ink-muted">No events scheduled.</p>
+              ) : null}
               <ul className="divide-y divide-white/[0.06]">
                 {chapter.events.map((e, i) => (
                   <li key={i} className="flex items-center gap-3 px-5 py-3.5">

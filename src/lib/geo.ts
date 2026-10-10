@@ -69,6 +69,17 @@ const LAND: LonLat[][] = [
   [[-10, 52], [-10, 55], [-6, 55], [-6, 52]],
   // Iceland
   [[-24, 65], [-14, 66], [-14, 64], [-22, 63]],
+  /*
+   * Anatolia. Added with the Turkey chapter: the Asia outline above runs along
+   * latitude 42-44 and then dives south at Iran, so the whole peninsula fell
+   * outside the land union and the Istanbul hub marker sat on bare background.
+   * The Balkans, the Levant and Mesopotamia are still gaps in this simplified
+   * outline — no hub needs them yet.
+   */
+  [
+    [26, 40], [28, 41.6], [31, 42], [36, 41.5], [41, 41.5], [44, 40],
+    [44, 37.5], [41, 37], [36, 36.5], [32, 36.5], [28, 37], [26, 38.5],
+  ],
   // Asia
   [
     [28, 44], [35, 44], [40, 43], [45, 42], [50, 44], [52, 42], [50, 37],
@@ -215,6 +226,9 @@ export const HUBS: Hub[] = [
   { code: "ID", name: "Indonesia", flag: "\u{1F1EE}\u{1F1E9}", lon: 106.8, lat: -6.2 },
   { code: "VN", name: "Vietnam", flag: "\u{1F1FB}\u{1F1F3}", lon: 105.8, lat: 21.0 },
   { code: "JP", name: "Japan", flag: "\u{1F1EF}\u{1F1F5}", lon: 139.7, lat: 35.7 },
+  { code: "CA", name: "Canada", flag: "\u{1F1E8}\u{1F1E6}", lon: -79.38, lat: 43.65 },
+  { code: "IN", name: "India", flag: "\u{1F1EE}\u{1F1F3}", lon: 72.88, lat: 19.08 },
+  { code: "TR", name: "Turkey", flag: "\u{1F1F9}\u{1F1F7}", lon: 28.98, lat: 41.01 },
 ];
 
 /** Ordered pairs of hub codes drawn as glowing great-circle-ish arcs. */
@@ -228,6 +242,12 @@ export const HUB_LINKS: [string, string][] = [
   ["MY", "SG"],
   ["ID", "AU"],
   ["VN", "JP"],
+  // Toronto hangs off New York, Mumbai off Dubai, Istanbul off London — each
+  // new hub links to its nearest existing one so the arcs stay readable
+  // rather than crossing the map.
+  ["CA", "US"],
+  ["IN", "AE"],
+  ["TR", "GB"],
 ];
 
 /** Quadratic arc between two projected points, bowed away from the equator. */

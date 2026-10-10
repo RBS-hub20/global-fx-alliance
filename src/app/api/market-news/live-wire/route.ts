@@ -29,10 +29,16 @@ export const dynamic = "force-dynamic";
 
 const SOURCES = [
   { provider: "ForexLive", url: "https://www.forexlive.com/feed/" },
-  { provider: "FXStreet", url: "https://www.fxstreet.com/rss/news" },
-  // The analysis feed is where most gold-specific pieces land — 11 of 30 on
-  // the day this was written, against 1 of 30 on the general news feed.
-  { provider: "FXStreet Analysis", url: "https://www.fxstreet.com/rss/analysis" },
+  /*
+   * FXStreet is gone, both feeds. It answers a laptop and returns 403 to this
+   * host on either runtime — a block on Vercel's addresses, measured rather than
+   * guessed — so it contributed nothing but a dead row in the status list and a
+   * "6 of 8 feeds" counter that made a healthy wire look broken.
+   *
+   * It was carried this long because its analysis feed was the one gold-specific
+   * source. Investing's commodities feed replaced it and then some: 8 kept out
+   * of 10 against FXStreet Analysis's 11 of 30, and it answers from here.
+   */
   /*
    * Added after the wire was found running on one feed out of three.
    *

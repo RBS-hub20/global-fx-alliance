@@ -2,7 +2,17 @@ import { NextResponse } from "next/server";
 import { parseDate, parseRSS, timeAgo, hashId, stripHTML } from "@/lib/newsParser";
 import { classifyGold, dubaiClock, titleKey } from "@/lib/goldWire";
 
-export const runtime = "edge";
+/*
+ * Node, not edge.
+ *
+ * FXStreet answers this project's laptop and refuses Vercel — a block on the
+ * address, not on the request, since adding a User-Agent changed nothing. The
+ * node runtime egresses from a different pool to the edge one, which is the
+ * cheapest thing to try before resorting to a proxy. `status` below records
+ * what each publisher actually said, so this is measurable rather than assumed.
+ */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * XAU/USD live wire.
@@ -57,6 +67,9 @@ const LIMIT = 30;
  */
 const UA = "Mozilla/5.0 (compatible; GFXA-Wire/1.0; +https://globalfxalliance.io)";
 
+/** What the publisher said, kept so a dead source is diagnosable from outside. */
+const STATUS = new Map<string, string>();
+
 async function fetchText(url: string): Promise<string | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -67,10 +80,16 @@ async function fetchText(url: string): Promise<string | null> {
       redirect: "follow",
       headers: { "User-Agent": UA, Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8" },
     });
+    STATUS.set(url, String(res.status));
     if (!res.ok) return null;
     const body = await res.text();
-    return body.includes("<item") ? body : null;
-  } catch {
+    if (!body.includes("<item")) {
+      STATUS.set(url, `${res.status} but no <item>`);
+      return null;
+    }
+    return body;
+  } catch (e) {
+    STATUS.set(url, e instanceof Error && e.name === "AbortError" ? "timeout" : "network error");
     return null;
   } finally {
     clearTimeout(timer);
@@ -115,7 +134,7 @@ export async function GET() {
         driver: read.driver,
       });
     }
-    status.push({ provider: f.provider, ok: !!f.xml, items: items.length, kept });
+    status.push({ provider: f.provider, ok: !!f.xml, items: items.length, kept, http: STATUS.get(f.url) ?? "?" });
   }
 
   stories.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));

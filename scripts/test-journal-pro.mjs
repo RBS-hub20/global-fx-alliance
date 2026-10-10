@@ -95,5 +95,51 @@ ok("runs oldest first and accumulates", eq[eq.length - 1].cumulative === 180, St
 const days = J.byDay(seq);
 ok("six separate days", days.size === 6, String(days.size));
 
+
+console.log("=== instruments ===");
+ok("XAU/USD is Gold", J.assetClassOf("XAU/USD") === "Gold");
+ok("GC=F is Gold", J.assetClassOf("GC=F") === "Gold");
+ok("EUR/USD is a Major", J.assetClassOf("EUR/USD") === "Majors");
+ok("US30 is an Index", J.assetClassOf("US30") === "Indices");
+ok("BTC/USD is Crypto", J.assetClassOf("BTC/USD") === "Crypto");
+ok("DXY is Other", J.assetClassOf("DXY") === "Other");
+ok("a made-up ticker is Other", J.assetClassOf("WHEATX") === "Other", J.assetClassOf("WHEATX"));
+ok("empty symbol defaults to XAU/USD", J.normaliseSymbolInput("  ") === "XAU/USD");
+ok("input is upper-cased and trimmed", J.normaliseSymbolInput(" eur/usd ") === "EUR/USD");
+
+console.log("=== contract sizes: assert only what is standard ===");
+ok("gold is 100 oz", J.contractSize("XAU/USD") === 100);
+ok("silver is 5000 oz", J.contractSize("XAG/USD") === 5000);
+ok("FX is 100,000", J.contractSize("EUR/USD") === 100000);
+ok("US30 is broker-specific -> null", J.contractSize("US30") === null);
+ok("BTC/USD is broker-specific -> null", J.contractSize("BTC/USD") === null);
+
+console.log("=== P/L estimate ===");
+// 0.10 lots of gold, 10 dollars of movement: 0.10 * 100 oz * $10 = $100
+ok("gold buy 4180->4190, 0.1 lot = $100", J.estimatePnl("XAU/USD", 4180, 4190, 0.1, "buy") === 100,
+   String(J.estimatePnl("XAU/USD", 4180, 4190, 0.1, "buy")));
+ok("same trade sold is -$100", J.estimatePnl("XAU/USD", 4180, 4190, 0.1, "sell") === -100,
+   String(J.estimatePnl("XAU/USD", 4180, 4190, 0.1, "sell")));
+// 1 lot EUR/USD, 50 pips = $500
+ok("EUR/USD 1 lot, 0.0050 = $500", J.estimatePnl("EUR/USD", 1.08, 1.085, 1, "buy") === 500,
+   String(J.estimatePnl("EUR/USD", 1.08, 1.085, 1, "buy")));
+// USD/JPY earns yen; 1 lot over 1.00 = 100,000 JPY / 147 ~= $680, NOT 100,000
+const jpy = J.estimatePnl("USD/JPY", 147, 148, 1, "buy");
+ok("USD/JPY converts back to USD", jpy !== null && jpy > 600 && jpy < 700, String(jpy));
+ok("US30 returns null, not a guess", J.estimatePnl("US30", 44000, 44100, 1, "buy") === null);
+ok("missing exit returns null", J.estimatePnl("XAU/USD", 4180, null, 0.1, "buy") === null);
+ok("zero size returns null", J.estimatePnl("XAU/USD", 4180, 4190, 0, "buy") === null);
+
+console.log("=== per-symbol breakdown ===");
+const mixed = [
+  T({ pnl: 100, symbol: "XAU/USD" }), T({ pnl: -40, symbol: "XAU/USD" }),
+  T({ pnl: 60, symbol: "EUR/USD" }), T({ pnl: -90, symbol: "US30" }),
+];
+const bs = J.bySymbol(mixed);
+ok("three symbols", bs.length === 3, bs.map((b) => b.key).join(","));
+ok("XAU/USD leads on trade count", bs[0].key === "XAU/USD" && bs[0].trades === 2, JSON.stringify(bs[0]));
+const ac = J.byAssetClass(mixed);
+ok("three asset classes", ac.length === 3, ac.map((b) => `${b.key}:${b.trades}`).join(" "));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

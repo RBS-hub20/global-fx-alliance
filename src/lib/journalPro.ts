@@ -319,3 +319,97 @@ export function monthGrid(year: number, month: number): string[] {
   }
   return days;
 }
+
+/* ------------------------------------------------------------- instruments */
+
+export const SYMBOL_GROUPS: { label: string; symbols: string[] }[] = [
+  { label: "Gold & metals", symbols: ["XAU/USD", "XAG/USD", "GC=F", "XAUEUR", "XAUGBP"] },
+  { label: "Majors", symbols: ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CHF", "NZD/USD", "USD/CAD"] },
+  { label: "Indices", symbols: ["US30", "US500", "NAS100", "GER40", "UK100"] },
+  { label: "Crypto", symbols: ["BTC/USD", "ETH/USD"] },
+  { label: "Other", symbols: ["DXY", "US10Y"] },
+];
+
+export type AssetClass = "Gold" | "Majors" | "Indices" | "Crypto" | "Other";
+
+/** Which bucket an instrument belongs to, including ones not on the list. */
+export function assetClassOf(symbol: string): AssetClass {
+  const s = (symbol || "").trim().toUpperCase();
+  if (/^(XAU|XAG|GC=F)/.test(s)) return "Gold";
+  if (/^(BTC|ETH|SOL|XRP|LTC|DOGE)/.test(s)) return "Crypto";
+  if (/^(US30|US500|NAS100|GER40|UK100|JP225|HK50|AUS200|SPX|NDX|DJI)/.test(s)) return "Indices";
+  // A plain six-letter pair with a slash is a currency pair; metals were caught
+  // above, so what is left here is FX.
+  if (/^[A-Z]{3}\/[A-Z]{3}$/.test(s)) return "Majors";
+  return "Other";
+}
+
+export function normaliseSymbolInput(raw: string): string {
+  const s = (raw || "").trim().toUpperCase();
+  return s || "XAU/USD";
+}
+
+/**
+ * Contract size per lot, when it is standard enough to be worth asserting.
+ *
+ * FX and the metals are standardised across brokers, so a P/L estimated from
+ * them is right. Index and crypto CFDs are not — US30 is one dollar a point at
+ * some brokers and ten at others — so those return null and the member types
+ * the figure their platform actually shows. A wrong number filled in
+ * automatically is worse than an empty box, because it ends up in the journal
+ * and then in the statistics.
+ */
+export function contractSize(symbol: string): number | null {
+  const s = (symbol || "").trim().toUpperCase();
+  if (/^XAU/.test(s) || s === "GC=F") return 100;      // troy ounces
+  if (/^XAG/.test(s)) return 5000;
+  /*
+   * Crypto before the currency-pair test, not after.
+   *
+   * BTC and ETH are three letters, so BTC/USD matched the FX pattern below and
+   * came back as a 100,000-unit lot — which would have reported a one-lot
+   * Bitcoin trade a hundred thousand times too large, straight into the
+   * journal and then into the statistics.
+   */
+  if (assetClassOf(s) === "Crypto") return null;
+  if (/^[A-Z]{3}\/[A-Z]{3}$/.test(s)) return 100_000; // standard FX lot
+  return null;
+}
+
+/**
+ * P/L in USD, or null when it cannot be worked out.
+ *
+ * A pair quoted in something other than dollars earns its profit in that
+ * currency, so the result is converted back at the exit price — without that,
+ * a USD/JPY trade reports its P/L about 150 times too large.
+ */
+export function estimatePnl(
+  symbol: string,
+  entry: number | null,
+  exit: number | null,
+  size: number | null,
+  direction: "buy" | "sell"
+): number | null {
+  if (entry === null || exit === null || size === null) return null;
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(size) || size <= 0) return null;
+
+  const contract = contractSize(symbol);
+  if (contract === null) return null;
+
+  const diff = (exit - entry) * (direction === "sell" ? -1 : 1);
+  const raw = diff * contract * size;
+
+  const quote = (symbol || "").trim().toUpperCase().split("/")[1] ?? "USD";
+  const value = quote === "USD" || !quote ? raw : raw / (exit || 1);
+  return Math.round(value * 100) / 100;
+}
+
+/** Win rate and net per instrument. */
+export function bySymbol(trades: JournalTrade[]): TagStat[] {
+  return byTag(trades.map((t) => ({ ...t, setupType: t.symbol })), "setupType");
+}
+
+/** Share of trades per asset class, for the distribution chart. */
+export function byAssetClass(trades: JournalTrade[]): TagStat[] {
+  return byTag(trades.map((t) => ({ ...t, setupType: assetClassOf(t.symbol) })), "setupType");
+}

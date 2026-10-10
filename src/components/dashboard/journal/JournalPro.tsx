@@ -6,9 +6,11 @@ import { Card, CardHead, EmptyState, Modal, PanelHeader, Toast, money } from "@/
 import { JournalCalendar } from "./JournalCalendar";
 import { JournalCommunity } from "./JournalCommunity";
 import {
-  DEFAULT_SETTINGS, byTag, compliance, dayOf, equityCurve, net, streaks, summarise,
-  type JournalSettings, type JournalTrade, type Rule,
+  DEFAULT_SETTINGS, SYMBOL_GROUPS, assetClassOf, byAssetClass, bySymbol, byTag, compliance, dayOf,
+  equityCurve, estimatePnl, net, normaliseSymbolInput, streaks, summarise,
+  type AssetClass, type JournalSettings, type JournalTrade, type Rule,
 } from "@/lib/journalPro";
+import { useLiveTick } from "@/lib/useLiveTick";
 
 /**
  * The trading journal, kept by hand.
@@ -46,6 +48,8 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [rules, setRules] = useState(false);
+  const [filterClass, setFilterClass] = useState<"all" | AssetClass>("all");
+  const [filterSymbol, setFilterSymbol] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -107,6 +111,20 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
     () => (openDay ? trades.filter((t) => dayOf(t.closedAt ?? t.openedAt) === openDay) : []),
     [openDay, trades]
   );
+
+  /*
+   * The relayed price for whatever instrument the modal is on. Hooks cannot be
+   * called conditionally, so this runs whether or not the modal is open; with
+   * no row for that symbol it simply returns nothing and the form stays manual.
+   */
+  const draftSymbol = normaliseSymbolInput(draft?.symbol ?? "XAU/USD");
+  const { tick, live: tickLive } = useLiveTick(draftSymbol);
+
+  const shown = useMemo(() => trades.filter((t) => {
+    if (filterClass !== "all" && assetClassOf(t.symbol) !== filterClass) return false;
+    if (filterSymbol && !t.symbol.toUpperCase().includes(filterSymbol.toUpperCase())) return false;
+    return true;
+  }), [trades, filterClass, filterSymbol]);
 
   const s = useMemo(() => summarise(trades), [trades]);
   const str = useMemo(() => streaks(trades), [trades]);
@@ -235,12 +253,29 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
           <TagCard title="By mistake" rows={byTag(trades, "mistakeTag")} empty="No mistakes tagged yet." invert />
           <TagCard title="By emotion" rows={byTag(trades, "emotion")} empty="Tag how you felt and this fills in." />
           <TagCard title="By session" rows={byTag(trades, "session")} empty="No sessions tagged yet." />
+          <TagCard title="By instrument" rows={bySymbol(trades)} empty="Log a trade and this fills in." />
+          <TagCard title="By asset class" rows={byAssetClass(trades)} empty="Log a trade and this fills in." />
         </div>
       ) : null}
 
       {/* ---------------------------------------------------------- the log */}
       <Card>
-        <CardHead title={`Trades · ${s.trades} closed`} icon={NotebookPen} />
+        <CardHead
+          title={`Trades · ${shown.length === trades.length ? `${s.trades} closed` : `${shown.length} of ${trades.length}`}`}
+          icon={NotebookPen}
+          right={trades.length ? (
+            <span className="flex items-center gap-2">
+              <select value={filterClass} onChange={(e) => setFilterClass(e.target.value as "all" | AssetClass)}
+                className="rounded border border-white/[0.1] bg-black/40 px-2 py-1 text-[11px] text-ink-muted outline-none focus:border-brand-accent/50">
+                {(["all", "Gold", "Majors", "Indices", "Crypto", "Other"] as const).map((c) => (
+                  <option key={c} value={c}>{c === "all" ? "All instruments" : c}</option>
+                ))}
+              </select>
+              <input value={filterSymbol} onChange={(e) => setFilterSymbol(e.target.value)} placeholder="symbol"
+                className="w-24 rounded border border-white/[0.1] bg-black/40 px-2 py-1 text-[11px] text-ink-muted outline-none focus:border-brand-accent/50" />
+            </span>
+          ) : undefined}
+        />
         {trades.length === 0 ? (
           <EmptyState icon={NotebookPen} title="Nothing logged yet"
             body="Log a trade with its setup, the mistake if there was one, and how you felt. Three or four entries is enough for the breakdowns above to start saying something."
@@ -250,15 +285,16 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
             <table className="w-full min-w-[920px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-white/[0.07]">
-                  {["Date", "Dir", "Entry", "Exit", "Size", "Risk", "RR", "Setup", "Mistake", "Feel", "Session", "Net", ""].map((h) => (
+                  {["Date", "Symbol", "Dir", "Entry", "Exit", "Size", "Risk", "RR", "Setup", "Mistake", "Feel", "Session", "Net", ""].map((h) => (
                     <th key={h} className="whitespace-nowrap px-3 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-muted">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {trades.map((t) => (
+                {shown.map((t) => (
                   <tr key={t.id} className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02]">
                     <Td>{dayOf(t.closedAt ?? t.openedAt) || "—"}</Td>
+                    <Td className="font-semibold text-white">{t.symbol}</Td>
                     <Td className={t.direction === "buy" ? "text-brand-green" : "text-brand-danger"}>{t.direction}</Td>
                     <Td>{t.entryPrice ?? "—"}</Td>
                     <Td>{t.exitPrice ?? "—"}</Td>
@@ -393,13 +429,69 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
       <Modal open={!!draft} onClose={() => setDraft(null)} title={draft?.id ? "Edit trade" : "Log a trade"} wide>
         {draft ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {/* Symbol first: it decides the contract size, the live price and
+                which asset class the trade lands in. */}
+            <label className="col-span-2 block sm:col-span-1">
+              <span className={LABEL}>Symbol</span>
+              <input
+                className={FIELD}
+                list="gfxa-symbols"
+                value={draft.symbol ?? "XAU/USD"}
+                onChange={(e) => setDraft({ ...draft, symbol: e.target.value.toUpperCase() })}
+                onBlur={(e) => setDraft({ ...draft, symbol: normaliseSymbolInput(e.target.value) })}
+                placeholder="XAU/USD"
+                autoCapitalize="characters"
+                spellCheck={false}
+              />
+              {/* A list of suggestions, not a closed set — a member trading
+                  something we have not listed should still be able to log it. */}
+              <datalist id="gfxa-symbols">
+                {SYMBOL_GROUPS.flatMap((g) => g.symbols.map((sym) => (
+                  <option key={sym} value={sym}>{g.label}</option>
+                )))}
+              </datalist>
+            </label>
+
+            <div className="col-span-2 flex items-end pb-1 text-[11.5px] sm:col-span-2">
+              {tick ? (
+                <span className="flex items-center gap-1.5 text-ink-muted">
+                  {tickLive ? (
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-green opacity-70" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-green" />
+                    </span>
+                  ) : null}
+                  <span className="num-mono font-semibold text-white">{tick.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  {tick.changePercent !== null ? (
+                    <span className={tick.changePercent >= 0 ? "text-brand-green" : "text-brand-danger"}>
+                      {tick.changePercent >= 0 ? "▲ +" : "▼ "}{tick.changePercent.toFixed(2)}%
+                    </span>
+                  ) : null}
+                  <span className="text-ink-muted/70">{tickLive ? "live" : "last seen"}</span>
+                  <button type="button" onClick={() => setDraft({ ...draft, entryPrice: tick.price })}
+                    className="ml-1 rounded border border-white/[0.12] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted hover:text-white">
+                    → entry
+                  </button>
+                  <button type="button" onClick={() => setDraft({ ...draft, exitPrice: tick.price })}
+                    className="rounded border border-white/[0.12] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted hover:text-white">
+                    → exit
+                  </button>
+                </span>
+              ) : (
+                <span className="text-ink-muted/70">No live price for {draftSymbol} — enter it by hand.</span>
+              )}
+            </div>
+
             <Num label="Entry" v={draft.entryPrice} set={(n) => setDraft({ ...draft, entryPrice: n })} />
             <Num label="Exit" v={draft.exitPrice} set={(n) => setDraft({ ...draft, exitPrice: n })} />
             <Num label="Size (lots)" v={draft.size} set={(n) => setDraft({ ...draft, size: n })} />
             <Num label="Risk $" v={draft.riskUsd} set={(n) => setDraft({ ...draft, riskUsd: n })} />
             <Num label="Risk %" v={draft.riskPercent} set={(n) => setDraft({ ...draft, riskPercent: n })} />
             <Num label="RR (1:x)" v={draft.rr} set={(n) => setDraft({ ...draft, rr: n })} />
-            <Num label="P/L $" v={draft.pnl} set={(n) => setDraft({ ...draft, pnl: n })} />
+            <div>
+              <Num label="P/L $" v={draft.pnl} set={(n) => setDraft({ ...draft, pnl: n })} />
+              <PnlHint draft={draft} onUse={(n) => setDraft({ ...draft, pnl: n })} />
+            </div>
             <Num label="Fees $" v={draft.fees} set={(n) => setDraft({ ...draft, fees: n })} />
             <Pick label="Direction" v={draft.direction ?? "buy"} opts={["buy", "sell"]} set={(v) => setDraft({ ...draft, direction: v as "buy" | "sell" })} />
             <Pick label="Setup" v={draft.setupType ?? ""} opts={SETUPS} set={(v) => setDraft({ ...draft, setupType: v || null })} free />
@@ -445,6 +537,31 @@ export function JournalPro({ onLegacy }: { onLegacy: () => void }) {
 
       <Toast message={toast} />
     </div>
+  );
+}
+
+/**
+ * What the P/L works out to, offered rather than filled in.
+ *
+ * Never written automatically: the member's platform is the authority on what
+ * they were actually paid, and a number this put in the box without being asked
+ * would end up in the statistics as fact. For indices and crypto it says
+ * nothing at all, because the contract size is broker-specific and a confident
+ * wrong figure is worse than a blank.
+ */
+function PnlHint({ draft, onUse }: { draft: Draft; onUse: (n: number) => void }) {
+  const estimate = estimatePnl(
+    normaliseSymbolInput(draft.symbol ?? "XAU/USD"),
+    draft.entryPrice ?? null, draft.exitPrice ?? null, draft.size ?? null,
+    draft.direction ?? "buy"
+  );
+  if (estimate === null) return null;
+  if (draft.pnl !== null && draft.pnl !== undefined && Math.abs(draft.pnl - estimate) < 0.01) return null;
+  return (
+    <button type="button" onClick={() => onUse(estimate)}
+      className="mt-1 text-[11px] text-ink-muted underline-offset-2 hover:text-brand-accent hover:underline">
+      works out to {money(estimate)} — use it
+    </button>
   );
 }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifySignature } from "@/lib/vpsClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { tableMissing } from "@/lib/adminGate";
+import { SYMBOL_GROUPS } from "@/lib/journalPro";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +11,12 @@ export const dynamic = "force-dynamic";
  *  that a captured request is useless by the time anyone replays it. */
 const MAX_SKEW_MS = 120_000;
 
-const SYMBOLS = new Set(["XAU/USD", "XAG/USD", "EUR/USD", "GBP/USD", "USD/JPY", "DXY"]);
+/*
+ * The same instruments the journal offers, rather than a second list that would
+ * drift from it. The relay can only push what the dashboard knows how to look
+ * up, so one source for both is the point.
+ */
+const SYMBOLS = new Set(SYMBOL_GROUPS.flatMap((g) => g.symbols));
 
 const num = (v: unknown): number | null => {
   const n = typeof v === "number" ? v : Number.parseFloat(String(v ?? ""));

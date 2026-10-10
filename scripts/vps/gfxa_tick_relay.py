@@ -16,7 +16,30 @@ Requires:  pip install websockets requests
 Env:       TWELVEDATA_API_KEY   the key, from twelvedata.com/account
            VPS_SECRET           the same value Vercel has; signs every push
            INGEST_URL           https://globalfxalliance.io/api/market/ingest
-           SYMBOLS              optional, default "XAU/USD"
+           SYMBOLS              optional; comma-separated, see below
+
+SYMBOLS and the eight-credit ceiling
+------------------------------------
+The Grow plan allows one connection and eight WebSocket credits, and a credit is
+one subscribed symbol. Eight is therefore the hard limit, not a suggestion —
+asking for sixteen does not stream sixteen, it streams whichever eight the
+server accepts and silently drops the rest. The daemon refuses to send more than
+MAX_SYMBOLS and says which ones it left out.
+
+Each entry is either a symbol, or DISPLAY:FEED when the two differ:
+
+    SYMBOLS="XAU/USD,EUR/USD,GBP/USD,USD/JPY,BTC/USD,US30:DJI"
+
+The left side is what is stored in market_ticks and what the dashboard looks up;
+the right side is what TwelveData is asked for. That mapping exists because the
+two are not the same for indices — US30 is a broker's name for the Dow, not a
+TwelveData symbol.
+
+Indices are left out of the default on purpose. TwelveData's public reference
+list contains no entry for DOW, SPX, NDX, DJI or IXIC, so the right symbol for
+the Dow on this account cannot be confirmed from here and a guess would fail
+silently. Add one with the mapping above and read the log: every subscription
+the server refuses is printed by name.
 """
 
 import asyncio
@@ -35,7 +58,38 @@ LOG = logging.getLogger("gfxa-relay")
 API_KEY = os.environ.get("TWELVEDATA_API_KEY", "")
 SECRET = os.environ.get("VPS_SECRET", "")
 INGEST_URL = os.environ.get("INGEST_URL", "https://globalfxalliance.io/api/market/ingest")
-SYMBOLS = [s.strip() for s in os.environ.get("SYMBOLS", "XAU/USD").split(",") if s.strip()]
+# The plan's ceiling. One credit per subscribed symbol.
+MAX_SYMBOLS = 8
+
+# Metals, the liquid majors and the two crypto pairs — eight exactly, all
+# confirmed to exist on TwelveData. Override with SYMBOLS to trade the slots.
+DEFAULT_SYMBOLS = "XAU/USD,XAG/USD,EUR/USD,GBP/USD,USD/JPY,AUD/USD,BTC/USD,ETH/USD"
+
+
+def parse_symbols(raw: str) -> dict[str, str]:
+    """`DISPLAY:FEED` or plain `SYMBOL`, mapped display -> what to ask for."""
+    out: dict[str, str] = {}
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        display, _, feed = part.partition(":")
+        display = display.strip().upper()
+        out[display] = (feed.strip() or display).upper()
+    return out
+
+
+SYMBOL_MAP = parse_symbols(os.environ.get("SYMBOLS", DEFAULT_SYMBOLS))
+if len(SYMBOL_MAP) > MAX_SYMBOLS:
+    _dropped = list(SYMBOL_MAP)[MAX_SYMBOLS:]
+    SYMBOL_MAP = {k: SYMBOL_MAP[k] for k in list(SYMBOL_MAP)[:MAX_SYMBOLS]}
+else:
+    _dropped = []
+
+# TwelveData speaks in feed symbols; everything else here speaks in display ones.
+FEED_TO_DISPLAY = {v: k for k, v in SYMBOL_MAP.items()}
+SYMBOLS = list(SYMBOL_MAP)
+FEED_SYMBOLS = list(SYMBOL_MAP.values())
 
 WS_URL = "wss://ws.twelvedata.com/v1/quotes/price?apikey=" + API_KEY
 QUOTE_URL = "https://api.twelvedata.com/quote"
@@ -56,15 +110,19 @@ _closes_at = 0.0
 def refresh_closes() -> None:
     """Previous close per symbol, so change_percent is a real number."""
     global _closes_at
-    for symbol in SYMBOLS:
+    for display, feed in SYMBOL_MAP.items():
         try:
-            r = requests.get(QUOTE_URL, params={"symbol": symbol, "apikey": API_KEY}, timeout=10)
+            r = requests.get(QUOTE_URL, params={"symbol": feed, "apikey": API_KEY}, timeout=10)
             data = r.json()
             close = data.get("previous_close") or data.get("close")
             if close:
-                _prev_close[symbol] = float(close)
+                _prev_close[display] = float(close)
+            elif data.get("status") == "error":
+                # Names the symbol the account cannot see, rather than leaving a
+                # percentage quietly missing.
+                LOG.warning("quote for %s (%s): %s", display, feed, data.get("message", "")[:120])
         except Exception as exc:  # noqa: BLE001 - a missing percentage is not fatal
-            LOG.warning("previous close for %s failed: %s", symbol, exc)
+            LOG.warning("previous close for %s failed: %s", display, exc)
     _closes_at = time.time()
 
 
@@ -98,8 +156,8 @@ def push(symbol: str, price: float) -> None:
 async def stream() -> None:
     """One connection, resubscribed on every reconnect."""
     async with websockets.connect(WS_URL, ping_interval=20, ping_timeout=20) as ws:
-        await ws.send(json.dumps({"action": "subscribe", "params": {"symbols": ",".join(SYMBOLS)}}))
-        LOG.info("subscribed: %s", ", ".join(SYMBOLS))
+        await ws.send(json.dumps({"action": "subscribe", "params": {"symbols": ",".join(FEED_SYMBOLS)}}))
+        LOG.info("requested %d of %d credits: %s", len(FEED_SYMBOLS), MAX_SYMBOLS, ", ".join(FEED_SYMBOLS))
 
         async for raw in ws:
             try:
@@ -108,15 +166,25 @@ async def stream() -> None:
                 continue
 
             event = msg.get("event")
-            if event == "subscribe-status" and msg.get("status") != "ok":
-                LOG.error("subscribe refused: %s", msg)
+            if event == "subscribe-status":
+                # Printed by name either way. A symbol this account cannot see
+                # is refused here and would otherwise just never tick, which
+                # looks identical to a quiet market.
+                success = [s.get("symbol") for s in msg.get("success", [])]
+                fails = [s.get("symbol") for s in msg.get("fails", [])]
+                if success:
+                    LOG.info("streaming: %s", ", ".join(filter(None, success)))
+                if fails:
+                    LOG.error("REFUSED by TwelveData: %s — check the symbol or the plan", ", ".join(filter(None, fails)))
                 continue
             if event != "price":
                 continue
 
-            symbol = msg.get("symbol")
+            feed_symbol = msg.get("symbol")
             price = msg.get("price")
-            if symbol not in SYMBOLS or price is None:
+            # Back to the name the dashboard uses before anything is stored.
+            symbol = FEED_TO_DISPLAY.get(str(feed_symbol).upper())
+            if symbol is None or price is None:
                 continue
 
             now = time.time()
@@ -135,6 +203,13 @@ async def main() -> None:
     missing = [n for n, v in (("TWELVEDATA_API_KEY", API_KEY), ("VPS_SECRET", SECRET)) if not v]
     if missing:
         raise SystemExit("missing environment: " + ", ".join(missing))
+
+    if _dropped:
+        LOG.error(
+            "SYMBOLS asked for more than the plan's %d credits; not subscribing: %s",
+            MAX_SYMBOLS, ", ".join(_dropped),
+        )
+    LOG.info("relaying %s", ", ".join(f"{d}<-{f}" if d != f else d for d, f in SYMBOL_MAP.items()))
 
     refresh_closes()
     backoff = 1.0

@@ -10,7 +10,11 @@
 #   TWELVEDATA_API_KEY=...
 #   VPS_SECRET=...            # the same value Vercel has
 #   INGEST_URL=https://globalfxalliance.io/api/market/ingest
-#   SYMBOLS=XAU/USD
+#   SYMBOLS=XAU/USD,XAG/USD,EUR/USD,GBP/USD,USD/JPY,AUD/USD,BTC/USD,ETH/USD
+#
+# Eight entries is the ceiling — the Grow plan's eight WebSocket credits are one
+# per symbol. Use DISPLAY:FEED when the names differ, e.g. US30:DJI, and read
+# the log: every subscription TwelveData refuses is printed by name.
 
 [Unit]
 Description=GFXA tick relay (TwelveData WebSocket -> globalfxalliance.io)
